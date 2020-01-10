@@ -43,6 +43,10 @@ class EventMailScheduler(models.Model):
                         mass_keep_log=True
                     )
                     mail.write({'mail_sent': True})
+
+                    contacted_attendees = len(mail.event_id.registration_ids.filtered(lambda reg: reg.state != 'cancel'))
+                    mail.contact_count_str = mail._get_attendees_str() % contacted_attendees if contacted_attendees else False
+
         return super(EventMailScheduler, self).execute()
 
 
