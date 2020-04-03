@@ -268,7 +268,10 @@ class TestLeadConvertCommon(TestCrmCommon):
             'use_opportunities': True,
             'company_id': False,
             'user_id': cls.user_sales_manager.id,
-            'member_ids': [(4, cls.user_sales_salesman.id)],
+        })
+        cls.sales_team_convert_m1 = cls.env['crm.team.member'].create({
+            'user_id': cls.user_sales_salesman.id,
+            'crm_team_id': cls.sales_team_convert.id,
         })
         cls.stage_team_convert_1 = cls.env['crm.stage'].create({
             'name': 'New',
@@ -308,8 +311,9 @@ class TestLeadConvertMassCommon(TestLeadConvertCommon):
             notification_type='inbox',
             groups='sales_team.group_sale_salesman_all_leads,base.group_partner_manager,crm.group_use_lead',
         )
-        cls.sales_team_convert.write({
-            'member_ids': [(4, cls.user_sales_leads_convert.id)]
+        cls.sales_team_convert_m2 = cls.env['crm.team.member'].create({
+            'user_id': cls.user_sales_leads_convert.id,
+            'crm_team_id': cls.sales_team_convert.id,
         })
 
         cls.lead_w_partner = cls.env['crm.lead'].create({
