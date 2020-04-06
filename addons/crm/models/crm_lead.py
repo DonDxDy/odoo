@@ -1035,7 +1035,13 @@ class Lead(models.Model):
 
         if len(self.ids) > 5 and not self.env.is_superuser():
             raise UserError(_("To prevent data loss, Leads and Opportunities can only be merged by groups of 5."))
+        return self._merge_opportunity(user_id=user_id, team_id=team_id, auto_unlink=auto_unlink)
 
+    def _merge_opportunity(self, user_id=False, team_id=False, auto_unlink=True):
+        """ Private merging method. This one has no rules on record set length
+        allowing to merge more than 5 opportunities at once if requested.
+
+        See ``merge_opportunity`` for more details. """
         opportunities = self._sort_by_confidence_level(reverse=True)
 
         # get SORTED recordset of head and tail, and complete list

@@ -52,6 +52,14 @@ class TestCrmCommon(TestSalesCommon, MailCase):
             'use_leads': True,
             'use_opportunities': True,
         })
+        cls.sales_team_1_m1.write({
+            'assignment_max': 45,
+            'assignment_domain': False,
+        })
+        cls.sales_team_1_m2.write({
+            'assignment_max': 15,
+            'assignment_domain': False,
+        })
 
         (cls.user_sales_manager | cls.user_sales_leads | cls.user_sales_salesman).write({
             'groups_id': [(4, cls.env.ref('crm.group_use_lead').id)]
@@ -272,6 +280,8 @@ class TestLeadConvertCommon(TestCrmCommon):
         cls.sales_team_convert_m1 = cls.env['crm.team.member'].create({
             'user_id': cls.user_sales_salesman.id,
             'crm_team_id': cls.sales_team_convert.id,
+            'assignment_max': 30,
+            'assignment_domain': False,
         })
         cls.stage_team_convert_1 = cls.env['crm.stage'].create({
             'name': 'New',
@@ -288,6 +298,49 @@ class TestLeadConvertCommon(TestCrmCommon):
     def tearDownClass(cls):
         cls.crm_lead_dt_patcher.stop()
         super(TestLeadConvertCommon, cls).tearDownClass()
+
+    @classmethod
+    def _switch_to_multi_membership(cls):
+        # Sales Team organization
+        # Role: M (team member) R (team manager)
+        # SALESMAN---------------sales_team_1-----sales_team_convert
+        # admin------------------M----------------/    (sales_team_1_m2)
+        # user_sales_manager-----R----------------R+M  <-- NEW (sales_team_convert_m2)
+        # user_sales_leads-------M----------------/    (sales_team_1_m1)
+        # user_sales_salesman----M----------------M    <-- NEW (sales_team_1_m3 / sales_team_convert_m1)
+
+        # SALESMAN--------------sales_team----------assign_max
+        # admin-----------------sales_team_1--------15 (tot: 0.5/day)
+        # user_sales_manager----sales_team_convert--60 (tot: 2/day)
+        # user_sales_leads------sales_team_1--------45 (tot: 1.5/day)
+        # user_sales_salesman---sales_team_1--------15 (tot: 1.5/day)
+        # user_sales_salesman---sales_team_convert--30
+
+        cls.sales_team_1_m1.write({
+            'assignment_max': 45
+        })
+        cls.sales_team_1_m2.write({
+            'assignment_max': 15,
+            'assignment_domain': [('priority', 'in', ['1', '2'])]
+        })
+
+        cls.env['ir.config_parameter'].set_param('sales_team.membership_multi', True)
+        cls.sales_team_1_m3 = cls.env['crm.team.member'].create({
+            'user_id': cls.user_sales_salesman.id,
+            'crm_team_id': cls.sales_team_1.id,
+            'assignment_max': 15,
+            'assignment_domain': False,
+        })
+        cls.sales_team_convert_m1.write({
+            'assignment_max': 30,
+            'assignment_domain': [('probability', '>=', 30)]
+        })
+        cls.sales_team_convert_m2 = cls.env['crm.team.member'].create({
+            'user_id': cls.user_sales_manager.id,
+            'crm_team_id': cls.sales_team_convert.id,
+            'assignment_max': 60,
+            'assignment_domain': False,
+        })
 
 
 class TestLeadConvertMassCommon(TestLeadConvertCommon):
