@@ -1,11 +1,18 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-import ast
 import datetime
+import logging
+import threading
 
-from odoo import api, fields, models, _
+from ast import literal_eval
+
+from odoo import api, exceptions, fields, models, _
+from odoo.addons.crm.models.crm_lead import LEAD_ASSIGN_EVAL_CONTEXT
+from odoo.osv import expression
 from odoo.tools.safe_eval import safe_eval
+
+_logger = logging.getLogger(__name__)
 
 
 class Team(models.Model):
@@ -18,6 +25,11 @@ class Team(models.Model):
     alias_id = fields.Many2one(
         'mail.alias', string='Alias', ondelete="restrict", required=True,
         help="The email address associated with this channel. New emails received will automatically create new leads assigned to the channel.")
+    # assignment
+    assignment_max = fields.Integer(
+        'Lead Capacity', compute='_compute_assignment_max',
+        help='Monthly leads for all salesmen belonging to the team')
+    assignment_domain = fields.Char('Domain', tracking=True)
     # statistics about leads / opportunities / both
     lead_unassigned_count = fields.Integer(
         string='# Unassigned Leads', compute='_compute_lead_unassigned_count')
@@ -36,6 +48,11 @@ class Team(models.Model):
     alias_user_id = fields.Many2one(
         'res.users', related='alias_id.alias_user_id', inherited=True,
         domain=lambda self: [('groups_id', 'in', self.env.ref('sales_team.group_sale_salesman_all_leads').id)])
+
+    @api.depends('crm_team_member_ids.assignment_max')
+    def _compute_assignment_max(self):
+        for rec in self:
+            rec.assignment_max = sum(s.assignment_max for s in rec.crm_team_member_ids)
 
     def _compute_lead_unassigned_count(self):
         leads_data = self.env['crm.lead'].read_group([
@@ -88,6 +105,15 @@ class Team(models.Model):
         if not self.use_leads and not self.use_opportunities:
             self.alias_name = False
 
+    @api.constrains('assignment_domain')
+    def _constrains_assignment_domain(self):
+        for team in self:
+            try:
+                domain = safe_eval(team.assignment_domain or '[]', LEAD_ASSIGN_EVAL_CONTEXT)
+                self.env['crm.lead'].search_count(domain)
+            except Exception:
+                raise Warning('Domain for %s is incorrectly formatted' % team.name)
+
     # ------------------------------------------------------------
     # ORM
     # ------------------------------------------------------------
@@ -113,11 +139,90 @@ class Team(models.Model):
         if self.id:
             if not self.use_leads and not self.use_opportunities:
                 values['alias_name'] = False
-            values['alias_defaults'] = defaults = ast.literal_eval(self.alias_defaults or "{}")
+            values['alias_defaults'] = defaults = literal_eval(self.alias_defaults or "{}")
             has_group_use_lead = self.env.user.has_group('crm.group_use_lead')
             defaults['type'] = 'lead' if has_group_use_lead and self.use_leads else 'opportunity'
             defaults['team_id'] = self.id
         return values
+
+    # ------------------------------------------------------------
+    # LEAD ASSIGNMENT
+    # ------------------------------------------------------------
+
+    @api.model
+    def cron_assign_leads(self):
+        if not self.env.user.has_group('sales_team.group_sale_manager') and not self.env.user.has_group('base.group_system'):
+            raise exceptions.UserError(_('Lead/Opportunities automatic assignment is limited to managers or administrators'))
+
+        return self.env['crm.team'].search([]).action_assign_leads()
+
+    def action_assign_leads(self):
+        if not self.env.user.has_group('sales_team.group_sale_manager') and not self.env.user.has_group('base.group_system'):
+            raise exceptions.UserError(_('Lead/Opportunities automatic assignment is limited to managers or administrators'))
+        team_members = self.mapped('crm_team_member_ids')
+
+        _logger.info('### START Lead Assignment (%d teams, %d sales persons)' % (len(self), len(team_members)))
+        self._assign_leads_to_teams()
+        team_members._assign_and_convert_leads()
+        _logger.info('### END Lead Assignment')
+
+    def _assign_leads_to_teams(self):
+        BUNDLE_SIZE = int(self.env['ir.config_parameter'].sudo().get_param('crm.assignment.bundle', default=50))
+        team_done = self.env['crm.team']
+        # limit_date = fields.Datetime.now() - datetime.timedelta(hours=1)
+        limit_date = fields.Datetime.now() + datetime.timedelta(hours=1)
+        remaining_teams = self
+        team_domains = dict()
+
+        while remaining_teams:
+            for team in remaining_teams:
+                if team not in team_domains:
+                    team_domains[team] = safe_eval(team.assignment_domain or '[]', LEAD_ASSIGN_EVAL_CONTEXT)
+
+                lead_domain = expression.AND([
+                    team_domains[team],
+                    [('create_date', '<', limit_date)],
+                    ['&', ('team_id', '=', False), ('user_id', '=', False)],
+                    ['|', ('stage_id.is_won', '=', False), ('probability', 'not in', [False, 0, 100])]
+                ])
+                leads = self.env["crm.lead"].search(lead_domain, limit=BUNDLE_SIZE)
+
+                if len(leads) < BUNDLE_SIZE:
+                    team_done += team
+
+                leads_dup_ids = team._assign_and_deduplicate_leads(leads)
+
+                _logger.info('Assigned %s leads to team %s' % (len(leads), team.id))
+                _logger.info('Duplicated leads: %s' % leads_dup_ids)
+                _logger.info('List of leads: %s' % leads)
+
+                # auto-commit except in testing mode
+                auto_commit = not getattr(threading.currentThread(), 'testing', False)
+                if auto_commit:
+                    self._cr.commit()
+
+            remaining_teams = remaining_teams.browse([tid for tid in remaining_teams.ids if tid not in team_done.ids])
+
+    def _assign_and_deduplicate_leads(self, leads):
+        self.ensure_one()
+
+        leads_done_ids = set()
+        leads_dup_ids = set()
+        for lead in leads:
+            if lead.id not in leads_done_ids | leads_dup_ids:
+                leads_duplicated = lead._get_lead_duplicates(email=lead.email_from)
+                if len(leads_duplicated) > 1:
+                    merged = leads_duplicated.merge_opportunity(user_id=False, team_id=self.id)
+                    leads_dup_ids.update((leads_duplicated - merged).ids)
+                else:
+                    lead.handle_salesmen_assignment(team_id=self.id)
+                leads_done_ids.add(lead.id)
+            # auto-commit except in testing mode
+            auto_commit = not getattr(threading.currentThread(), 'testing', False)
+            if auto_commit:
+                self._cr.commit()
+
+        return leads_dup_ids
 
     # ------------------------------------------------------------
     # ACTIONS
@@ -180,4 +285,4 @@ class Team(models.Model):
     def _graph_title_and_key(self):
         if self.use_opportunities:
             return ['', _('New Opportunities')] # no more title
-        return super(Team,self)._graph_title_and_key()
+        return super(Team, self)._graph_title_and_key()
