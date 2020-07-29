@@ -869,7 +869,7 @@ class ReportSaleDetails(models.AbstractModel):
 
 
     @api.model
-    def get_sale_details(self, date_start=False, date_stop=False, config_ids=False, session_ids=False):
+    def get_sale_details(self, date_start=False, date_stop=False, config_ids=False, session_ids=False, include_products=True):
         """ Serialise the orders of the requested time period, configs and sessions.
 
         :param date_start: The dateTime to start, default today 00:00:00.
@@ -914,6 +914,9 @@ class ReportSaleDetails(models.AbstractModel):
                 domain = AND([domain, [('config_id', 'in', config_ids)]])
 
         orders = self.env['pos.order'].search(domain)
+        return self.prepare_sale_details(orders, domain, date_start, date_stop, config_ids, session_ids, include_products)
+
+    def prepare_sale_details(self, orders, domain, date_start, date_stop, config_ids, session_ids, include_products):
 
         user_currency = self.env.company.currency_id
 
@@ -946,7 +949,7 @@ class ReportSaleDetails(models.AbstractModel):
         payment_ids = self.env["pos.payment"].search([('pos_order_id', 'in', orders.ids)]).ids
         if payment_ids:
             self.env.cr.execute("""
-                SELECT method.name, sum(amount) total
+                SELECT method.name, sum(amount) total, count(DISTINCT payment.pos_order_id)
                 FROM pos_payment AS payment,
                      pos_payment_method AS method
                 WHERE payment.payment_method_id = method.id
@@ -977,5 +980,5 @@ class ReportSaleDetails(models.AbstractModel):
     def _get_report_values(self, docids, data=None):
         data = dict(data or {})
         configs = self.env['pos.config'].browse(data['config_ids'])
-        data.update(self.get_sale_details(data['date_start'], data['date_stop'], configs.ids))
+        data.update(self.get_sale_details(data['date_start'], data['date_stop'], configs.ids, include_products=data.get('include_products', True)))
         return data
