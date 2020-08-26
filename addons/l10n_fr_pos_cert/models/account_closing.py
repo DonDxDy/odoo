@@ -144,7 +144,8 @@ class AccountClosing(models.Model):
     def write(self, vals):
         raise UserError(_('Sale Closings are not meant to be written or deleted under any circumstances.'))
 
-    def unlink(self):
+    @api.ondelete(at_uninstall=True)
+    def _check_sale_closings(self):
         raise UserError(_('Sale Closings are not meant to be written or deleted under any circumstances.'))
 
     @api.model

@@ -18,8 +18,8 @@ class AccountBankStatement(models.Model):
                 raise UserError(_("You can't validate a bank statement that is used in an opened Session of a Point of Sale."))
         return super(AccountBankStatement, self).button_validate_or_action()
 
-    def unlink(self):
+    @api.ondelete(at_uninstall=False)
+    def _check_pos_bank_statement(self):
         for bs in self:
             if bs.pos_session_id:
                 raise UserError(_("You cannot delete a bank statement linked to Point of Sale session."))
-        return super( AccountBankStatement, self).unlink()

@@ -8,16 +8,16 @@ from odoo.exceptions import UserError
 class AccountBankStatement(models.Model):
     _inherit = 'account.bank.statement'
 
-    def unlink(self):
+    @api.ondelete(at_uninstall=True)
+    def _check_bank_statement(self):
         for statement in self.filtered(lambda s: s.company_id._is_accounting_unalterable() and s.journal_id.pos_payment_method_ids):
             raise UserError(_('You cannot modify anything on a bank statement (name: %s) that was created by point of sale operations.') % (statement.name,))
-        return super(AccountBankStatement, self).unlink()
 
 
 class AccountBankStatementLine(models.Model):
     _inherit = 'account.bank.statement.line'
 
-    def unlink(self):
+    @api.ondelete(at_uninstall=True)
+    def _check_bank_statement_line(self):
         for line in self.filtered(lambda s: s.company_id._is_accounting_unalterable() and s.journal_id.pos_payment_method_ids):
             raise UserError(_('You cannot modify anything on a bank statement line (name: %s) that was created by point of sale operations.') % (line.name,))
-        return super(AccountBankStatementLine, self).unlink()

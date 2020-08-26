@@ -11,12 +11,12 @@ class UoMCategory(models.Model):
 
     name = fields.Char('Unit of Measure Category', required=True, translate=True)
 
-    def unlink(self):
+    @api.ondelete(at_uninstall=False)
+    def _check_master_data(self):
         uom_categ_unit = self.env.ref('uom.product_uom_categ_unit')
         uom_categ_wtime = self.env.ref('uom.uom_categ_wtime')
         if any(categ.id in (uom_categ_unit + uom_categ_wtime).ids for categ in self):
             raise UserError(_("You cannot delete this UoM Category as it is used by the system."))
-        return super(UoMCategory, self).unlink()
 
 
 class UoM(models.Model):
@@ -106,12 +106,12 @@ class UoM(models.Model):
             values['factor'] = factor_inv and (1.0 / factor_inv) or 0.0
         return super(UoM, self).write(values)
 
-    def unlink(self):
+    @api.ondelete(at_uninstall=False)
+    def _check_master_data(self):
         uom_categ_unit = self.env.ref('uom.product_uom_categ_unit')
         uom_categ_wtime = self.env.ref('uom.uom_categ_wtime')
         if any(uom.category_id.id in (uom_categ_unit + uom_categ_wtime).ids and uom.uom_type == 'reference' for uom in self):
             raise UserError(_("You cannot delete this UoM as it is used by the system. You should rather archive it."))
-        return super(UoM, self).unlink()
 
     @api.model
     def name_create(self, name):

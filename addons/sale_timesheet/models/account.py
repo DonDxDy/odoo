@@ -137,7 +137,7 @@ class AccountAnalyticLine(models.Model):
         res = super(AccountAnalyticLine, self)._get_timesheets_to_merge()
         return res.filtered(lambda l: not l.timesheet_invoice_id or l.timesheet_invoice_id.state != 'posted')
 
-    def unlink(self):
+    @api.ondelete(at_uninstall=False)
+    def _check_invoiced_timesheets(self):
         if any(line.timesheet_invoice_id and line.timesheet_invoice_id.state == 'posted' for line in self):
             raise UserError(_('You cannot remove a timesheet that has already been invoiced.'))
-        return super(AccountAnalyticLine, self).unlink()

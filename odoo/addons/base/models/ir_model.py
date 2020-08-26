@@ -28,6 +28,8 @@ SAFE_EVAL_BASE = {
     'time': time,
 }
 
+# pylint: disable=raise-unlink-override
+
 
 def make_compute(text, deps):
     """ Return a compute function from its code body and dependencies. """

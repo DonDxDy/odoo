@@ -133,10 +133,10 @@ class MrpUnbuild(models.Model):
             vals['name'] = self.env['ir.sequence'].next_by_code('mrp.unbuild') or _('New')
         return super(MrpUnbuild, self).create(vals)
 
-    def unlink(self):
+    @api.ondelete(at_uninstall=False)
+    def _check_order_state(self):
         if 'done' in self.mapped('state'):
             raise UserError(_("You cannot delete an unbuild order if the state is 'Done'."))
-        return super(MrpUnbuild, self).unlink()
 
     def action_unbuild(self):
         self.ensure_one()
