@@ -21,6 +21,8 @@ class EventSponsor(models.Model):
     _rec_name = 'name'
     _order = 'sponsor_type_id, sequence'
 
+    active = fields.Boolean(default=True)
+
     # description
     subtitle = fields.Char('Slogan', help='Catchy marketing sentence for promote')
     is_exhibitor = fields.Boolean("Exhibitor's Chat")
