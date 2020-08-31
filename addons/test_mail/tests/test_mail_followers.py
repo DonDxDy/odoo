@@ -103,6 +103,21 @@ class BaseFollowersTest(common.BaseFunctionalTest):
         self.assertEqual(test_record.message_channel_ids, self.env['mail.channel'])
         self.assertEqual(test_record.message_follower_ids.subtype_ids, self.mt_mg_nodef | self.mt_al_nodef)
 
+    def test_followers_multiple_subscription_update(self):
+        test_record = self.test_record.sudo(self.user_employee)
+        test_record.message_subscribe(partner_ids=[self.user_employee.partner_id.id], subtype_ids=[self.mt_mg_def.id, self.mt_cl_def.id])
+        self.assertEqual(test_record.message_partner_ids, self.user_employee.partner_id)
+        follower = self.env['mail.followers'].search([
+            ('res_model', '=', 'mail.test.simple'),
+            ('res_id', '=', test_record.id),
+            ('partner_id', '=', self.user_employee.partner_id.id)])
+        self.assertEqual(follower, test_record.message_follower_ids)
+        self.assertEqual(follower.subtype_ids, self.mt_mg_def | self.mt_cl_def)
+
+        # remove one subtype `mt_mg_def` and set new subtype `mt_al_def`
+        test_record.message_subscribe(partner_ids=[self.user_employee.partner_id.id], subtype_ids=[self.mt_cl_def.id, self.mt_al_def.id])
+        self.assertEqual(follower.subtype_ids, self.mt_cl_def | self.mt_al_def)
+
     def test_followers_no_DID(self):
         """Test that a follower cannot suffer from dissociative identity disorder.
            It cannot be both a partner and a channel.
