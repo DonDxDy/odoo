@@ -6,7 +6,7 @@
     'version': '0.3',
     'depends': [
         'l10n_it',
-        'fetchmail',
+        'fetchmail', #TODO remove this
         'account_edi'
     ],
     'author': 'Odoo',
