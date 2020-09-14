@@ -25,6 +25,18 @@ odoo.define('calendar.CalendarController', function (require) {
             });
         },
 
+        _onDeleteRecord: function (ev) {
+            const event = _.find(this.model.data.data, e => e.id === ev.data.id && e.attendee_id === ev.data.event.attendee_id);
+            if (this.getSession().partner_id === event.attendee_id && this.getSession().partner_id === event.record.partner_id[0]) {
+                this._super(...arguments);
+            } else {
+                var self = this;
+                this.model.declineEvent(event.id).then(function () {
+                    self.reload();
+                });
+            }
+        },
+
         // TODO factorize duplicated code
         /**
          * @override

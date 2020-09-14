@@ -384,3 +384,12 @@ class Meeting(models.Model):
         super(Meeting, my_cancelled_records)._cancel_microsoft()
         attendees = (self - my_cancelled_records).attendee_ids.filtered(lambda a: a.partner_id == user.partner_id)
         attendees.state = 'declined'
+
+class Attendee(models.Model):
+    _name = 'calendar.attendee'
+    _inherit = ['calendar.attendee']
+
+    def write(self, vals):
+        super().write(vals)
+        if 'state' in vals:
+            self.event_id.write({'need_sync_m': True})
