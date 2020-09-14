@@ -84,18 +84,19 @@ odoo.define('payment.manage_form', require => {
                     method: 'write',
                     args: [[tokenId], {active: false}],
                 }).then(result => {
-                    if (result === true) { // Token successfully delete, remove it from the view
+                    if (result === true) { // Token successfully deleted, remove it from the view
                         const $tokenCard = this.$(
-                            `input[name="o_payment_radio"][data-payment-option-id="${tokenId}"]`
-                        ).closest('div');
-                        $tokenCard.siblings(`#o_payment_inline_form_${tokenId}`).remove();
+                            `input[name="o_payment_radio"][data-payment-option-id="${tokenId}"]` +
+                            `[data-payment-option-type="token"]`
+                        ).closest('div[name="o_payment_option_card"]');
+                        $tokenCard.siblings(`#o_payment_token_inline_form_${tokenId}`).remove();
                         $tokenCard.remove();
                         this._disableButton(false);
                     }
                 }).guardedCatch(error => {
                     this._displayError(
                         _t("Server Error"),
-                        _t("We are not able to delete your payment method at the moment."),
+                        _t("We are not able to delete your payment method."),
                         error.message.data.message
                     );
                 });
@@ -160,7 +161,7 @@ odoo.define('payment.manage_form', require => {
             ev.preventDefault();
 
             // Extract contextual values from the delete button
-            const linkedRadio = $(ev.target).siblings().find('input[type="radio"]')[0];
+            const linkedRadio = $(ev.target).siblings().find('input[name="o_payment_radio"]')[0];
             const tokenId = this._getPaymentOptionIdFromRadio(linkedRadio);
 
             // Delete the token
@@ -181,26 +182,26 @@ odoo.define('payment.manage_form', require => {
             ev.preventDefault();
 
             // Check that the user has selected a payment option
-            const $checkedRadios = this.$('input[type="radio"]:checked');
+            const $checkedRadios = this.$('input[name="o_payment_radio"]:checked');
             if (!this._ensureRadioIsChecked($checkedRadios)) {
                 return;
             }
             const checkedRadio = $checkedRadios[0];
 
             // Extract contextual values from the radio button
-            const paymentOptionId = this._getPaymentOptionIdFromRadio(checkedRadio);
             const provider = this._getProviderFromRadio(checkedRadio);
+            const paymentOptionId = this._getPaymentOptionIdFromRadio(checkedRadio);
             const flow = this._getPaymentFlowFromRadio(checkedRadio);
 
-            this._disableButton();
+            // Save the payment method
+            this._hideError(); // Don't keep the error displayed if the user is going through 3DS2
+            this._disableButton(true); // Disable until it is needed again
             if (flow !== 'token') { // Creation of a new token
                 this.txContext.tokenizationRequested = true;
-                this.txContext.isValidation = true;
-                this._processTx(paymentOptionId, provider, flow);
+                this._processPayment(provider, paymentOptionId, flow);
             } else if (this.txContext.allowTokenSelection) { // Assignation of a token to a record
                 this._assignToken(paymentOptionId);
             }
-            this._enableButton();
         },
 
         /**
