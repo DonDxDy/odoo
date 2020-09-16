@@ -86,6 +86,7 @@ class ResCompany(models.Model):
 
     invoice_is_email = fields.Boolean('Email by default', default=True)
     invoice_is_print = fields.Boolean('Print by default', default=True)
+    company_registry = fields.Char(compute='_compute_company_registry', store=True, readonly=False)
 
     #Fields of the setup step for opening move
     account_opening_move_id = fields.Many2one(string='Opening Journal Entry', comodel_name='account.move', help="The journal entry containing the initial balance of all this company's accounts.")
@@ -154,6 +155,17 @@ class ResCompany(models.Model):
             max_day = calendar.monthrange(year, int(rec.fiscalyear_last_month))[1]
             if rec.fiscalyear_last_day > max_day:
                 raise ValidationError(_("Invalid fiscal year last day"))
+
+    @api.depends('vat', 'country_id')
+    def _compute_company_registry(self):
+    # If a belgian company has a VAT number then it's company registry is it's VAT Number (without country code).
+        for company in self:
+            if company.country_id.code == 'BE' and company.vat:
+                ResPartner = self.env['res.partner']
+                vat_country, vat_number = ResPartner._split_vat(company.vat)
+                # set value only if VAT number is valid
+                if vat_country == 'be' and ResPartner.simple_vat_check(vat_country, vat_number):
+                    company.company_registry = vat_number
 
     @api.depends('country_id')
     def compute_account_tax_fiscal_country(self):
