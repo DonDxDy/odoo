@@ -1,57 +1,42 @@
 odoo.define('mail/static/src/models/country/country.js', function (require) {
 'use strict';
 
-const { registerNewModel } = require('mail/static/src/model/model_core.js');
-const { attr } = require('mail/static/src/model/model_field.js');
-const { clear } = require('mail/static/src/model/model_field_command.js');
+const {
+    'Feature/defineModel': defineModel,
+    'Feature/defineSlice': defineFeatureSlice,
+    'Field/attr': attr,
+    'Field/clear': clear,
+} = require('mail/static/src/model/utils.js');
 
-function factory(dependencies) {
-
-    class Country extends dependencies['mail.model'] {
-
-        //----------------------------------------------------------------------
-        // Private
-        //----------------------------------------------------------------------
-
-        /**
-         * @override
-         */
-        static _createRecordLocalId(data) {
-            return `${this.modelName}_${data.id}`;
-        }
-
-        /**
-         * @private
-         * @returns {string|undefined}
-         */
-        _computeFlagUrl() {
-            if (!this.code) {
-                return clear();
-            }
-            return `/base/static/img/country_flags/${this.code}.png`;
-        }
-
+const model = defineModel({
+    name: 'Country',
+    fields: {
+        $$$code: attr(),
+        $$$flagUrl: attr({
+            /**
+             * @param {Object} param0
+             * @param {Country} param0.record
+             * @returns {string|undefined}
+             */
+            compute({ record }) {
+                if (!record.$$$code(this)) {
+                    return clear();
+                }
+                return `/base/static/img/country_flags/${
+                    record.$$$code(this)
+                }.png`;
+            },
+        }),
+        $$$id: attr({
+            id: true,
+        }),
+        $$$name: attr(),
     }
+});
 
-    Country.fields = {
-        code: attr(),
-        flagUrl: attr({
-            compute: '_computeFlagUrl',
-            dependencies: [
-                'code',
-            ],
-        }),
-        id: attr({
-            required: true,
-        }),
-        name: attr(),
-    };
-
-    Country.modelName = 'mail.country';
-
-    return Country;
-}
-
-registerNewModel('mail.country', factory);
+return defineFeatureSlice(
+    'mail/static/src/models/country/country.js',
+    model,
+);
 
 });

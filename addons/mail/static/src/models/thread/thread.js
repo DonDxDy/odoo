@@ -1,22 +1,2398 @@
 odoo.define('mail/static/src/models/thread/thread.js', function (require) {
 'use strict';
 
-const { registerNewModel } = require('mail/static/src/model/model_core.js');
-const { attr, many2many, many2one, one2many, one2one } = require('mail/static/src/model/model_field.js');
-const { clear } = require('mail/static/src/model/model_field_command.js');
+const {
+    'Feature/defineActions': defineActions,
+    'Feature/defineModel': defineModel,
+    'Feature/defineSlice': defineFeatureSlice,
+    'Field/attr': attr,
+    'Field/clear': clear,
+    'Field/create': create,
+    'Field/insert': insert,
+    'Field/insertAndReplace': insertAndReplace,
+    'Field/link': link,
+    'Field/many2many': many2many,
+    'Field/many2one': many2one,
+    'Field/one2many': one2many,
+    'Field/one2one': one2one,
+    'Field/replace': replace,
+    'Field/unlink': unlink,
+    'Field/unlinkAll': unlinkAll,
+} = require('mail/static/src/model/utils.js');
 const throttle = require('mail/static/src/utils/throttle/throttle.js');
 const Timer = require('mail/static/src/utils/timer/timer.js');
-const mailUtils = require('mail.utils');
+const {
+    parseEmail,
+} = require('mail.utils');
 
-function factory(dependencies) {
+const actions = defineActions({
+    /**
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     * @param {string} [stringifiedDomain='[]']
+     * @returns {ThreadCache}
+     */
+    'Thread/cache'(
+        { env },
+        thread,
+        stringifiedDomain = '[]'
+    ) {
+        let cache = thread.$$$caches(this).find(cache =>
+            cache.$$$stringifiedDomain(this) === stringifiedDomain
+        );
+        if (!cache) {
+            cache = env.invoke('ThreadCache/create', {
+                $$$stringifiedDomain: stringifiedDomain,
+                $$$thread: link(thread),
+            });
+        }
+        return cache;
+    },
+    /**
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} [thread] the concerned thread
+     */
+    'Thread/computeLastCurrentPartnerMessageSeenByEveryone'(
+        { env },
+        thread = undefined
+    ) {
+        const threads = thread ? [thread] : env.invoke('Thread/all');
+        threads.map(localThread => {
+            env.invoke('Record/update', localThread, {
+                $$$lastCurrentPartnerMessageSeenByEveryone:
+                    env.invoke(
+                        'Thread/_computeLastCurrentPartnerMessageSeenByEveryone',
+                        localThread
+                    ),
+            });
+        });
+    },
+    /**
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Object} data
+     * @return {Object}
+     */
+    'Thread/convertData'({ env }, data) {
+        const data2 = {
+            $$$messagesAsServerChannel: [],
+        };
+        if ('model' in data) {
+            data2.$$$model = data.model;
+        }
+        if ('channel_type' in data) {
+            data2.$$$channelType = data.channel_type;
+            data2.$$$model = 'mail.channel';
+        }
+        if ('create_uid' in data) {
+            data2.$$$creator = insert({
+                $$$id: data.create_uid,
+            });
+        }
+        if ('custom_channel_name' in data) {
+            data2.$$$customChannelName = data.custom_channel_name;
+        }
+        if ('group_based_subscription' in data) {
+            data2.$$$isGroupBasedSubscription = data.group_based_subscription;
+        }
+        if ('id' in data) {
+            data2.$$$id = data.id;
+        }
+        if ('is_minimized' in data && 'state' in data) {
+            data2.$$$serverFoldState = data.is_minimized ? data.state : 'closed';
+        }
+        if ('is_moderator' in data) {
+            data2.$$$isModerator = data.is_moderator;
+        }
+        if ('is_pinned' in data) {
+            data2.$$$isServerPinned = data.is_pinned;
+        }
+        if ('last_message' in data && data.last_message) {
+            data2.$$$messagesAsServerChannel.push(
+                insert({
+                    $$$id: data.last_message.id,
+                })
+            );
+            data2.$$$serverLastMessageId = data.last_message.id;
+        }
+        if ('last_message_id' in data && data.last_message_id) {
+            data2.$$$messagesAsServerChannel.push(
+                insert({
+                    $$$id: data.last_message_id,
+                })
+            );
+            data2.$$$serverLastMessageId = data.last_message_id;
+        }
+        if ('mass_mailing' in data) {
+            data2.$$$isMassMailing = data.mass_mailing;
+        }
+        if ('moderation' in data) {
+            data2.$$$moderation = data.moderation;
+        }
+        if ('message_needaction_counter' in data) {
+            data2.$$$messageNeedactionCounter = data.message_needaction_counter;
+        }
+        if ('message_unread_counter' in data) {
+            data2.$$$serverMessageUnreadCounter = data.message_unread_counter;
+        }
+        if ('name' in data) {
+            data2.$$$name = data.name;
+        }
+        if ('public' in data) {
+            data2.$$$public = data.public;
+        }
+        if ('seen_message_id' in data) {
+            data2.$$$lastSeenByCurrentPartnerMessageId = data.seen_message_id || 0;
+        }
+        if ('uuid' in data) {
+            data2.$$$uuid = data.uuid;
+        }
 
-    class Thread extends dependencies['mail.model'] {
+        // relations
+        if ('members' in data) {
+            if (!data.members) {
+                data2.$$$members = unlinkAll();
+            } else {
+                data2.$$$members = insertAndReplace(
+                    data.members.map(memberData =>
+                        env.invoke('Partner/convertData', memberData)
+                    )
+                );
+            }
+        }
+        if ('seen_partners_info' in data) {
+            if (!data.seen_partners_info) {
+                data2.$$$partnerSeenInfos = unlinkAll();
+            } else {
+                /*
+                    * FIXME: not optimal to write on relation given the fact that the relation
+                    * will be (re)computed based on given fields.
+                    * (here channelId will compute partnerSeenInfo.thread))
+                    * task-2336946
+                    */
+                data2.$$$partnerSeenInfos = insertAndReplace(
+                    data.seen_partners_info.map(
+                        ({ fetched_message_id, partner_id, seen_message_id }) => {
+                            return {
+                                $$$channelId: data2.id,
+                                $$$lastFetchedMessage: fetched_message_id
+                                    ? insert({ $$$id: fetched_message_id })
+                                    : unlinkAll(),
+                                $$$lastSeenMessage: seen_message_id
+                                    ? insert({ $$$id: seen_message_id })
+                                    : unlinkAll(),
+                                $$$partnerId: partner_id,
+                            };
+                        }
+                    ),
+                );
+                if (data.id) {
+                    const messageIds = data.seen_partners_info.reduce(
+                        (currentSet, { fetched_message_id, seen_message_id }) => {
+                            if (fetched_message_id) {
+                                currentSet.add(fetched_message_id);
+                            }
+                            if (seen_message_id) {
+                                currentSet.add(seen_message_id);
+                            }
+                            return currentSet;
+                        },
+                        new Set()
+                    );
+                    if (messageIds.size > 0) {
+                        /*
+                            * FIXME: not optimal to write on relation given the fact that the relation
+                            * will be (re)computed based on given fields.
+                            * (here channelId will compute messageSeenIndicator.thread))
+                            * task-2336946
+                            */
+                        data2.$$$messageSeenIndicators = insert(
+                            [...messageIds].map(messageId => {
+                                return {
+                                    $$$channelId: data.id,
+                                    $$$messageId: messageId,
+                                };
+                            })
+                        );
+                    }
+                }
+            }
+        }
 
+        return data2;
+    },
+    /**
+     * Fetches suggested recipients.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/fetchAndUpdateSuggestedRecipients'({ env }, thread) {
+        if (thread.$$$isTemporary(this)) {
+            return;
+        }
+        return env.invoke(
+            'Thread/performRpcMailGetSuggestedRecipients',
+            {
+                model: thread.$$$model(this),
+                res_ids: [thread.$$$id(this)],
+            }
+        );
+    },
+    /**
+     * Fetch attachments linked to a record. Useful for populating the store
+     * with these attachments, which are used by attachment box in the chatter.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/fetchAttachments'({ env }, thread) {
+        const attachmentsData = await env.invoke(
+            'Record/doAsync',
+            thread,
+            () => env.services.rpc({
+                model: 'ir.attachment',
+                method: 'search_read',
+                domain: [
+                    ['res_id', '=', thread.$$$id(this)],
+                    ['res_model', '=', thread.$$$model(this)],
+                ],
+                fields: ['id', 'name', 'mimetype'],
+                orderBy: [{ name: 'id', asc: false }],
+            }, { shadow: true })
+        );
+        env.invoke('Record/update', thread, {
+            $$$originThreadAttachments: insertAndReplace(
+                attachmentsData.map(data =>
+                    env.invoke('Attachment/convertData', data)
+                )
+            ),
+        });
+        env.invoke('Record/update', thread, {
+            $$$areAttachmentsLoaded: true,
+        });
+    },
+    /**
+     * Add current user to provided thread's followers.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/follow'(
+        { env },
+        thread
+    ) {
+        await env.invoke(
+            'Record/doAsync',
+            thread,
+            () => env.services.rpc({
+                model: thread.$$$model(this),
+                method: 'message_subscribe',
+                args: [[thread.$$$id(this)]],
+                kwargs: {
+                    partner_ids: [env.messaging.$$$currentPartner(this).$$$id(this)],
+                },
+            })
+        );
+        env.invoke('Thread/refreshFollowers', thread);
+        env.invoke('Thread/fetchAndUpdateSuggestedRecipients', thread);
+    },
+    /**
+     * Load new messages on the main cache of this thread.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    'Thread/loadNewMessages'(
+        { env },
+        thread
+    ) {
+        env.invoke('ThreadCache/loadnewMessages',
+            thread.$$$mainCache(this)
+        );
+    },
+    /**
+     * Load the previews of the specified threads. Basically, it fetches the
+     * last messages, since they are used to display inline content of them.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread[]} threads
+     */
+    async 'Thread/loadPreviews'(
+        { env },
+        threads
+    ) {
+        const channelIds = threads.reduce((list, thread) => {
+            if (thread.$$$model() === 'mail.channel') {
+                return list.concat(thread.$$$id());
+            }
+            return list;
+        }, []);
+        if (channelIds.length === 0) {
+            return;
+        }
+        const channelPreviews = await env.services.rpc({
+            model: 'mail.channel',
+            method: 'channel_fetch_preview',
+            args: [channelIds],
+        }, { shadow: true });
+        env.invoke('Message/insert', channelPreviews.filter(p => p.last_message)
+            .map(channelPreview =>
+                env.invoke('Message/convertData', channelPreview.last_message)
+            )
+        );
+    },
+    /**
+     * Mark the specified conversation as fetched.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/markAsFetched'(
+        { env },
+        thread
+    ) {
+        await env.invoke(
+            'Record/doAsync',
+            thread,
+            () => env.services.rpc({
+                model: 'mail.channel',
+                method: 'channel_fetched',
+                args: [[thread.$$$id(this)]],
+            }, { shadow: true })
+        );
+    },
+    /**
+     * Mark the specified conversation as read/seen.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     * @param {Message} message the message to be considered as last seen
+     */
+    async 'Thread/markAsSeen'(
+        { env },
+        thread,
+        message
+    ) {
+        if (thread.$$$model(this) !== 'mail.channel') {
+            return;
+        }
+        if (
+            thread.$$$pendingSeenMessageId(this) &&
+            message.$$$id(this) <= thread.$$$pendingSeenMessageId(this)
+        ) {
+            return;
+        }
+        if (
+            thread.$$$lastSeenByCurrentPartnerMessageId(this) &&
+            message.$$$id(this) <= thread.$$$lastSeenByCurrentPartnerMessageId(this)
+        ) {
+            return;
+        }
+        env.invoke('Record/update', thread, {
+            $$$pendingSeenMessageId: message.$$$id(this),
+        });
+        return env.invoke('Thread/performRpcChannelSeen', {
+            ids: [thread.$$$id(this)],
+            lastMessageId: message.$$$id(this),
+        });
+    },
+    /**
+     * Mark all needaction messages of this thread as read.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/markNeedactionMessagesAsRead'(
+        { env },
+        thread
+    ) {
+        await env.invoke(
+            'Record/doAsync',
+            thread,
+            () => env.invoke('Message/markMessagesAsRead',
+                thread.$$$needactionMessages(this)
+            )
+        );
+    },
+    /**
+     * Notifies the server of new fold state. Useful for initial,
+     * cross-tab, and cross-device chat window state synchronization.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     * @param {string} state
+     */
+    async 'Thread/notifyFoldStateToServer'(
+        { env },
+        thread,
+        state
+    ) {
+        if (thread.$$$model(this) !== 'mail.channel') {
+            // Server sync of fold state is only supported for channels.
+            return;
+        }
+        if (!thread.$$$uuid(this)) {
+            return;
+        }
+        return env.invoke('Thread/performRpcChannelFold',
+            thread.$$$uuid(this),
+            state
+        );
+    },
+    /**
+     * Notify server to leave the current channel. Useful for cross-tab
+     * and cross-device chat window state synchronization.
+     *
+     * Only makes sense if isPendingPinned is set to the desired value.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/notifyPinStateToServer'(
+        { env },
+        thread
+    ) {
+        if (thread.$$$isPendingPinned(this)) {
+            await env.invoke('Thread/performRpcChannelPin', {
+                pinned: true,
+                uuid: thread.$$$uuid(this),
+            });
+        } else {
+            env.invoke('Thread/performRpcExecuteCommand', {
+                channelId: thread.$$$id(this),
+                command: 'leave',
+            });
+        }
+    },
+    /**
+     * Opens this thread either as form view, in discuss app, or as a chat
+     * window. The thread will be opened in an "active" matter, which will
+     * interrupt current user flow.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     * @param {Object} [param2]
+     * @param {boolean} [param2.expanded=false]
+     */
+    async 'Thread/open'(
+        { env },
+        thread,
+        { expanded = false } = {}
+    ) {
+        const discuss = env.messaging.$$$discuss(this);
+        // check if thread must be opened in form view
+        if (!['mail.box', 'mail.channel'].includes(thread.$$$model(this))) {
+            if (expanded || discuss.$$$isOpen(this)) {
+                // Close chat window because having the same thread opened
+                // both in chat window and as main document does not look
+                // good.
+                env.invoke('ChatWindowManager/closeThread',
+                    env.messaging.$$$chatWindowManager(this),
+                    thread,
+                );
+                return env.invoke('Messaging/openDocument', {
+                    id: thread.$$$id(this),
+                    model: thread.$$$model(this),
+                });
+            }
+        }
+        // check if thread must be opened in discuss
+        const device = env.messaging.$$$device(this);
+        if (
+            (
+                !device.$$$isMobile(this) &&
+                (discuss.$$$isOpen(this) || expanded)
+            ) ||
+            thread.$$$model(this) === 'mail.box'
+        ) {
+            env.invoke('Discuss/openThread', discuss, thread);
+        }
+        // thread must be opened in chat window
+        return env.invoke('ChatWindowManager/openThread',
+            env.messaging.$$$chatWindowManager(this),
+            thread,
+            {
+                makeActive: true,
+            }
+        );
+    },
+    /**
+     * Opens the most appropriate view that is a profile for this thread.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/openProfile'(
+        { env },
+        thread
+    ) {
+        env.invoke('Messaging/openDocument');
+        return env.invoke('Messaging/openDocument', {
+            id: thread.$$$id(this),
+            model: thread.$$$model(this),
+        });
+    },
+    /**
+     * Performs the `channel_fold` RPC on `mail.channel`.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {string} uuid
+     * @param {string} state
+     */
+    async 'Thread/performRpcChannelFold'(
+        { env },
+        uuid,
+        state
+    ) {
+        return env.services.rpc({
+            model: 'mail.channel',
+            method: 'channel_fold',
+            kwargs: {
+                state,
+                uuid,
+            }
+        }, { shadow: true });
+    },
+    /**
+     * Performs the `channel_info` RPC on `mail.channel`.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Object} param1
+     * @param {integer[]} param1.ids list of id of channels
+     * @returns {Thread[]}
+     */
+    async 'Thread/performRpcChannelInfo'(
+        { env },
+        { ids }
+    ) {
+        const channelInfos = await env.services.rpc({
+            model: 'mail.channel',
+            method: 'channel_info',
+            args: [ids],
+        }, { shadow: true });
+        const channels = env.invoke('Thread/insert',
+            channelInfos.map(channelInfo =>
+                env.invoke('Thread/convertData', channelInfo)
+            )
+        );
+        // manually force recompute of counter
+        env.invoke('Record/update',
+            env.messaging.$$$messagingMenu()
+        );
+        return channels;
+    },
+    /**
+     * Performs the `channel_seen` RPC on `mail.channel`.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Object} param1
+     * @param {integer[]} param1.ids list of id of channels
+     * @param {integer[]} param1.lastMessageId
+     */
+    async 'Thread/performRpcChannelSeen'(
+        { env },
+        {
+            ids,
+            lastMessageId,
+        }
+    ) {
+        return env.services.rpc({
+            model: 'mail.channel',
+            method: 'channel_seen',
+            args: [ids],
+            kwargs: {
+                last_message_id: lastMessageId,
+            },
+        }, { shadow: true });
+    },
+    /**
+     * Performs the `channel_pin` RPC on `mail.channel`.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Object} param1
+     * @param {boolean} [param1.pinned=false]
+     * @param {string} param1.uuid
+     */
+    async 'Thread/performRpcChannelPin'(
+        { env },
+        {
+            pinned = false,
+            uuid,
+        }
+    ) {
+        return env.services.rpc({
+            model: 'mail.channel',
+            method: 'channel_pin',
+            kwargs: {
+                uuid,
+                pinned,
+            },
+        }, { shadow: true });
+    },
+    /**
+     * Performs the `channel_create` RPC on `mail.channel`.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Object} param1
+     * @param {string} param1.name
+     * @param {string} [param1.privacy]
+     * @returns {Thread} the created channel
+     */
+    async 'Thread/performRpcCreateChannel'(
+        { env },
+        {
+            name,
+            privacy,
+        }
+    ) {
+        const device = env.messaging.$$$device();
+        const data = await env.services.rpc({
+            model: 'mail.channel',
+            method: 'channel_create',
+            args: [name, privacy],
+            kwargs: {
+                context: {
+                    ...env.session.user_content,
+                    // optimize the return value by avoiding useless queries
+                    // in non-mobile devices
+                    isMobile: device.$$$isMobile(),
+                },
+            },
+        });
+        return env.invoke('Thread/insert',
+            env.invoke('Thread/convertData', data)
+        );
+    },
+    /**
+     * Performs the `channel_get` RPC on `mail.channel`.
+     *
+     * `openChat` is preferable in business code because it will avoid the
+     * RPC if the chat already exists.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Object} param1
+     * @param {integer[]} param1.partnerIds
+     * @param {boolean} [param1.pinForCurrentPartner]
+     * @returns {Thread|undefined} the created or existing chat
+     */
+    async 'Thread/performRpcCreateChat'(
+        { env },
+        {
+            partnerIds,
+            pinForCurrentPartner,
+        }
+    ) {
+        const device = env.messaging.$$$device();
+        // TODO FIX: potential duplicate chat task-2276490
+        const data = await env.services.rpc({
+            model: 'mail.channel',
+            method: 'channel_get',
+            kwargs: {
+                context: {
+                    ...env.session.user_content,
+                    // optimize the return value by avoiding useless queries
+                    // in non-mobile devices
+                    isMobile: device.$$$isMobile(),
+                },
+                partners_to: partnerIds,
+                pin: pinForCurrentPartner,
+            },
+        });
+        if (!data) {
+            return;
+        }
+        return env.invoke('Thread/insert',
+            env.invoke('Thread/convertData', data)
+        );
+    },
+    /**
+     * Performs the `channel_join_and_get_info` RPC on `mail.channel`.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Object} param1
+     * @param {integer} param1.channelId
+     * @returns {Thread} the channel that was joined
+     */
+    async 'Thread/performRpcJoinChannel'(
+        { env },
+        { channelId }
+    ) {
+        const device = env.messaging.$$$device();
+        const data = await env.services.rpc({
+            model: 'mail.channel',
+            method: 'channel_join_and_get_info',
+            args: [[channelId]],
+            kwargs: {
+                context: {
+                    ...env.session.user_content,
+                    // optimize the return value by avoiding useless queries
+                    // in non-mobile devices
+                    isMobile: device.$$$isMobile(),
+                },
+            },
+        });
+        return env.invoke('Thread/insert',
+            env.invoke('Thread/convertData', data)
+        );
+    },
+    /**
+     * Performs the `execute_command` RPC on `mail.channel`.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Object} param1
+     * @param {integer} param1.channelId
+     * @param {string} param1.command
+     * @param {Object} [param1.postData={}]
+     */
+    async 'Thread/performRpcExecuteCommand'(
+        { env },
+        {
+            channelId,
+            command,
+            postData = {},
+        }
+    ) {
+        return env.services.rpc({
+            model: 'mail.channel',
+            method: 'execute_command',
+            args: [[channelId]],
+            kwargs: {
+                command,
+                ...postData,
+            },
+        });
+    },
+    /**
+     * Performs RPC on the route `/mail/get_suggested_recipients`.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Object} param1
+     * @param {string} param1.model
+     * @param {integer[]} param1.res_ids
+     */
+    async 'Thread/performRpcMailGetSuggestedRecipients'(
+        { env },
+        {
+            model,
+            res_ids,
+        }
+    ) {
+        const data = await env.services.rpc({
+            route: '/mail/get_suggested_recipients',
+            params: {
+                model,
+                res_ids,
+            },
+        }, { shadow: true });
+        for (const id in data) {
+            const recipientInfoList = data[id].map(recipientInfoData => {
+                const [partner_id, emailInfo, reason] = recipientInfoData;
+                const [name, email] = emailInfo && parseEmail(emailInfo);
+                return {
+                    $$$email: email,
+                    $$$name: name,
+                    $$$partner: partner_id
+                        ? insert({
+                            $$$id: partner_id,
+                        })
+                        : unlink(),
+                    $$$reason: reason,
+                };
+            });
+            env.invoke('Thread/insert', {
+                $$$id: parseInt(id),
+                $$$model: model,
+                $$$suggestedRecipientInfoList: insertAndReplace(recipientInfoList),
+            });
+        }
+    },
+    /**
+     * Performs the `message_post` RPC on given threadModel.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Object} param1
+     * @param {Object} param1.postData
+     * @param {integer} param1.threadId
+     * @param {string} param1.threadModel
+     * @return {integer} the posted message id
+     */
+    async 'Thread/performRpcMessagePost'(
+        { env },
+        {
+            postData,
+            threadId,
+            threadModel,
+        }
+    ) {
+        return env.services.rpc({
+            model: threadModel,
+            method: 'message_post',
+            args: [threadId],
+            kwargs: postData,
+        });
+    },
+    /**
+     * Pin this thread and notify server of the change.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/pin'(
+        { env },
+        thread
+    ) {
+        env.invoke('Record/update', thread, {
+            $$$isPendingPinned: true,
+        });
+        await env.invoke('Thread/notifyPinStateToServer', thread);
+    },
+    /**
+     * Open a dialog to add channels as followers.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    'Thread/promptAddChannelFollower'(
+        { env },
+        thread
+    ) {
+        env.invoke('Thread/_promptAddFollower',
+            thread,
+            { mail_invite_follower_channel_only: true }
+        );
+    },
+    /**
+     * Open a dialog to add partners as followers.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    'Thread/promptAddPartnerFollower'(
+        { env },
+        thread
+    ) {
+        env.invoke('Thread/_promptAddFollower',
+            thread,
+            { mail_invite_follower_channel_only: false }
+        );
+    },
+    /**
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/refresh'(
+        { env },
+        thread
+    ) {
+        if (thread.$$$isTemporary(this)) {
+            return;
+        }
+        env.invoke('Thread/loadNewMessages', thread);
+        env.invoke('Record/update', thread, {
+            $$$isLoadingAttachments: true,
+        });
+        await env.invoke(
+            'Record/doAsync',
+            thread,
+            () => env.invoke('Thread/fetchAttachments', thread)
+        );
+        env.invoke('Record/update', thread, {
+            $$$isLoadingAttachments: false,
+        });
+    },
+    /**
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/refreshActivities'(
+        { env },
+        thread
+    ) {
+        if (!thread.$$$hasActivities(this)) {
+            return;
+        }
+        if (thread.$$$isTemporary(this)) {
+            return;
+        }
+        // A bit "extreme", may be improved
+        const [{ activity_ids: newActivityIds }] = await env.invoke(
+            'Record/doAsync',
+            thread,
+            () => env.services.rpc({
+                model: thread.$$$model(this),
+                method: 'read',
+                args: [
+                    thread.$$$id(this),
+                    ['activity_ids']
+                ],
+            }, { shadow: true })
+        );
+        const activitiesData = await env.invoke(
+            'Record/doAsync',
+            thread,
+            () => env.services.rpc({
+                model: 'mail.activity',
+                method: 'activity_format',
+                args: [newActivityIds]
+            }, { shadow: true })
+        );
+        const activities = env.invoke('Activity/insert',
+            activitiesData.map(
+                activityData => env.invoke(
+                    'Activity/convertData',
+                    activityData
+                )
+            )
+        );
+        env.invoke('Record/update', thread, {
+            $$$activities: replace(activities),
+        });
+    },
+    /**
+     * Refresh the typing status of the current partner.
+     *
+     * @param {Object} _
+     * @param {Thread} thread
+     */
+    'Thread/refreshCurrentPartnerIsTyping'(
+        _,
+        thread
+    ) {
+        thread._currentPartnerInactiveTypingTimer.reset();
+    },
+    /**
+     * Refresh followers information from server.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/refreshFollowers'(
+        { env },
+        thread
+    ) {
+        if (thread.$$$isTemporary(this)) {
+            env.invoke('Record/update', thread, {
+                $$$followers: unlinkAll(),
+            });
+            return;
+        }
+        const { followers } = await env.invoke(
+            'Record/doAsync',
+            thread,
+            () => env.services.rpc({
+                route: '/mail/read_followers',
+                params: {
+                    res_id: thread.$$$id(this),
+                    res_model: thread.$$$model(this),
+                },
+            }, { shadow: true })
+        );
+        env.invoke('Record/update', thread, {
+            $$$areFollowersLoaded: true,
+        });
+        if (followers.length > 0) {
+            env.invoke('Record/update', thread, {
+                $$$followers: insertAndReplace(
+                    followers.map(data =>
+                        env.invoke('Follower/convertData', data)
+                    )
+                ),
+            });
+        } else {
+            env.invoke('Record/update', thread, {
+                $$$followers: unlinkAll(),
+            });
+        }
+    },
+    /**
+     * Called to refresh a registered other member partner that is typing
+     * something.
+     *
+     * @param {Object} _
+     * @param {Thread} thread
+     * @param {Partner} partner
+     */
+    'Thread/refreshOtherMemberTypingMember'(
+        _,
+        thread,
+        partner
+    ) {
+        thread._otherMembersLongTypingTimers.get(partner).reset();
+    },
+    /**
+     * Called when current partner is inserting some input in composer.
+     * Useful to notify current partner is currently typing something in the
+     * composer of this thread to all other members.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/registerCurrentPartnerIsTyping'(
+        { env },
+        thread
+    ) {
+        // Handling of typing timers.
+        thread._currentPartnerInactiveTypingTimer.start();
+        thread._currentPartnerLongTypingTimer.start();
+        // Manage typing member relation.
+        const currentPartner = env.messaging.$$$currentPartner(this);
+        const newOrderedTypingMemberLocalIds = thread.$$$orderedTypingMemberLocalIds(this)
+            .filter(localId => localId !== currentPartner.localId);
+        newOrderedTypingMemberLocalIds.push(currentPartner.localId);
+        env.invoke('Record/update', thread, {
+            $$$orderedTypingMemberLocalIds: newOrderedTypingMemberLocalIds,
+            $$$typingMembers: link(currentPartner),
+        });
+        // Notify typing status to other members.
+        await thread._throttleNotifyCurrentPartnerTypingStatus(
+            { isTyping: true }
+        );
+    },
+    /**
+     * Called to register a new other member partner that is typing
+     * something.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     * @param {Partner} partner
+     */
+    'Thread/registerOtherMemberTypingMember'(
+        { env },
+        thread,
+        partner
+    ) {
+        const timer = new Timer(
+            env,
+            () => env.invoke(
+                'Record/doAsync',
+                thread,
+                () => env.invoke(
+                    'Thread/_onOtherMemberLongTypingTimeout',
+                    thread,
+                    partner
+                )
+            ),
+            60 * 1000
+        );
+        thread._otherMembersLongTypingTimers.set(partner, timer);
+        timer.start();
+        const newOrderedTypingMemberLocalIds = thread.$$$orderedTypingMemberLocalIds(this)
+            .filter(localId => localId !== partner.localId);
+        newOrderedTypingMemberLocalIds.push(partner.localId);
+        env.invoke('Record/update', thread, {
+            $$$orderedTypingMemberLocalIds: newOrderedTypingMemberLocalIds,
+            $$$typingMembers: link(partner),
+        });
+    },
+    /**
+     * Rename the given thread with provided new name.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     * @param {string} newName
+     */
+    async 'Thread/rename'(
+        { env },
+        thread,
+        newName
+    ) {
+        if (thread.$$$channelType(this) === 'chat') {
+            await env.invoke(
+                'Record/doAsync',
+                thread,
+                () => env.services.rpc({
+                    model: 'mail.channel',
+                    method: 'channel_set_custom_name',
+                    args: [thread.$$$id(this)],
+                    kwargs: {
+                        name: newName,
+                    },
+                })
+            );
+        }
+        env.invoke('Record/update', thread, {
+            $$$customChannelName: newName,
+        });
+    },
+    /**
+     * Unfollow current partner from this thread.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/unfollow'(
+        { env },
+        thread
+    ) {
+        const currentPartnerFollower = thread.$$$followers(this).find(
+            follower => (
+                follower.$$$partner(this) ===
+                env.messaging.$$$currentPartner(this)
+            )
+        );
+        await env.invoke(
+            'Record/doAsync',
+            thread,
+            () => env.invoke('Follower/remove', currentPartnerFollower)
+        );
+    },
+    /**
+     * Unpin this thread and notify server of the change.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/unpin'(
+        { env },
+        thread
+    ) {
+        env.invoke('Record/update', thread, {
+            $$$isPendingPinned: false,
+        });
+        await env.invoke('Thread/notifyPinStateToServer', thread);
+    },
+    /**
+     * Called when current partner has explicitly stopped inserting some
+     * input in composer. Useful to notify current partner has currently
+     * stopped typing something in the composer of this thread to all other
+     * members.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     * @param {Object} [param2={}]
+     * @param {boolean} [param2.immediateNotify=false] if set, is typing
+     *   status of current partner is immediately notified and doesn't
+     *   consume throttling at all.
+     */
+    async 'Thread/unregisterCurrentPartnerIsTyping'(
+        { env },
+        thread,
+        { immediateNotify = false } = {}
+    ) {
+        // Handling of typing timers.
+        thread._currentPartnerInactiveTypingTimer.clear();
+        thread._currentPartnerLongTypingTimer.clear();
+        // Manage typing member relation.
+        const currentPartner = env.messaging.$$$currentPartner(this);
+        const newOrderedTypingMemberLocalIds = thread.$$$orderedTypingMemberLocalIds(this)
+            .filter(localId => localId !== currentPartner.localId);
+        env.invoke('Record/update', thread, {
+            $$$orderedTypingMemberLocalIds: newOrderedTypingMemberLocalIds,
+            $$$typingMembers: unlink(currentPartner),
+        });
+        // Notify typing status to other members.
+        if (immediateNotify) {
+            thread._throttleNotifyCurrentPartnerTypingStatus.clear();
+        }
+        await env.invoke(
+            'Record/doAsync',
+            thread,
+            () => thread._throttleNotifyCurrentPartnerTypingStatus(
+                { isTyping: false }
+            )
+        );
+    },
+    /**
+     * Called to unregister an other member partner that is no longer typing
+     * something.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     * @param {Partner} partner
+     */
+    'Thread/unregisterOtherMemberTypingMember'(
+        { env },
+        thread,
+        partner
+    ) {
+        thread._otherMembersLongTypingTimers.get(partner).clear();
+        thread._otherMembersLongTypingTimers.delete(partner);
+        const newOrderedTypingMemberLocalIds = thread.$$$orderedTypingMemberLocalIds(this)
+            .filter(localId => localId !== partner.localId);
+        env.invoke('Record/update', thread, {
+            $$$orderedTypingMemberLocalIds: newOrderedTypingMemberLocalIds,
+            $$$typingMembers: unlink(partner),
+        });
+    },
+    /**
+     * Unsubscribe current user from provided channel.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    'Thread/unsubscribe'(
+        { env },
+        thread
+    ) {
+        env.invoke('ChatWindowManager/closeThread',
+            env.messaging.$$$chatWindowManager(this),
+            thread
+        );
+        env.invoke('Thread/unpin', thread);
+    },
+    /**
+     * @private
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     * @param {Object} param2
+     * @param {boolean} param2.isTyping
+     */
+    async 'Thread/_notifyCurrentPartnerTypingStatus'(
+        { env },
+        thread,
+        { isTyping }
+    ) {
+        if (
+            thread._forceNotifyNextCurrentPartnerTypingStatus ||
+            isTyping !== thread._currentPartnerLastNotifiedIsTyping
+        ) {
+            if (thread.$$$model(this) === 'mail.channel') {
+                await env.invoke(
+                    'Record/doAsync',
+                    thread,
+                    () => env.services.rpc({
+                        model: 'mail.channel',
+                        method: 'notify_typing',
+                        args: [thread.$$$id(this)],
+                        kwargs: { is_typing: isTyping },
+                    }, { shadow: true })
+                );
+            }
+            if (isTyping && thread._currentPartnerLongTypingTimer.isRunning) {
+                thread._currentPartnerLongTypingTimer.reset();
+            }
+        }
+        thread._forceNotifyNextCurrentPartnerTypingStatus = false;
+        thread._currentPartnerLastNotifiedIsTyping = isTyping;
+    },
+    /**
+     * @private
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/_onCurrentPartnerInactiveTypingTimeout'(
+        { env },
+        thread
+    ) {
+        await env.invoke(
+            'Record/doAsync',
+            thread,
+            () => env.invoke(
+                'Thread/unregisterCurrentPartnerIsTyping',
+                thread
+            )
+        );
+    },
+    /**
+     * Called when current partner has been typing for a very long time.
+     * Immediately notify other members that he/she is still typing.
+     *
+     * @private
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     */
+    async 'Thread/_onCurrentPartnerLongTypingTimeout'(
+        { env },
+        thread
+    ) {
+        thread._forceNotifyNextCurrentPartnerTypingStatus = true;
+        thread._throttleNotifyCurrentPartnerTypingStatus.clear();
+        await env.invoke(
+            'Record/doAsync',
+            thread,
+            () => thread._throttleNotifyCurrentPartnerTypingStatus(
+                { isTyping: true }
+            )
+        );
+    },
+    /**
+     * @private
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     * @param {Partner} partner
+     */
+    async 'Thread/_onOtherMemberLongTypingTimeout'(
+        { env },
+        thread,
+        partner
+    ) {
+        if (!thread.$$$typingMembers(this).includes(partner)) {
+            thread._otherMembersLongTypingTimers.delete(partner);
+            return;
+        }
+        env.invoke(
+            'Thread/unregisterOtherMemberTypingMember',
+            thread,
+            partner
+        );
+    },
+    /**
+     * @private
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Thread} thread
+     * @param {Object} [param2={}]
+     * @param {boolean} [param2.mail_invite_follower_channel_only=false]
+     */
+    'Thread/_promptAddFollower'(
+        { env },
+        thread,
+        { mail_invite_follower_channel_only = false } = {}
+    ) {
+        const action = {
+            type: 'ir.actions.act_window',
+            res_model: 'mail.wizard.invite',
+            view_mode: 'form',
+            views: [[false, 'form']],
+            name: env._t("Invite Follower"),
+            target: 'new',
+            context: {
+                default_res_model: thread.$$$model(this),
+                default_res_id: thread.$$$id(this),
+                mail_invite_follower_channel_only,
+            },
+        };
+        env.bus.trigger('do-action', {
+            action,
+            options: {
+                on_close: async () => {
+                    await env.invoke(
+                        'Record/doAsync',
+                        thread,
+                        () => env.invoke('Thread/refreshFollowers', thread)
+                    );
+                    env.bus.trigger('Thread:promptAddFollower-closed');
+                },
+            },
+        });
+    },
+});
+
+const model = defineModel({
+    name: 'Thread',
+    fields: {
         /**
-         * @override
+         * Determines the `Activity` that belong to `this`, assuming `this`
+         * has activities (@see hasActivities).
          */
-        _willCreate() {
-            const res = super._willCreate(...arguments);
+        $$$activities: one2many('Activity', {
+            inverse: '$$$thread',
+        }),
+        /**
+         * Serves as compute dependency.
+         */
+        $$$activitiesState: attr({
+            related: '$$$activities.$$$state',
+        }),
+        $$$allAttachments: many2many('Attachment', {
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {Attachment[]}
+             */
+            compute({ record }) {
+                const allAttachments =
+                    [
+                        ...new Set(
+                            record.$$$originThreadAttachments(this).concat(
+                                record.$$$attachments(this)
+                            )
+                        )
+                    ]
+                    .sort((a1, a2) => {
+                        // "uploading" before "uploaded" attachments.
+                        if (!a1.$$$isTemporary(this) && a2.$$$isTemporary(this)) {
+                            return 1;
+                        }
+                        if (a1.$$$isTemporary(this) && !a2.$$$isTemporary(this)) {
+                            return -1;
+                        }
+                        // "most-recent" before "oldest" attachments.
+                        return Math.abs(a2.$$$id(this)) - Math.abs(a1.$$$id(this));
+                    });
+                return replace(allAttachments);
+            },
+        }),
+        $$$areAttachmentsLoaded: attr({
+            default: false,
+        }),
+        /**
+         * States whether followers have been loaded at least once for this
+         * thread.
+         */
+        $$$areFollowersLoaded: attr({
+            default: false,
+        }),
+        $$$attachments: many2many('Attachment', {
+            inverse: '$$$threads',
+        }),
+        $$$caches: one2many('ThreadCache', {
+            inverse: '$$$thread',
+            isCausal: true,
+        }),
+        $$$channelType: attr(),
+        /**
+         * States the `ChatWindow` related to `this`. Serves as compute
+         * dependency. It is computed from the inverse relation and it should
+         * otherwise be considered read-only.
+         */
+        $$$chatWindow: one2one('ChatWindow', {
+            inverse: '$$$thread',
+        }),
+        /**
+         * Serves as compute dependency.
+         */
+        $$$chatWindowIsFolded: attr({
+            related: '$$$chatWindow.$$$isFolded',
+        }),
+        $$$composer: one2one('Composer', {
+            default: create(),
+            inverse: '$$$thread',
+            isCausal: true,
+            readonly: true,
+        }),
+        $$$correspondent: many2one('Partner', {
+            /**
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @param {Thread} param0.record
+             * @returns {Partner}
+             */
+            compute({ env, record }) {
+                if (record.$$$channelType(this) === 'channel') {
+                    return unlink();
+                }
+                const correspondents = record.$$$members(this).filter(partner =>
+                    partner !== env.messaging.$$$currentPartner(this)
+                );
+                if (correspondents.length === 1) {
+                    // 2 members chat
+                    return link(correspondents[0]);
+                }
+                if (record.$$$members(this).length === 1) {
+                    // chat with oneself
+                    return link(record.$$$members(this)[0]);
+                }
+                return unlink();
+            },
+            inverse: '$$$correspondentThreads',
+        }),
+        $$$correspondentNameOrDisplayName: attr({
+            related: '$$$correspondent.$$$nameOrDisplayName',
+        }),
+        $$$counter: attr({
+            default: 0,
+        }),
+        $$$creator: many2one('User'),
+        $$$customChannelName: attr(),
+        $$$displayName: attr({
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {string}
+             */
+            compute({ record }) {
+                if (
+                    record.$$$channelType(this) === 'chat' &&
+                    record.$$$correspondent(this)
+                ) {
+                    return (
+                        record.$$$customChannelName(this) ||
+                        record.$$$correspondent(this).$$$nameOrDisplayName(this)
+                    );
+                }
+                return record.$$$name(this);
+            },
+        }),
+        $$$followersPartner: many2many('Partner', {
+            related: '$$$followers.$$$partner',
+        }),
+        $$$followers: one2many('Follower', {
+            inverse: '$$$followedThread',
+        }),
+        /**
+         * States the `Activity` that belongs to `this` and that are
+         * planned in the future (due later than today).
+         */
+        $$$futureActivities: one2many('Activity', {
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {Activity[]}
+             */
+            compute({ record }) {
+                return replace(
+                    record.$$$activities(this).filter(
+                        activity => activity.$$$state(this) === 'planned'
+                    )
+                );
+            },
+        }),
+        /**
+         * States whether `this` has activities (`mail.activity.mixin` server side).
+         */
+        $$$hasActivities: attr({
+            default: false,
+        }),
+        /**
+         * Determine whether this thread has the seen indicators (V and VV)
+         * enabled or not.
+         */
+        $$$hasSeenIndicators: attr({
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {boolean}
+             */
+            compute({ record }) {
+                if (record.$$$model(this) !== 'mail.channel') {
+                    return false;
+                }
+                if (record.$$$isMassMailing(this)) {
+                    return false;
+                }
+                return ['chat', 'livechat'].includes(record.$$$channelType(this));
+            },
+            default: false,
+        }),
+        $$$id: attr({
+            id: true,
+        }),
+        /**
+         * States whether this thread is a `mail.channel` qualified as chat.
+         *
+         * Useful to list chat channels, like in messaging menu with the filter
+         * 'chat'.
+         */
+        $$$isChatChannel: attr({
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {boolean}
+             */
+            compute({ record }) {
+                return record.$$$channelType(this) === 'chat';
+            },
+            default: false,
+        }),
+        $$$isCurrentPartnerFollowing: attr({
+            /**
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @param {Thread} param0.record
+             * @returns {boolean}
+             */
+            compute({ env, record }) {
+                return record.$$$followers(this).some(
+                    follower => (
+                        follower.$$$partner(this) &&
+                        (
+                            follower.$$$partner(this) ===
+                            env.messaging.$$$currentPartner(this)
+                        )
+                    )
+                );
+            },
+            default: false,
+        }),
+        $$$isGroupBasedSubscription: attr({
+            default: false,
+        }),
+        /**
+         * States whether `this` is currently loading attachments.
+         */
+        $$$isLoadingAttachments: attr({
+            default: false,
+        }),
+        $$$isMassMailing: attr({
+            default: false,
+        }),
+        $$$isModeratedByCurrentPartner: attr({
+            /**
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @param {Thread} param0.record
+             * @returns {boolean}
+             */
+            compute({ env, record }) {
+                if (!record.$$$messaging(this)) {
+                    return false;
+                }
+                if (!record.$$$messaging(this).$$$currentPartner(this)) {
+                    return false;
+                }
+                return record.$$$moderators(this).includes(
+                    env.messaging.$$$currentPartner(this)
+                );
+            },
+        }),
+        /**
+         * Determine if there is a pending pin state change, which is a change
+         * of pin state requested by the client but not yet confirmed by the
+         * server.
+         *
+         * This field can be updated to immediately change the pin state on the
+         * interface and to notify the server of the new state.
+         */
+        $$$isPendingPinned: attr(),
+        /**
+         * Boolean that determines whether this thread is pinned
+         * in discuss and present in the messaging menu.
+         */
+        $$$isPinned: attr({
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {boolean}
+             */
+            compute({ record }) {
+                return (
+                    record.$$$isPendingPinned(this) !== undefined
+                        ? record.$$$isPendingPinned(this)
+                        : record.$$$isServerPinned(this)
+                );
+            },
+        }),
+        /**
+         * Determine the last pin state known by the server, which is the pin
+         * state displayed after initialization or when the last pending
+         * pin state change was confirmed by the server.
+         *
+         * This field should be considered read only in most situations. Only
+         * the code handling pin state change from the server should typically
+         * update it.
+         */
+        $$$isServerPinned: attr({
+            default: false,
+        }),
+        $$$isTemporary: attr({
+            default: false,
+        }),
+        $$$isModerator: attr({
+            default: false,
+        }),
+        $$$lastCurrentPartnerMessageSeenByEveryone: many2one('Message', {
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {Message}
+             */
+            compute({ record }) {
+                const otherPartnerSeenInfos =
+                    record.$$$partnerSeenInfos(this).filter(
+                        partnerSeenInfo => (
+                            partnerSeenInfo.$$$partner(this) !==
+                            record.$$$messagingCurrentPartner(this)
+                        )
+                    );
+                if (otherPartnerSeenInfos.length === 0) {
+                    return unlinkAll();
+                }
+
+                const otherPartnersLastSeenMessageIds =
+                    otherPartnerSeenInfos.map(
+                        partnerSeenInfo => (
+                            partnerSeenInfo.$$$lastSeenMessage(this)
+                            ? partnerSeenInfo.$$$lastSeenMessage(this).$$$id(this)
+                            : 0
+                        )
+                    );
+                if (otherPartnersLastSeenMessageIds.length === 0) {
+                    return unlinkAll();
+                }
+                const lastMessageSeenByAllId = Math.min(
+                    ...otherPartnersLastSeenMessageIds
+                );
+                const currentPartnerOrderedSeenMessages =
+                    record.$$$orderedNonTransientMessages(this).filter(
+                        message => (
+                            (
+                                message.$$$author(this) ===
+                                record.$$$messagingCurrentPartner(this)
+                            ) &&
+                            message.$$$id(this) <= lastMessageSeenByAllId
+                        )
+                    );
+
+                if (
+                    !currentPartnerOrderedSeenMessages ||
+                    currentPartnerOrderedSeenMessages.length === 0
+                ) {
+                    return unlinkAll();
+                }
+                return link(currentPartnerOrderedSeenMessages.slice().pop());
+            },
+        }),
+        /**
+         * Last message of the thread, could be a transient one.
+         */
+        $$$lastMessage: many2one('Message', {
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {Message|undefined}
+             */
+            compute({ record }) {
+                const {
+                    length: l,
+                    [l - 1]: lastMessage,
+                } = record.$$$orderedMessages(this);
+                if (lastMessage) {
+                    return link(lastMessage);
+                }
+                return unlink();
+            },
+        }),
+        $$$lastNeedactionMessage: many2one('Message', {
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {Message|undefined}
+             */
+            compute({ record }) {
+                const orderedNeedactionMessages = record.$$$needactionMessages(this).sort(
+                    (m1, m2) => m1.$$$id(this) < m2.$$$id(this) ? -1 : 1
+                );
+                const {
+                    length: l,
+                    [l - 1]: lastNeedactionMessage,
+                } = orderedNeedactionMessages;
+                if (lastNeedactionMessage) {
+                    return link(lastNeedactionMessage);
+                }
+                return unlink();
+            },
+        }),
+        /**
+         * Last non-transient message.
+         */
+        $$$lastNonTransientMessage: many2one('Message', {
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {Message|undefined}
+             */
+            compute({ record }) {
+                const {
+                    length: l,
+                    [l - 1]: lastMessage,
+                } = record.$$$orderedNonTransientMessages(this);
+                if (lastMessage) {
+                    return link(lastMessage);
+                }
+                return unlink();
+            },
+        }),
+        /**
+         * Last seen message id of the channel by current partner.
+         *
+         * If there is a pending seen message id change, it is immediately applied
+         * on the interface to avoid a feeling of unresponsiveness. Otherwise the
+         * last known message id of the server is used.
+         *
+         * Also, it needs to be kept as an id because it's considered like a "date" and could stay
+         * even if corresponding message is deleted. It is basically used to know which
+         * messages are before or after it.
+         */
+        $$$lastSeenByCurrentPartnerMessageId: attr({
+            /**
+             * Adjusts the last seen message received from the server to consider
+             * the following messages also as read if they are either transient
+             * messages or messages from the current partner.
+             *
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @param {Thread} param0.record
+             * @returns {integer}
+             */
+            compute({ env, record }) {
+                const firstMessage = record.$$$orderedMessages(this)[0];
+                if (
+                    firstMessage &&
+                    record.$$$lastSeenByCurrentPartnerMessageId(this) &&
+                    record.$$$lastSeenByCurrentPartnerMessageId(this) < firstMessage.$$$id(this)
+                ) {
+                    // no deduction can be made if there is a gap
+                    return record.$$$lastSeenByCurrentPartnerMessageId(this);
+                }
+                let lastSeenByCurrentPartnerMessageId = record.$$$lastSeenByCurrentPartnerMessageId(this);
+                for (const message of record.$$$orderedMessages(this)) {
+                    if (message.$$$id(this) <= record.$$$lastSeenByCurrentPartnerMessageId(this)) {
+                        continue;
+                    }
+                    if (
+                        message.author === env.messaging.$$$currentPartner(this) ||
+                        message.$$$isTransient(this)
+                    ) {
+                        lastSeenByCurrentPartnerMessageId = message.$$$id(this);
+                        continue;
+                    }
+                    return lastSeenByCurrentPartnerMessageId;
+                }
+                return lastSeenByCurrentPartnerMessageId;
+            },
+            default: 0,
+        }),
+        /**
+         * Local value of message unread counter, that means it is based on initial server value and
+         * updated with interface updates.
+         */
+        $$$localMessageUnreadCounter: attr({
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {integer}
+             */
+            compute({ record }) {
+                // By default trust the server up to the last message it used
+                // because it's not possible to do better.
+                let baseCounter = record.$$$serverMessageUnreadCounter(this);
+                let countFromId = record.$$$serverLastMessageId(this);
+                // But if the client knows the last seen message that the server
+                // returned (and by assumption all the messages that come after),
+                // the counter can be computed fully locally, ignoring potentially
+                // obsolete values from the server.
+                const firstMessage = record.$$$orderedMessages(this)[0];
+                if (
+                    firstMessage &&
+                    record.$$$lastSeenByCurrentPartnerMessageId(this) &&
+                    record.$$$lastSeenByCurrentPartnerMessageId(this) >= firstMessage.$$$id(this)
+                ) {
+                    baseCounter = 0;
+                    countFromId = this.lastSeenByCurrentPartnerMessageId;
+                }
+                // Include all the messages that are known locally but the server
+                // didn't take into account.
+                return record.$$$orderedMessages(this).reduce((total, message) => {
+                    if (message.$$$id(this) <= countFromId) {
+                        return total;
+                    }
+                    return total + 1;
+                }, baseCounter);
+            },
+        }),
+        $$$mainCache: one2one('ThreadCache', {
+            /**
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @param {Thread} param0.record
+             * @returns {ThreadCache}
+             */
+            compute({ env, record }) {
+                return link(
+                    env.invoke('Thread/cache', record)
+                );
+            },
+        }),
+        $$$members: many2many('Partner', {
+            inverse: '$$$memberThreads',
+        }),
+        /**
+         * Determines the message before which the "new message" separator must
+         * be positioned, if any.
+         */
+        $$$messageAfterNewMessageSeparator: many2one('Message', {
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {Message|undefined}
+             */
+            compute({ record }) {
+                if (record.$$$model(this) !== 'mail.channel') {
+                    return unlink();
+                }
+                if (record.$$$localMessageUnreadCounter(this) === 0) {
+                    return unlink();
+                }
+                const index = record.$$$orderedMessages(this).findIndex(message =>
+                    message.$$$id(this) === record.$$$lastSeenByCurrentPartnerMessageId(this)
+                );
+                const message = record.$$$orderedMessages(this)[index + 1];
+                if (!message) {
+                    return unlink();
+                }
+                return link(message);
+            },
+        }),
+        $$$messageNeedactionCounter: attr({
+            default: 0,
+        }),
+        /**
+         * All messages that this thread is linked to.
+         * Note that this field is automatically computed by inverse
+         * computed field.
+         */
+        $$$messages: many2many('Message', {
+            inverse: '$$$threads',
+        }),
+        /**
+         * All messages that are contained on this channel on the server.
+         * Equivalent to the inverse of python field `channel_ids`.
+         */
+        $$$messagesAsServerChannel: many2many('Message', {
+            inverse: '$$$serverChannels',
+        }),
+        $$$messageSeenIndicators: one2many('MessageSeenIndicator', {
+            inverse: '$$$thread',
+            isCausal: true,
+            readonly: true,
+        }),
+        $$$messaging: many2one('Messaging', {
+            /**
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @returns {Messaging}
+             */
+            compute({ env }) {
+                return link(env.messaging);
+            },
+        }),
+        $$$messagingCurrentPartner: many2one('Partner', {
+            related: '$$$messaging.$$$currentPartner',
+        }),
+        $$$model: attr({
+            id: true,
+        }),
+        $$$modelName: attr(),
+        $$$moderation: attr({
+            default: false,
+        }),
+        /**
+         * Partners that are moderating this thread (only applies to channels).
+         */
+        $$$moderators: many2many('Partner', {
+            inverse: '$$$moderatedChannels',
+        }),
+        $$$moduleIcon: attr(),
+        $$$name: attr(),
+        $$$needactionMessages: many2many('Message', {
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {Message[]}
+             */
+            compute({ record }) {
+                return replace(
+                    record.$$$messages(this).filter(
+                        message => message.$$$isNeedaction(this)
+                    )
+                );
+            },
+        }),
+        /**
+         * Not a real field, used to trigger `_onChangeFollowersPartner` when one of
+         * the dependencies changes.
+         */
+        $$$onChangeFollowersPartner: attr({
+            /**
+             * Cleans followers of current thread. In particular, chats are supposed
+             * to work with "members", not with "followers". This clean up is only
+             * necessary to remove illegitimate followers in stable version, it can
+             * be removed in master after proper migration to clean the database.
+             *
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @param {Thread} param0.record
+             */
+            compute({ env, record }) {
+                if (record.$$$channelType(this) !== 'chat') {
+                    return;
+                }
+                for (const follower of record.$$$followers(this)) {
+                    if (follower.$$$partner(this)) {
+                        env.invoke('Follower/remove', follower);
+                    }
+                }
+            },
+            dependencies: [
+                '$$$followersPartner',
+            ],
+        }),
+        $$$onChangeLastSeenByCurrentPartnerMessageId: attr({
+            /**
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @param {Thread} param0.record
+             */
+            compute({ env, record }) {
+                env.messagingBus.trigger(
+                    'o-thread-last-seen-by-current-partner-message-id-changed',
+                    { thread: record }
+                );
+            },
+            dependencies: [
+                '$$$lastSeenByCurrentPartnerMessageId',
+            ],
+        }),
+        /**
+         * Not a real field, used to trigger `_onChangeThreadViews` when one of
+         * the dependencies changes.
+         */
+        $$$onChangeThreadView: attr({
+            /**
+             * Fetches followers of chats when they are displayed for the first
+             * time. This is necessary to clean the followers.
+             * @see `$$$onChangeFollowersPartner` for more information.
+             *
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @param {Thread} param0.record
+             */
+            compute({ env, record }) {
+                if (record.$$$channelType(this) !== 'chat') {
+                    return;
+                }
+                if (record.$$$threadViews(this).length === 0) {
+                    return;
+                }
+                if (record.$$$areFollowersLoaded(this)) {
+                    return;
+                }
+                env.invoke('Thread/refreshFollowers', record);
+            },
+            dependencies: [
+                '$$$threadViews',
+            ],
+        }),
+        /**
+         * Not a real field, used to trigger `_onIsServerPinnedChanged` when one of
+         * the dependencies changes.
+         */
+        $$$onIsServerPinnedChanged: attr({
+            /**
+             * Handles change of pinned state coming from the server. Useful to
+             * clear pending state once server acknowledged the change.
+             * @see isPendingPinned
+             *
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @param {Thread} param0.record
+             */
+            compute({ env, record }) {
+                if (
+                    record.$$$isServerPinned(this) ===
+                    record.$$$isPendingPinned(this)
+                ) {
+                    env.invoke('Record/update', record, {
+                        $$$isPendingPinned: clear(),
+                    });
+                }
+            },
+            dependencies: [
+                '$$$isServerPinned',
+            ],
+        }),
+        /**
+         * Not a real field, used to trigger `_onServerFoldStateChanged` when one of
+         * the dependencies changes.
+         */
+        $$$onServerFoldStateChanged: attr({
+            /**
+             * Handles change of fold state coming from the server. Useful to
+             * synchronize corresponding chat window.
+             *
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @param {Thread} param0.record
+             */
+            compute({ env, record }) {
+                if (!env.messaging.$$$chatWindowManager(this)) {
+                    // avoid crash during destroy
+                    return;
+                }
+                if (record.$$$serverFoldState(this) === 'closed') {
+                    env.invoke('ChatWindowManager/closeThread',
+                        env.messaging.$$$chatWindowManager(this),
+                        record,
+                        {
+                            notifyServer: false,
+                        }
+                    );
+                } else {
+                    env.invoke('ChatWindowManager/openThread',
+                        env.messaging.$$$chatWindowManager(this),
+                        record,
+                        {
+                            isFolded: record.$$$serverFoldState(this) === 'folded',
+                            notifyServer: false,
+                        }
+                    );
+                }
+            },
+            dependencies: [
+                'serverFoldState',
+            ],
+        }),
+        /**
+         * All messages ordered like they are displayed.
+         */
+        $$$orderedMessages: many2many('Message', {
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {Message[]}
+             */
+            compute({ record }) {
+                return replace(
+                    record.$$$messages(this).sort(
+                        (m1, m2) => (
+                            m1.$$$id(this) < m2.$$$id(this)
+                            ? -1
+                            : 1
+                        )
+                    )
+                );
+            },
+        }),
+        /**
+         * All messages ordered like they are displayed. This field does not
+         * contain transient messages which are not "real" records.
+         */
+        $$$orderedNonTransientMessages: many2many('Message', {
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {Message[]}
+             */
+            compute({ record }) {
+                return replace(
+                    record.$$$orderedMessages(this).filter(
+                        m => !m.$$$isTransient(this)
+                    )
+                );
+            },
+        }),
+        /**
+         * Ordered typing members on this thread, excluding the current partner.
+         */
+        $$$orderedOtherTypingMembers: many2many('Partner', {
+            /**
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @param {Thread} param0.record
+             * @returns {Partner[]}
+             */
+            compute({ env, record }) {
+                return replace(
+                    record.$$$orderedTypingMembers(this).filter(
+                        member => member !== env.messaging.$$$currentPartner(this)
+                    ),
+                );
+            },
+        }),
+        /**
+         * Ordered typing members on this thread. Lower index means this member
+         * is currently typing for the longest time. This list includes current
+         * partner as typer.
+         */
+        $$$orderedTypingMembers: many2many('Partner', {
+            /**
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @param {Thread} param0.record
+             * @returns {Partner[]}
+             */
+            compute({ env, record }) {
+                return replace(
+                    record.$$$orderedTypingMemberLocalIds(this)
+                        .map(localId => env.invoke('Record/get', localId))
+                        .filter(member => !!member),
+                );
+            },
+        }),
+        /**
+         * Technical attribute to manage ordered list of typing members.
+         */
+        $$$orderedTypingMemberLocalIds: attr({
+            default: [],
+        }),
+        $$$originThreadAttachments: one2many('Attachment', {
+            inverse: '$$$originThread',
+        }),
+        /**
+         * States the `Activity` that belongs to `this` and that are
+         * overdue (due earlier than today).
+         */
+        $$$overdueActivities: one2many('Activity', {
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {Activity[]}
+             */
+            compute({ record }) {
+                return replace(
+                    record.$$$activities(this).filter(
+                        activity => activity.$$$state(this) === 'overdue'
+                    )
+                );
+            },
+        }),
+        $$$partnerSeenInfos: one2many('ThreadPartnerSeenInfo', {
+            inverse: '$$$thread',
+            isCausal: true,
+            readonly: true,
+        }),
+        /**
+         * Determine if there is a pending seen message change, which is a change
+         * of seen message requested by the client but not yet confirmed by the
+         * server.
+         */
+        $$$pendingSeenMessageId: attr(),
+        $$$public: attr(),
+        /**
+         * Determine the last fold state known by the server, which is the fold
+         * state displayed after initialization or when the last pending
+         * fold state change was confirmed by the server.
+         *
+         * This field should be considered read only in most situations. Only
+         * the code handling fold state change from the server should typically
+         * update it.
+         */
+        $$$serverFoldState: attr({
+            default: 'closed',
+        }),
+        /**
+         * Last message id considered by the server.
+         *
+         * Useful to compute localMessageUnreadCounter field.
+         *
+         * @see $$$localMessageUnreadCounter
+         */
+        $$$serverLastMessageId: attr({
+            default: 0,
+        }),
+        /**
+         * Message unread counter coming from server.
+         *
+         * Value of this field is unreliable, due to dynamic nature of
+         * messaging. So likely outdated/unsync with server. Should use
+         * localMessageUnreadCounter instead, which smartly guess the actual
+         * message unread counter at all time.
+         *
+         * @see $$$localMessageUnreadCounter
+         */
+        $$$serverMessageUnreadCounter: attr({
+            default: 0,
+        }),
+        /**
+         * Determines the `SuggestedRecipientInfo` concerning `this`.
+         */
+        $$$suggestedRecipientInfoList: one2many('SuggestedRecipientInfo', {
+            inverse: '$$$thread',
+        }),
+        $$$threadViews: one2many('ThreadView', {
+            inverse: '$$$thread',
+        }),
+        /**
+         * States the `Activity` that belongs to `this` and that are due
+         * specifically today.
+         */
+        $$$todayActivities: one2many('Activity', {
+            /**
+             * @param {Object} param0
+             * @param {Thread} param0.record
+             * @returns {Activity[]}
+             */
+            compute({ record }) {
+                return replace(
+                    record.$$$activities(this).filter(
+                        activity => activity.$$$state(this) === 'today'
+                    )
+                );
+            },
+        }),
+        /**
+         * Members that are currently typing something in the composer of this
+         * thread, including current partner.
+         */
+        $$$typingMembers: many2many('Partner'),
+        /**
+         * Text that represents the status on this thread about typing members.
+         */
+        $$$typingStatusText: attr({
+            /**
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @param {Thread} param0.record
+             * @returns {string}
+             */
+            compute({ env, record }) {
+                if (record.$$$orderedOtherTypingMembers(this).length === 0) {
+                    return record.constructor.fields.get('$$$typingStatusText').default;
+                }
+                if (record.$$$orderedOtherTypingMembers(this).length === 1) {
+                    return _.str.sprintf(
+                        env._t("%s is typing..."),
+                        record.$$$orderedOtherTypingMembers(this)[0].$$$nameOrDisplayName(this)
+                    );
+                }
+                if (record.$$$orderedOtherTypingMembers(this).length === 2) {
+                    return _.str.sprintf(
+                        env._t("%s and %s are typing..."),
+                        record.$$$orderedOtherTypingMembers(this)[0].$$$nameOrDisplayName(this),
+                        record.$$$orderedOtherTypingMembers(this)[1].$$$nameOrDisplayName(this)
+                    );
+                }
+                return _.str.sprintf(
+                    env._t("%s, %s and more are typing..."),
+                    record.$$$orderedOtherTypingMembers(this)[0].$$$nameOrDisplayName(this),
+                    record.$$$orderedOtherTypingMembers(this)[1].$$$nameOrDisplayName(this)
+                );
+            },
+            default: "",
+        }),
+        $$$uuid: attr(),
+    },
+    lifecycles: {
+        /**
+         * @param {Object} param0
+         * @param {web.env} param0.env
+         * @param {Thread} param0.record
+         */
+        onCreate({ env, record }) {
             /**
              * Timer of current partner that was currently typing something, but
              * there is no change on the input for 5 seconds. This is used
@@ -24,9 +2400,16 @@ function factory(dependencies) {
              * partner has stopped typing something, due to making no changes
              * on the composer for some time.
              */
-            this._currentPartnerInactiveTypingTimer = new Timer(
-                this.env,
-                () => this.async(() => this._onCurrentPartnerInactiveTypingTimeout()),
+            record._currentPartnerInactiveTypingTimer = new Timer(
+                env,
+                () => env.invoke(
+                    'Record/doAsync',
+                    record,
+                    () => env.invoke(
+                        'Thread/_onCurrentPartnerInactiveTypingTimeout',
+                        record
+                    )
+                ),
                 5 * 1000
             );
             /**
@@ -43,7 +2426,7 @@ function factory(dependencies) {
              * undefined makes only sense initially and during current partner
              * long typing timeout flow.
              */
-            this._currentPartnerLastNotifiedIsTyping = undefined;
+            record._currentPartnerLastNotifiedIsTyping = undefined;
             /**
              * Timer of current partner that is typing a very long text. When
              * the other members do not receive any typing notification for a
@@ -53,9 +2436,16 @@ function factory(dependencies) {
              * is still typing something, so that they should not assume he/she
              * has stopped typing something.
              */
-            this._currentPartnerLongTypingTimer = new Timer(
-                this.env,
-                () => this.async(() => this._onCurrentPartnerLongTypingTimeout()),
+            record._currentPartnerLongTypingTimer = new Timer(
+                env,
+                () => env.invoke(
+                    'Record/doAsync',
+                    record,
+                    () => env.invoke(
+                        'Thread/_onCurrentPartnerLongTypingTimeout',
+                        record
+                    )
+                ),
                 50 * 1000
             );
             /**
@@ -66,7 +2456,7 @@ function factory(dependencies) {
              * changed, exception being the long typing scenario of current
              * partner.
              */
-            this._forceNotifyNextCurrentPartnerTypingStatus = false;
+            record._forceNotifyNextCurrentPartnerTypingStatus = false;
             /**
              * Registry of timers of partners currently typing in the thread,
              * excluding current partner. This is useful in order to
@@ -78,7 +2468,7 @@ function factory(dependencies) {
              * @see registerOtherMemberTypingMember
              * @see unregisterOtherMemberTypingMember
              */
-            this._otherMembersLongTypingTimers = new Map();
+            record._otherMembersLongTypingTimers = new Map();
 
             /**
              * Clearable and cancellable throttled version of the
@@ -90,2016 +2480,44 @@ function factory(dependencies) {
              *
              * @see _notifyCurrentPartnerTypingStatus
              */
-            this._throttleNotifyCurrentPartnerTypingStatus = throttle(
-                this.env,
-                ({ isTyping }) => this.async(() => this._notifyCurrentPartnerTypingStatus({ isTyping })),
+            record._throttleNotifyCurrentPartnerTypingStatus = throttle(
+                env,
+                ({ isTyping }) => env.invoke(
+                    'Record/doAsync',
+                    () => env.invoke(
+                        'Thread/_notifyCurrentPartnerTypingStatus',
+                        record,
+                        { isTyping }
+                    )
+                ),
                 2.5 * 1000
             );
-            return res;
-        }
-
+        },
         /**
-         * @override
+         * @param {Object} param0
+         * @param {web.env} param0.env
+         * @param {Thread} param0.record
          */
-        _willDelete() {
-            this._currentPartnerInactiveTypingTimer.clear();
-            this._currentPartnerLongTypingTimer.clear();
-            this._throttleNotifyCurrentPartnerTypingStatus.clear();
-            for (const timer of this._otherMembersLongTypingTimers.values()) {
+        onDelete({ env, record }) {
+            record._currentPartnerInactiveTypingTimer.clear();
+            record._currentPartnerLongTypingTimer.clear();
+            record._throttleNotifyCurrentPartnerTypingStatus.clear();
+            for (const timer of record._otherMembersLongTypingTimers.values()) {
                 timer.clear();
             }
-            if (this.isTemporary) {
-                for (const message of this.messages) {
-                    message.delete();
+            if (record.$$$isTemporary(this)) {
+                for (const message of record.$$$messages(this)) {
+                    env.invoke('Record/delete', message);
                 }
             }
-            return super._willDelete(...arguments);
-        }
-
-        //----------------------------------------------------------------------
-        // Public
-        //----------------------------------------------------------------------
-
-        /**
-         * @static
-         * @param {mail.thread} [thread] the concerned thread
-         */
-        static computeLastCurrentPartnerMessageSeenByEveryone(thread = undefined) {
-            const threads = thread ? [thread] : this.env.models['mail.thread'].all();
-            threads.map(localThread => {
-                localThread.update({
-                    lastCurrentPartnerMessageSeenByEveryone: localThread._computeLastCurrentPartnerMessageSeenByEveryone(),
-                });
-            });
-        }
-
-        /**
-         * @static
-         * @param {Object} data
-         * @return {Object}
-         */
-        static convertData(data) {
-            const data2 = {
-                messagesAsServerChannel: [],
-            };
-            if ('model' in data) {
-                data2.model = data.model;
-            }
-            if ('channel_type' in data) {
-                data2.channel_type = data.channel_type;
-                data2.model = 'mail.channel';
-            }
-            if ('create_uid' in data) {
-                data2.creator = [['insert', { id: data.create_uid }]];
-            }
-            if ('custom_channel_name' in data) {
-                data2.custom_channel_name = data.custom_channel_name;
-            }
-            if ('group_based_subscription' in data) {
-                data2.group_based_subscription = data.group_based_subscription;
-            }
-            if ('id' in data) {
-                data2.id = data.id;
-            }
-            if ('is_minimized' in data && 'state' in data) {
-                data2.serverFoldState = data.is_minimized ? data.state : 'closed';
-            }
-            if ('is_moderator' in data) {
-                data2.is_moderator = data.is_moderator;
-            }
-            if ('is_pinned' in data) {
-                data2.isServerPinned = data.is_pinned;
-            }
-            if ('last_message' in data && data.last_message) {
-                data2.messagesAsServerChannel.push(['insert', { id: data.last_message.id }]);
-                data2.serverLastMessageId = data.last_message.id;
-            }
-            if ('last_message_id' in data && data.last_message_id) {
-                data2.messagesAsServerChannel.push(['insert', { id: data.last_message_id }]);
-                data2.serverLastMessageId = data.last_message_id;
-            }
-            if ('mass_mailing' in data) {
-                data2.mass_mailing = data.mass_mailing;
-            }
-            if ('moderation' in data) {
-                data2.moderation = data.moderation;
-            }
-            if ('message_needaction_counter' in data) {
-                data2.message_needaction_counter = data.message_needaction_counter;
-            }
-            if ('message_unread_counter' in data) {
-                data2.serverMessageUnreadCounter = data.message_unread_counter;
-            }
-            if ('name' in data) {
-                data2.name = data.name;
-            }
-            if ('public' in data) {
-                data2.public = data.public;
-            }
-            if ('seen_message_id' in data) {
-                data2.lastSeenByCurrentPartnerMessageId = data.seen_message_id || 0;
-            }
-            if ('uuid' in data) {
-                data2.uuid = data.uuid;
-            }
-
-            // relations
-            if ('members' in data) {
-                if (!data.members) {
-                    data2.members = [['unlink-all']];
-                } else {
-                    data2.members = [
-                        ['insert-and-replace', data.members.map(memberData =>
-                            this.env.models['mail.partner'].convertData(memberData)
-                        )],
-                    ];
-                }
-            }
-            if ('seen_partners_info' in data) {
-                if (!data.seen_partners_info) {
-                    data2.partnerSeenInfos = [['unlink-all']];
-                } else {
-                    /*
-                     * FIXME: not optimal to write on relation given the fact that the relation
-                     * will be (re)computed based on given fields.
-                     * (here channelId will compute partnerSeenInfo.thread))
-                     * task-2336946
-                     */
-                    data2.partnerSeenInfos = [
-                        ['insert-and-replace',
-                            data.seen_partners_info.map(
-                                ({ fetched_message_id, partner_id, seen_message_id }) => {
-                                    return {
-                                        channelId: data2.id,
-                                        lastFetchedMessage: [fetched_message_id ? ['insert', { id: fetched_message_id }] : ['unlink-all']],
-                                        lastSeenMessage: [seen_message_id ? ['insert', { id: seen_message_id }] : ['unlink-all']],
-                                        partnerId: partner_id,
-                                    };
-                                })
-                        ]
-                    ];
-                    if (data.id || this.id) {
-                        const messageIds = data.seen_partners_info.reduce((currentSet, { fetched_message_id, seen_message_id }) => {
-                            if (fetched_message_id) {
-                                currentSet.add(fetched_message_id);
-                            }
-                            if (seen_message_id) {
-                                currentSet.add(seen_message_id);
-                            }
-                            return currentSet;
-                        }, new Set());
-                        if (messageIds.size > 0) {
-                            /*
-                             * FIXME: not optimal to write on relation given the fact that the relation
-                             * will be (re)computed based on given fields.
-                             * (here channelId will compute messageSeenIndicator.thread))
-                             * task-2336946
-                             */
-                            data2.messageSeenIndicators = [
-                                ['insert',
-                                    [...messageIds].map(messageId => {
-                                       return {
-                                           channelId: data.id || this.id,
-                                           messageId,
-                                       };
-                                    })
-                                ]
-                            ];
-                        }
-                    }
-                }
-            }
-
-            return data2;
-        }
-
-        /**
-         * Load the previews of the specified threads. Basically, it fetches the
-         * last messages, since they are used to display inline content of them.
-         *
-         * @static
-         * @param {mail.thread[]} threads
-         */
-        static async loadPreviews(threads) {
-            const channelIds = threads.reduce((list, thread) => {
-                if (thread.model === 'mail.channel') {
-                    return list.concat(thread.id);
-                }
-                return list;
-            }, []);
-            if (channelIds.length === 0) {
-                return;
-            }
-            const channelPreviews = await this.env.services.rpc({
-                model: 'mail.channel',
-                method: 'channel_fetch_preview',
-                args: [channelIds],
-            }, { shadow: true });
-            this.env.models['mail.message'].insert(channelPreviews.filter(p => p.last_message).map(
-                channelPreview => this.env.models['mail.message'].convertData(channelPreview.last_message)
-            ));
-        }
-
-
-        /**
-         * Performs the `channel_fold` RPC on `mail.channel`.
-         *
-         * @static
-         * @param {string} uuid
-         * @param {string} state
-         */
-        static async performRpcChannelFold(uuid, state) {
-            return this.env.services.rpc({
-                model: 'mail.channel',
-                method: 'channel_fold',
-                kwargs: {
-                    state,
-                    uuid,
-                }
-            }, { shadow: true });
-        }
-
-        /**
-         * Performs the `channel_info` RPC on `mail.channel`.
-         *
-         * @static
-         * @param {Object} param0
-         * @param {integer[]} param0.ids list of id of channels
-         * @returns {mail.thread[]}
-         */
-        static async performRpcChannelInfo({ ids }) {
-            const channelInfos = await this.env.services.rpc({
-                model: 'mail.channel',
-                method: 'channel_info',
-                args: [ids],
-            }, { shadow: true });
-            const channels = this.env.models['mail.thread'].insert(
-                channelInfos.map(channelInfo => this.env.models['mail.thread'].convertData(channelInfo))
-            );
-            // manually force recompute of counter
-            this.env.messaging.messagingMenu.update();
-            return channels;
-        }
-
-        /**
-         * Performs the `channel_seen` RPC on `mail.channel`.
-         *
-         * @static
-         * @param {Object} param0
-         * @param {integer[]} param0.ids list of id of channels
-         * @param {integer[]} param0.lastMessageId
-         */
-        static async performRpcChannelSeen({ ids, lastMessageId }) {
-            return this.env.services.rpc({
-                model: 'mail.channel',
-                method: 'channel_seen',
-                args: [ids],
-                kwargs: {
-                    last_message_id: lastMessageId,
-                },
-            }, { shadow: true });
-        }
-
-        /**
-         * Performs the `channel_pin` RPC on `mail.channel`.
-         *
-         * @static
-         * @param {Object} param0
-         * @param {boolean} [param0.pinned=false]
-         * @param {string} param0.uuid
-         */
-        static async performRpcChannelPin({ pinned = false, uuid }) {
-            return this.env.services.rpc({
-                model: 'mail.channel',
-                method: 'channel_pin',
-                kwargs: {
-                    uuid,
-                    pinned,
-                },
-            }, { shadow: true });
-        }
-
-        /**
-         * Performs the `channel_create` RPC on `mail.channel`.
-         *
-         * @static
-         * @param {Object} param0
-         * @param {string} param0.name
-         * @param {string} [param0.privacy]
-         * @returns {mail.thread} the created channel
-         */
-        static async performRpcCreateChannel({ name, privacy }) {
-            const device = this.env.messaging.device;
-            const data = await this.env.services.rpc({
-                model: 'mail.channel',
-                method: 'channel_create',
-                args: [name, privacy],
-                kwargs: {
-                    context: Object.assign({}, this.env.session.user_content, {
-                        // optimize the return value by avoiding useless queries
-                        // in non-mobile devices
-                        isMobile: device.isMobile,
-                    }),
-                },
-            });
-            return this.env.models['mail.thread'].insert(
-                this.env.models['mail.thread'].convertData(data)
-            );
-        }
-
-        /**
-         * Performs the `channel_get` RPC on `mail.channel`.
-         *
-         * `openChat` is preferable in business code because it will avoid the
-         * RPC if the chat already exists.
-         *
-         * @static
-         * @param {Object} param0
-         * @param {integer[]} param0.partnerIds
-         * @param {boolean} [param0.pinForCurrentPartner]
-         * @returns {mail.thread|undefined} the created or existing chat
-         */
-        static async performRpcCreateChat({ partnerIds, pinForCurrentPartner }) {
-            const device = this.env.messaging.device;
-            // TODO FIX: potential duplicate chat task-2276490
-            const data = await this.env.services.rpc({
-                model: 'mail.channel',
-                method: 'channel_get',
-                kwargs: {
-                    context: Object.assign({}, this.env.session.user_content, {
-                        // optimize the return value by avoiding useless queries
-                        // in non-mobile devices
-                        isMobile: device.isMobile,
-                    }),
-                    partners_to: partnerIds,
-                    pin: pinForCurrentPartner,
-                },
-            });
-            if (!data) {
-                return;
-            }
-            return this.env.models['mail.thread'].insert(
-                this.env.models['mail.thread'].convertData(data)
-            );
-        }
-
-        /**
-         * Performs the `channel_join_and_get_info` RPC on `mail.channel`.
-         *
-         * @static
-         * @param {Object} param0
-         * @param {integer} param0.channelId
-         * @returns {mail.thread} the channel that was joined
-         */
-        static async performRpcJoinChannel({ channelId }) {
-            const device = this.env.messaging.device;
-            const data = await this.env.services.rpc({
-                model: 'mail.channel',
-                method: 'channel_join_and_get_info',
-                args: [[channelId]],
-                kwargs: {
-                    context: Object.assign({}, this.env.session.user_content, {
-                        // optimize the return value by avoiding useless queries
-                        // in non-mobile devices
-                        isMobile: device.isMobile,
-                    }),
-                },
-            });
-            return this.env.models['mail.thread'].insert(
-                this.env.models['mail.thread'].convertData(data)
-            );
-        }
-
-        /**
-         * Performs the `execute_command` RPC on `mail.channel`.
-         *
-         * @static
-         * @param {Object} param0
-         * @param {integer} param0.channelId
-         * @param {string} param0.command
-         * @param {Object} [param0.postData={}]
-         */
-        static async performRpcExecuteCommand({ channelId, command, postData = {} }) {
-            return this.env.services.rpc({
-                model: 'mail.channel',
-                method: 'execute_command',
-                args: [[channelId]],
-                kwargs: Object.assign({ command }, postData),
-            });
-        }
-
-        /**
-         * Performs the `message_post` RPC on given threadModel.
-         *
-         * @static
-         * @param {Object} param0
-         * @param {Object} param0.postData
-         * @param {integer} param0.threadId
-         * @param {string} param0.threadModel
-         * @return {integer} the posted message id
-         */
-        static async performRpcMessagePost({ postData, threadId, threadModel }) {
-            return this.env.services.rpc({
-                model: threadModel,
-                method: 'message_post',
-                args: [threadId],
-                kwargs: postData,
-            });
-        }
-
-        /**
-         * Performs RPC on the route `/mail/get_suggested_recipients`.
-         *
-         * @static
-         * @param {Object} param0
-         * @param {string} param0.model
-         * @param {integer[]} param0.res_id
-         */
-        static async performRpcMailGetSuggestedRecipients({ model, res_ids }) {
-            const data = await this.env.services.rpc({
-                route: '/mail/get_suggested_recipients',
-                params: {
-                    model,
-                    res_ids,
-                },
-            }, { shadow: true });
-            for (const id in data) {
-                const recipientInfoList = data[id].map(recipientInfoData => {
-                    const [partner_id, emailInfo, reason] = recipientInfoData;
-                    const [name, email] = emailInfo && mailUtils.parseEmail(emailInfo);
-                    return {
-                        email,
-                        name,
-                        partner: [partner_id ? ['insert', { id: partner_id }] : ['unlink']],
-                        reason,
-                    };
-                });
-                this.insert({
-                    id: parseInt(id),
-                    model,
-                    suggestedRecipientInfoList: [['insert-and-replace', recipientInfoList]],
-                });
-            }
-        }
-
-        /**
-         * @param {string} [stringifiedDomain='[]']
-         * @returns {mail.thread_cache}
-         */
-        cache(stringifiedDomain = '[]') {
-            let cache = this.caches.find(cache => cache.stringifiedDomain === stringifiedDomain);
-            if (!cache) {
-                cache = this.env.models['mail.thread_cache'].create({
-                    stringifiedDomain,
-                    thread: [['link', this]],
-                });
-            }
-            return cache;
-        }
-
-        /**
-         * Fetch attachments linked to a record. Useful for populating the store
-         * with these attachments, which are used by attachment box in the chatter.
-         */
-        async fetchAttachments() {
-            const attachmentsData = await this.async(() => this.env.services.rpc({
-                model: 'ir.attachment',
-                method: 'search_read',
-                domain: [
-                    ['res_id', '=', this.id],
-                    ['res_model', '=', this.model],
-                ],
-                fields: ['id', 'name', 'mimetype'],
-                orderBy: [{ name: 'id', asc: false }],
-            }, { shadow: true }));
-            this.update({
-                originThreadAttachments: [['insert-and-replace',
-                    attachmentsData.map(data =>
-                        this.env.models['mail.attachment'].convertData(data)
-                    )
-                ]],
-            });
-            this.update({ areAttachmentsLoaded: true });
-        }
-
-        /**
-         * Fetches suggested recipients.
-         */
-        async fetchAndUpdateSuggestedRecipients() {
-            if (this.isTemporary) {
-                return;
-            }
-            return this.env.models['mail.thread'].performRpcMailGetSuggestedRecipients({
-                model: this.model,
-                res_ids: [this.id],
-            });
-        }
-
-        /**
-         * Add current user to provided thread's followers.
-         */
-        async follow() {
-            await this.async(() => this.env.services.rpc({
-                model: this.model,
-                method: 'message_subscribe',
-                args: [[this.id]],
-                kwargs: {
-                    partner_ids: [this.env.messaging.currentPartner.id],
-                },
-            }));
-            this.refreshFollowers();
-            this.fetchAndUpdateSuggestedRecipients();
-        }
-
-        /**
-         * Load new messages on the main cache of this thread.
-         */
-        loadNewMessages() {
-            this.mainCache.loadNewMessages();
-        }
-
-        /**
-         * Mark the specified conversation as fetched.
-         */
-        async markAsFetched() {
-            await this.async(() => this.env.services.rpc({
-                model: 'mail.channel',
-                method: 'channel_fetched',
-                args: [[this.id]],
-            }, { shadow: true }));
-        }
-
-        /**
-         * Mark the specified conversation as read/seen.
-         *
-         * @param {mail.message} message the message to be considered as last seen.
-         */
-        async markAsSeen(message) {
-            if (this.model !== 'mail.channel') {
-                return;
-            }
-            if (this.pendingSeenMessageId && message.id <= this.pendingSeenMessageId) {
-                return;
-            }
-            if (
-                this.lastSeenByCurrentPartnerMessageId &&
-                message.id <= this.lastSeenByCurrentPartnerMessageId
-            ) {
-                return;
-            }
-            this.update({ pendingSeenMessageId: message.id });
-            return this.env.models['mail.thread'].performRpcChannelSeen({
-                ids: [this.id],
-                lastMessageId: message.id,
-            });
-        }
-
-        /**
-         * Mark all needaction messages of this thread as read.
-         */
-        async markNeedactionMessagesAsRead() {
-            await this.async(() =>
-                this.env.models['mail.message'].markAsRead(this.needactionMessages)
-            );
-        }
-
-        /**
-         * Notifies the server of new fold state. Useful for initial,
-         * cross-tab, and cross-device chat window state synchronization.
-         *
-         * @param {string} state
-         */
-        async notifyFoldStateToServer(state) {
-            if (this.model !== 'mail.channel') {
-                // Server sync of fold state is only supported for channels.
-                return;
-            }
-            if (!this.uuid) {
-                return;
-            }
-            return this.env.models['mail.thread'].performRpcChannelFold(this.uuid, state);
-        }
-
-        /**
-         * Notify server to leave the current channel. Useful for cross-tab
-         * and cross-device chat window state synchronization.
-         *
-         * Only makes sense if isPendingPinned is set to the desired value.
-         */
-        async notifyPinStateToServer() {
-            if (this.isPendingPinned) {
-                await this.env.models['mail.thread'].performRpcChannelPin({
-                    pinned: true,
-                    uuid: this.uuid,
-                });
-            } else {
-                this.env.models['mail.thread'].performRpcExecuteCommand({
-                    channelId: this.id,
-                    command: 'leave',
-                });
-            }
-        }
-
-        /**
-         * Opens this thread either as form view, in discuss app, or as a chat
-         * window. The thread will be opened in an "active" matter, which will
-         * interrupt current user flow.
-         *
-         * @param {Object} [param0]
-         * @param {boolean} [param0.expanded=false]
-         */
-        async open({ expanded = false } = {}) {
-            const discuss = this.env.messaging.discuss;
-            // check if thread must be opened in form view
-            if (!['mail.box', 'mail.channel'].includes(this.model)) {
-                if (expanded || discuss.isOpen) {
-                    // Close chat window because having the same thread opened
-                    // both in chat window and as main document does not look
-                    // good.
-                    this.env.messaging.chatWindowManager.closeThread(this);
-                    return this.env.messaging.openDocument({
-                        id: this.id,
-                        model: this.model,
-                    });
-                }
-            }
-            // check if thread must be opened in discuss
-            const device = this.env.messaging.device;
-            if (
-                (!device.isMobile && (discuss.isOpen || expanded)) ||
-                this.model === 'mail.box'
-            ) {
-                return discuss.openThread(this);
-            }
-            // thread must be opened in chat window
-            return this.env.messaging.chatWindowManager.openThread(this, {
-                makeActive: true,
-            });
-        }
-
-        /**
-         * Opens the most appropriate view that is a profile for this thread.
-         */
-        async openProfile() {
-            return this.env.messaging.openDocument({
-                id: this.id,
-                model: this.model,
-            });
-        }
-
-        /**
-         * Pin this thread and notify server of the change.
-         */
-        async pin() {
-            this.update({ isPendingPinned: true });
-            await this.notifyPinStateToServer();
-        }
-
-        /**
-         * Open a dialog to add channels as followers.
-         */
-        promptAddChannelFollower() {
-            this._promptAddFollower({ mail_invite_follower_channel_only: true });
-        }
-
-        /**
-         * Open a dialog to add partners as followers.
-         */
-        promptAddPartnerFollower() {
-            this._promptAddFollower({ mail_invite_follower_channel_only: false });
-        }
-
-        async refresh() {
-            if (this.isTemporary) {
-                return;
-            }
-            this.loadNewMessages();
-            this.update({ isLoadingAttachments: true });
-            await this.async(() => this.fetchAttachments());
-            this.update({ isLoadingAttachments: false });
-        }
-
-        async refreshActivities() {
-            if (!this.hasActivities) {
-                return;
-            }
-            if (this.isTemporary) {
-                return;
-            }
-            // A bit "extreme", may be improved
-            const [{ activity_ids: newActivityIds }] = await this.async(() => this.env.services.rpc({
-                model: this.model,
-                method: 'read',
-                args: [this.id, ['activity_ids']]
-            }, { shadow: true }));
-            const activitiesData = await this.async(() => this.env.services.rpc({
-                model: 'mail.activity',
-                method: 'activity_format',
-                args: [newActivityIds]
-            }, { shadow: true }));
-            const activities = this.env.models['mail.activity'].insert(activitiesData.map(
-                activityData => this.env.models['mail.activity'].convertData(activityData)
-            ));
-            this.update({ activities: [['replace', activities]] });
-        }
-
-        /**
-         * Refresh followers information from server.
-         */
-        async refreshFollowers() {
-            if (this.isTemporary) {
-                this.update({ followers: [['unlink-all']] });
-                return;
-            }
-            const { followers } = await this.async(() => this.env.services.rpc({
-                route: '/mail/read_followers',
-                params: {
-                    res_id: this.id,
-                    res_model: this.model,
-                },
-            }, { shadow: true }));
-            this.update({ areFollowersLoaded: true });
-            if (followers.length > 0) {
-                this.update({
-                    followers: [['insert-and-replace', followers.map(data =>
-                        this.env.models['mail.follower'].convertData(data))
-                    ]],
-                });
-            } else {
-                this.update({
-                    followers: [['unlink-all']],
-                });
-            }
-        }
-
-        /**
-         * Refresh the typing status of the current partner.
-         */
-        refreshCurrentPartnerIsTyping() {
-            this._currentPartnerInactiveTypingTimer.reset();
-        }
-
-        /**
-         * Called to refresh a registered other member partner that is typing
-         * something.
-         *
-         * @param {mail.partner} partner
-         */
-        refreshOtherMemberTypingMember(partner) {
-            this._otherMembersLongTypingTimers.get(partner).reset();
-        }
-
-        /**
-         * Called when current partner is inserting some input in composer.
-         * Useful to notify current partner is currently typing something in the
-         * composer of this thread to all other members.
-         */
-        async registerCurrentPartnerIsTyping() {
-            // Handling of typing timers.
-            this._currentPartnerInactiveTypingTimer.start();
-            this._currentPartnerLongTypingTimer.start();
-            // Manage typing member relation.
-            const currentPartner = this.env.messaging.currentPartner;
-            const newOrderedTypingMemberLocalIds = this.orderedTypingMemberLocalIds
-                .filter(localId => localId !== currentPartner.localId);
-            newOrderedTypingMemberLocalIds.push(currentPartner.localId);
-            this.update({
-                orderedTypingMemberLocalIds: newOrderedTypingMemberLocalIds,
-                typingMembers: [['link', currentPartner]],
-            });
-            // Notify typing status to other members.
-            await this._throttleNotifyCurrentPartnerTypingStatus({ isTyping: true });
-        }
-
-        /**
-         * Called to register a new other member partner that is typing
-         * something.
-         *
-         * @param {mail.partner} partner
-         */
-        registerOtherMemberTypingMember(partner) {
-            const timer = new Timer(
-                this.env,
-                () => this.async(() => this._onOtherMemberLongTypingTimeout(partner)),
-                60 * 1000
-            );
-            this._otherMembersLongTypingTimers.set(partner, timer);
-            timer.start();
-            const newOrderedTypingMemberLocalIds = this.orderedTypingMemberLocalIds
-                .filter(localId => localId !== partner.localId);
-            newOrderedTypingMemberLocalIds.push(partner.localId);
-            this.update({
-                orderedTypingMemberLocalIds: newOrderedTypingMemberLocalIds,
-                typingMembers: [['link', partner]],
-            });
-        }
-
-        /**
-         * Rename the given thread with provided new name.
-         *
-         * @param {string} newName
-         */
-        async rename(newName) {
-            if (this.channel_type === 'chat') {
-                await this.async(() => this.env.services.rpc({
-                    model: 'mail.channel',
-                    method: 'channel_set_custom_name',
-                    args: [this.id],
-                    kwargs: {
-                        name: newName,
-                    },
-                }));
-            }
-            this.update({ custom_channel_name: newName });
-        }
-
-        /**
-         * Unfollow current partner from this thread.
-         */
-        async unfollow() {
-            const currentPartnerFollower = this.followers.find(
-                follower => follower.partner === this.env.messaging.currentPartner
-            );
-            await this.async(() => currentPartnerFollower.remove());
-        }
-
-        /**
-         * Unpin this thread and notify server of the change.
-         */
-        async unpin() {
-            this.update({ isPendingPinned: false });
-            await this.notifyPinStateToServer();
-        }
-
-        /**
-         * Called when current partner has explicitly stopped inserting some
-         * input in composer. Useful to notify current partner has currently
-         * stopped typing something in the composer of this thread to all other
-         * members.
-         *
-         * @param {Object} [param0={}]
-         * @param {boolean} [param0.immediateNotify=false] if set, is typing
-         *   status of current partner is immediately notified and doesn't
-         *   consume throttling at all.
-         */
-        async unregisterCurrentPartnerIsTyping({ immediateNotify = false } = {}) {
-            // Handling of typing timers.
-            this._currentPartnerInactiveTypingTimer.clear();
-            this._currentPartnerLongTypingTimer.clear();
-            // Manage typing member relation.
-            const currentPartner = this.env.messaging.currentPartner;
-            const newOrderedTypingMemberLocalIds = this.orderedTypingMemberLocalIds
-                .filter(localId => localId !== currentPartner.localId);
-            this.update({
-                orderedTypingMemberLocalIds: newOrderedTypingMemberLocalIds,
-                typingMembers: [['unlink', currentPartner]],
-            });
-            // Notify typing status to other members.
-            if (immediateNotify) {
-                this._throttleNotifyCurrentPartnerTypingStatus.clear();
-            }
-            await this.async(
-                () => this._throttleNotifyCurrentPartnerTypingStatus({ isTyping: false })
-            );
-        }
-
-        /**
-         * Called to unregister an other member partner that is no longer typing
-         * something.
-         *
-         * @param {mail.partner} partner
-         */
-        unregisterOtherMemberTypingMember(partner) {
-            this._otherMembersLongTypingTimers.get(partner).clear();
-            this._otherMembersLongTypingTimers.delete(partner);
-            const newOrderedTypingMemberLocalIds = this.orderedTypingMemberLocalIds
-                .filter(localId => localId !== partner.localId);
-            this.update({
-                orderedTypingMemberLocalIds: newOrderedTypingMemberLocalIds,
-                typingMembers: [['unlink', partner]],
-            });
-        }
-
-        /**
-         * Unsubscribe current user from provided channel.
-         */
-        unsubscribe() {
-            this.env.messaging.chatWindowManager.closeThread(this);
-            this.unpin();
-        }
-
-        //----------------------------------------------------------------------
-        // Private
-        //----------------------------------------------------------------------
-
-        /**
-         * @override
-         */
-        static _createRecordLocalId(data) {
-            const { channel_type, id, model } = data;
-            let threadModel = model;
-            if (!threadModel && channel_type) {
-                threadModel = 'mail.channel';
-            }
-            return `${this.modelName}_${threadModel}_${id}`;
-        }
-
-        /**
-         * @private
-         * @returns {mail.attachment[]}
-         */
-        _computeAllAttachments() {
-            const allAttachments = [...new Set(this.originThreadAttachments.concat(this.attachments))]
-                .sort((a1, a2) => {
-                    // "uploading" before "uploaded" attachments.
-                    if (!a1.isTemporary && a2.isTemporary) {
-                        return 1;
-                    }
-                    if (a1.isTemporary && !a2.isTemporary) {
-                        return -1;
-                    }
-                    // "most-recent" before "oldest" attachments.
-                    return Math.abs(a2.id) - Math.abs(a1.id);
-                });
-            return [['replace', allAttachments]];
-        }
-
-        /**
-         * @private
-         * @returns {mail.partner}
-         */
-        _computeCorrespondent() {
-            if (this.channel_type === 'channel') {
-                return [['unlink']];
-            }
-            const correspondents = this.members.filter(partner =>
-                partner !== this.env.messaging.currentPartner
-            );
-            if (correspondents.length === 1) {
-                // 2 members chat
-                return [['link', correspondents[0]]];
-            }
-            if (this.members.length === 1) {
-                // chat with oneself
-                return [['link', this.members[0]]];
-            }
-            return [['unlink']];
-        }
-
-        /**
-         * @private
-         * @returns {string}
-         */
-        _computeDisplayName() {
-            if (this.channel_type === 'chat' && this.correspondent) {
-                return this.custom_channel_name || this.correspondent.nameOrDisplayName;
-            }
-            return this.name;
-        }
-
-        /**
-         * @private
-         * @returns {mail.activity[]}
-         */
-        _computeFutureActivities() {
-            return [['replace', this.activities.filter(activity => activity.state === 'planned')]];
-        }
-
-        /**
-         * @private
-         */
-        _computeHasSeenIndicators() {
-            if (this.model !== 'mail.channel') {
-                return false;
-            }
-            if (this.mass_mailing) {
-                return false;
-            }
-            return ['chat', 'livechat'].includes(this.channel_type);
-        }
-
-        /**
-         * @private
-         * @returns {boolean}
-         */
-        _computeIsChatChannel() {
-            return this.channel_type === 'chat';
-        }
-
-        /**
-         * @private
-         * @returns {boolean}
-         */
-        _computeIsCurrentPartnerFollowing() {
-            return this.followers.some(follower =>
-                follower.partner && follower.partner === this.env.messaging.currentPartner
-            );
-        }
-
-        /**
-         * @private
-         * @returns {boolean}
-         */
-        _computeIsModeratedByCurrentPartner() {
-            if (!this.messaging) {
-                return false;
-            }
-            if (!this.messaging.currentPartner) {
-                return false;
-            }
-            return this.moderators.includes(this.env.messaging.currentPartner);
-        }
-
-        /**
-         * @private
-         * @returns {boolean}
-         */
-        _computeIsPinned() {
-            return this.isPendingPinned !== undefined ? this.isPendingPinned : this.isServerPinned;
-        }
-
-        /**
-         * @private
-         * @returns {mail.message}
-         */
-        _computeLastCurrentPartnerMessageSeenByEveryone() {
-            const otherPartnerSeenInfos =
-                this.partnerSeenInfos.filter(partnerSeenInfo =>
-                    partnerSeenInfo.partner !== this.messagingCurrentPartner);
-            if (otherPartnerSeenInfos.length === 0) {
-                return [['unlink-all']];
-            }
-
-            const otherPartnersLastSeenMessageIds =
-                otherPartnerSeenInfos.map(partnerSeenInfo =>
-                    partnerSeenInfo.lastSeenMessage ? partnerSeenInfo.lastSeenMessage.id : 0
-                );
-            if (otherPartnersLastSeenMessageIds.length === 0) {
-                return [['unlink-all']];
-            }
-            const lastMessageSeenByAllId = Math.min(
-                ...otherPartnersLastSeenMessageIds
-            );
-            const currentPartnerOrderedSeenMessages =
-                this.orderedNonTransientMessages.filter(message =>
-                    message.author === this.messagingCurrentPartner &&
-                    message.id <= lastMessageSeenByAllId);
-
-            if (
-                !currentPartnerOrderedSeenMessages ||
-                currentPartnerOrderedSeenMessages.length === 0
-            ) {
-                return [['unlink-all']];
-            }
-            return [['link', currentPartnerOrderedSeenMessages.slice().pop()]];
-        }
-
-        /**
-         * @private
-         * @returns {mail.message|undefined}
-         */
-        _computeLastMessage() {
-            const {
-                length: l,
-                [l - 1]: lastMessage,
-            } = this.orderedMessages;
-            if (lastMessage) {
-                return [['link', lastMessage]];
-            }
-            return [['unlink']];
-        }
-
-        /**
-         * @private
-         * @returns {mail.message|undefined}
-         */
-        _computeLastNonTransientMessage() {
-            const {
-                length: l,
-                [l - 1]: lastMessage,
-            } = this.orderedNonTransientMessages;
-            if (lastMessage) {
-                return [['link', lastMessage]];
-            }
-            return [['unlink']];
-        }
-
-        /**
-         * Adjusts the last seen message received from the server to consider
-         * the following messages also as read if they are either transient
-         * messages or messages from the current partner.
-         *
-         * @private
-         * @returns {integer}
-         */
-        _computeLastSeenByCurrentPartnerMessageId() {
-            const firstMessage = this.orderedMessages[0];
-            if (
-                firstMessage &&
-                this.lastSeenByCurrentPartnerMessageId &&
-                this.lastSeenByCurrentPartnerMessageId < firstMessage.id
-            ) {
-                // no deduction can be made if there is a gap
-                return this.lastSeenByCurrentPartnerMessageId;
-            }
-            let lastSeenByCurrentPartnerMessageId = this.lastSeenByCurrentPartnerMessageId;
-            for (const message of this.orderedMessages) {
-                if (message.id <= this.lastSeenByCurrentPartnerMessageId) {
-                    continue;
-                }
-                if (
-                    message.author === this.env.messaging.currentPartner ||
-                    message.isTransient
-                ) {
-                    lastSeenByCurrentPartnerMessageId = message.id;
-                    continue;
-                }
-                return lastSeenByCurrentPartnerMessageId;
-            }
-            return lastSeenByCurrentPartnerMessageId;
-        }
-
-        /**
-         * @private
-         * @returns {mail.message|undefined}
-         */
-        _computeLastNeedactionMessage() {
-            const orderedNeedactionMessages = this.needactionMessages.sort(
-                (m1, m2) => m1.id < m2.id ? -1 : 1
-            );
-            const {
-                length: l,
-                [l - 1]: lastNeedactionMessage,
-            } = orderedNeedactionMessages;
-            if (lastNeedactionMessage) {
-                return [['link', lastNeedactionMessage]];
-            }
-            return [['unlink']];
-        }
-
-        /**
-         * @private
-         * @returns {mail.thread_cache}
-         */
-        _computeMainCache() {
-            return [['link', this.cache()]];
-        }
-
-        /**
-         * @private
-         * @returns {integer}
-         */
-        _computeLocalMessageUnreadCounter() {
-            // By default trust the server up to the last message it used
-            // because it's not possible to do better.
-            let baseCounter = this.serverMessageUnreadCounter;
-            let countFromId = this.serverLastMessageId;
-            // But if the client knows the last seen message that the server
-            // returned (and by assumption all the messages that come after),
-            // the counter can be computed fully locally, ignoring potentially
-            // obsolete values from the server.
-            const firstMessage = this.orderedMessages[0];
-            if (
-                firstMessage &&
-                this.lastSeenByCurrentPartnerMessageId &&
-                this.lastSeenByCurrentPartnerMessageId >= firstMessage.id
-            ) {
-                baseCounter = 0;
-                countFromId = this.lastSeenByCurrentPartnerMessageId;
-            }
-            // Include all the messages that are known locally but the server
-            // didn't take into account.
-            return this.orderedMessages.reduce((total, message) => {
-                if (message.id <= countFromId) {
-                    return total;
-                }
-                return total + 1;
-            }, baseCounter);
-        }
-
-        /**
-         * @private
-         * @returns {mail.messaging}
-         */
-        _computeMessaging() {
-            return [['link', this.env.messaging]];
-        }
-
-        /**
-         * @private
-         * @returns {mail.message[]}
-         */
-        _computeNeedactionMessages() {
-            return [['replace', this.messages.filter(message => message.isNeedaction)]];
-        }
-
-        /**
-         * @private
-         * @returns {mail.message|undefined}
-         */
-        _computeMessageAfterNewMessageSeparator() {
-            if (this.model !== 'mail.channel') {
-                return [['unlink']];
-            }
-            if (this.localMessageUnreadCounter === 0) {
-                return [['unlink']];
-            }
-            const index = this.orderedMessages.findIndex(message =>
-                message.id === this.lastSeenByCurrentPartnerMessageId
-            );
-            const message = this.orderedMessages[index + 1];
-            if (!message) {
-                return [['unlink']];
-            }
-            return [['link', message]];
-        }
-
-        /**
-         * @private
-         * @returns {mail.message[]}
-         */
-        _computeOrderedMessages() {
-            return [['replace', this.messages.sort((m1, m2) => m1.id < m2.id ? -1 : 1)]];
-        }
-
-        /**
-         * @private
-         * @returns {mail.message[]}
-         */
-        _computeOrderedNonTransientMessages() {
-            return [['replace', this.orderedMessages.filter(m => !m.isTransient)]];
-        }
-
-        /**
-         * @private
-         * @returns {mail.partner[]}
-         */
-        _computeOrderedOtherTypingMembers() {
-            return [[
-                'replace',
-                this.orderedTypingMembers.filter(
-                    member => member !== this.env.messaging.currentPartner
-                ),
-            ]];
-        }
-
-        /**
-         * @private
-         * @returns {mail.partner[]}
-         */
-        _computeOrderedTypingMembers() {
-            return [[
-                'replace',
-                this.orderedTypingMemberLocalIds
-                    .map(localId => this.env.models['mail.partner'].get(localId))
-                    .filter(member => !!member),
-            ]];
-        }
-
-        /**
-         * @private
-         * @returns {mail.activity[]}
-         */
-        _computeOverdueActivities() {
-            return [['replace', this.activities.filter(activity => activity.state === 'overdue')]];
-        }
-
-        /**
-         * @private
-         * @returns {mail.activity[]}
-         */
-        _computeTodayActivities() {
-            return [['replace', this.activities.filter(activity => activity.state === 'today')]];
-        }
-
-        /**
-         * @private
-         * @returns {string}
-         */
-        _computeTypingStatusText() {
-            if (this.orderedOtherTypingMembers.length === 0) {
-                return this.constructor.fields.typingStatusText.default;
-            }
-            if (this.orderedOtherTypingMembers.length === 1) {
-                return _.str.sprintf(
-                    this.env._t("%s is typing..."),
-                    this.orderedOtherTypingMembers[0].nameOrDisplayName
-                );
-            }
-            if (this.orderedOtherTypingMembers.length === 2) {
-                return _.str.sprintf(
-                    this.env._t("%s and %s are typing..."),
-                    this.orderedOtherTypingMembers[0].nameOrDisplayName,
-                    this.orderedOtherTypingMembers[1].nameOrDisplayName
-                );
-            }
-            return _.str.sprintf(
-                this.env._t("%s, %s and more are typing..."),
-                this.orderedOtherTypingMembers[0].nameOrDisplayName,
-                this.orderedOtherTypingMembers[1].nameOrDisplayName
-            );
-        }
-
-        /**
-         * @private
-         * @param {Object} param0
-         * @param {boolean} param0.isTyping
-         */
-        async _notifyCurrentPartnerTypingStatus({ isTyping }) {
-            if (
-                this._forceNotifyNextCurrentPartnerTypingStatus ||
-                isTyping !== this._currentPartnerLastNotifiedIsTyping
-            ) {
-                if (this.model === 'mail.channel') {
-                    await this.async(() => this.env.services.rpc({
-                        model: 'mail.channel',
-                        method: 'notify_typing',
-                        args: [this.id],
-                        kwargs: { is_typing: isTyping },
-                    }, { shadow: true }));
-                }
-                if (isTyping && this._currentPartnerLongTypingTimer.isRunning) {
-                    this._currentPartnerLongTypingTimer.reset();
-                }
-            }
-            this._forceNotifyNextCurrentPartnerTypingStatus = false;
-            this._currentPartnerLastNotifiedIsTyping = isTyping;
-        }
-
-        /**
-         * Cleans followers of current thread. In particular, chats are supposed
-         * to work with "members", not with "followers". This clean up is only
-         * necessary to remove illegitimate followers in stable version, it can
-         * be removed in master after proper migration to clean the database.
-         *
-         * @private
-         */
-        _onChangeFollowersPartner() {
-            if (this.channel_type !== 'chat') {
-                return;
-            }
-            for (const follower of this.followers) {
-                if (follower.partner) {
-                    follower.remove();
-                }
-            }
-        }
-
-        /**
-         * @private
-         */
-        _onChangeLastSeenByCurrentPartnerMessageId() {
-            this.env.messagingBus.trigger('o-thread-last-seen-by-current-partner-message-id-changed', {
-                thread: this,
-            });
-        }
-
-        /**
-         * Fetches followers of chats when they are displayed for the first
-         * time. This is necessary to clean the followers.
-         * @see `_onChangeFollowersPartner` for more information.
-         *
-         * @private
-         */
-        _onChangeThreadViews() {
-            if (this.channel_type !== 'chat') {
-                return;
-            }
-            if (this.threadViews.length === 0) {
-                return;
-            }
-            if (this.areFollowersLoaded) {
-                return;
-            }
-            this.refreshFollowers();
-        }
-
-        /**
-         * Handles change of pinned state coming from the server. Useful to
-         * clear pending state once server acknowledged the change.
-         *
-         * @private
-         * @see isPendingPinned
-         */
-        _onIsServerPinnedChanged() {
-            if (this.isServerPinned === this.isPendingPinned) {
-                this.update({ isPendingPinned: clear() });
-            }
-        }
-
-        /**
-         * Handles change of fold state coming from the server. Useful to
-         * synchronize corresponding chat window.
-         *
-         * @private
-         */
-        _onServerFoldStateChanged() {
-            if (!this.env.messaging.chatWindowManager) {
-                // avoid crash during destroy
-                return;
-            }
-            if (this.serverFoldState === 'closed') {
-                this.env.messaging.chatWindowManager.closeThread(this, {
-                    notifyServer: false,
-                });
-            } else {
-                this.env.messaging.chatWindowManager.openThread(this, {
-                    isFolded: this.serverFoldState === 'folded',
-                    notifyServer: false,
-                });
-            }
-        }
-
-        /**
-         * @private
-         * @param {Object} [param0={}]
-         * @param {boolean} [param0.mail_invite_follower_channel_only=false]
-         */
-        _promptAddFollower({ mail_invite_follower_channel_only = false } = {}) {
-            const action = {
-                type: 'ir.actions.act_window',
-                res_model: 'mail.wizard.invite',
-                view_mode: 'form',
-                views: [[false, 'form']],
-                name: this.env._t("Invite Follower"),
-                target: 'new',
-                context: {
-                    default_res_model: this.model,
-                    default_res_id: this.id,
-                    mail_invite_follower_channel_only,
-                },
-            };
-            this.env.bus.trigger('do-action', {
-                action,
-                options: {
-                    on_close: async () => {
-                       await this.async(() => this.refreshFollowers());
-                       this.env.bus.trigger('mail.thread:promptAddFollower-closed');
-                    },
-                },
-            });
-        }
-
-        //----------------------------------------------------------------------
-        // Handlers
-        //----------------------------------------------------------------------
-
-        /**
-         * @private
-         */
-        async _onCurrentPartnerInactiveTypingTimeout() {
-            await this.async(() => this.unregisterCurrentPartnerIsTyping());
-        }
-
-        /**
-         * Called when current partner has been typing for a very long time.
-         * Immediately notify other members that he/she is still typing.
-         *
-         * @private
-         */
-        async _onCurrentPartnerLongTypingTimeout() {
-            this._forceNotifyNextCurrentPartnerTypingStatus = true;
-            this._throttleNotifyCurrentPartnerTypingStatus.clear();
-            await this.async(
-                () => this._throttleNotifyCurrentPartnerTypingStatus({ isTyping: true })
-            );
-        }
-
-        /**
-         * @private
-         * @param {mail.partner} partner
-         */
-        async _onOtherMemberLongTypingTimeout(partner) {
-            if (!this.typingMembers.includes(partner)) {
-                this._otherMembersLongTypingTimers.delete(partner);
-                return;
-            }
-            this.unregisterOtherMemberTypingMember(partner);
-        }
-
-    }
-
-    Thread.fields = {
-        /**
-         * Determines the `mail.activity` that belong to `this`, assuming `this`
-         * has activities (@see hasActivities).
-         */
-        activities: one2many('mail.activity', {
-            inverse: 'thread',
-        }),
-        /**
-         * Serves as compute dependency.
-         */
-        activitiesState: attr({
-            related: 'activities.state',
-        }),
-        allAttachments: many2many('mail.attachment', {
-            compute: '_computeAllAttachments',
-            dependencies: [
-                'attachments',
-                'originThreadAttachments',
-            ],
-        }),
-        areAttachmentsLoaded: attr({
-            default: false,
-        }),
-        /**
-         * States whether followers have been loaded at least once for this
-         * thread.
-         */
-        areFollowersLoaded: attr({
-            default: false,
-        }),
-        attachments: many2many('mail.attachment', {
-            inverse: 'threads',
-        }),
-        caches: one2many('mail.thread_cache', {
-            inverse: 'thread',
-            isCausal: true,
-        }),
-        channel_type: attr(),
-        /**
-         * States the `mail.chat_window` related to `this`. Serves as compute
-         * dependency. It is computed from the inverse relation and it should
-         * otherwise be considered read-only.
-         */
-        chatWindow: one2one('mail.chat_window', {
-            inverse: 'thread',
-        }),
-        /**
-         * Serves as compute dependency.
-         */
-        chatWindowIsFolded: attr({
-            related: 'chatWindow.isFolded',
-        }),
-        composer: one2one('mail.composer', {
-            default: [['create']],
-            inverse: 'thread',
-            isCausal: true,
-            readonly: true,
-        }),
-        correspondent: many2one('mail.partner', {
-            compute: '_computeCorrespondent',
-            dependencies: [
-                'channel_type',
-                'members',
-                'messagingCurrentPartner',
-            ],
-            inverse: 'correspondentThreads',
-        }),
-        correspondentNameOrDisplayName: attr({
-            related: 'correspondent.nameOrDisplayName',
-        }),
-        counter: attr({
-            default: 0,
-        }),
-        creator: many2one('mail.user'),
-        custom_channel_name: attr(),
-        displayName: attr({
-            compute: '_computeDisplayName',
-            dependencies: [
-                'channel_type',
-                'correspondent',
-                'correspondentNameOrDisplayName',
-                'custom_channel_name',
-                'name',
-            ],
-        }),
-        followersPartner: many2many('mail.partner', {
-            related: 'followers.partner',
-        }),
-        followers: one2many('mail.follower', {
-            inverse: 'followedThread',
-        }),
-        /**
-         * States the `mail.activity` that belongs to `this` and that are
-         * planned in the future (due later than today).
-         */
-        futureActivities: one2many('mail.activity', {
-            compute: '_computeFutureActivities',
-            dependencies: ['activitiesState'],
-        }),
-        group_based_subscription: attr({
-            default: false,
-        }),
-        /**
-         * States whether `this` has activities (`mail.activity.mixin` server side).
-         */
-        hasActivities: attr({
-            default: false,
-        }),
-        /**
-         * Determine whether this thread has the seen indicators (V and VV)
-         * enabled or not.
-         */
-        hasSeenIndicators: attr({
-            compute: '_computeHasSeenIndicators',
-            default: false,
-            dependencies: [
-                'channel_type',
-                'mass_mailing',
-                'model',
-            ],
-        }),
-        id: attr({
-            required: true,
-        }),
-        /**
-         * States whether this thread is a `mail.channel` qualified as chat.
-         *
-         * Useful to list chat channels, like in messaging menu with the filter
-         * 'chat'.
-         */
-        isChatChannel: attr({
-            compute: '_computeIsChatChannel',
-            dependencies: [
-                'channel_type',
-            ],
-            default: false,
-        }),
-        isCurrentPartnerFollowing: attr({
-            compute: '_computeIsCurrentPartnerFollowing',
-            default: false,
-            dependencies: [
-                'followersPartner',
-                'messagingCurrentPartner',
-            ],
-        }),
-        /**
-         * States whether `this` is currently loading attachments.
-         */
-        isLoadingAttachments: attr({
-            default: false,
-        }),
-        isModeratedByCurrentPartner: attr({
-            compute: '_computeIsModeratedByCurrentPartner',
-            dependencies: [
-                'messagingCurrentPartner',
-                'moderators',
-            ],
-        }),
-        /**
-         * Determine if there is a pending pin state change, which is a change
-         * of pin state requested by the client but not yet confirmed by the
-         * server.
-         *
-         * This field can be updated to immediately change the pin state on the
-         * interface and to notify the server of the new state.
-         */
-        isPendingPinned: attr(),
-        /**
-         * Boolean that determines whether this thread is pinned
-         * in discuss and present in the messaging menu.
-         */
-        isPinned: attr({
-            compute: '_computeIsPinned',
-            dependencies: [
-                'isPendingPinned',
-                'isServerPinned',
-            ],
-        }),
-        /**
-         * Determine the last pin state known by the server, which is the pin
-         * state displayed after initialization or when the last pending
-         * pin state change was confirmed by the server.
-         *
-         * This field should be considered read only in most situations. Only
-         * the code handling pin state change from the server should typically
-         * update it.
-         */
-        isServerPinned: attr({
-            default: false,
-        }),
-        isTemporary: attr({
-            default: false,
-        }),
-        is_moderator: attr({
-            default: false,
-        }),
-        lastCurrentPartnerMessageSeenByEveryone: many2one('mail.message', {
-            compute: '_computeLastCurrentPartnerMessageSeenByEveryone',
-            dependencies: [
-                'messagingCurrentPartner',
-                'orderedNonTransientMessages',
-                'partnerSeenInfos',
-            ],
-        }),
-        /**
-         * Last message of the thread, could be a transient one.
-         */
-        lastMessage: many2one('mail.message', {
-            compute: '_computeLastMessage',
-            dependencies: ['orderedMessages'],
-        }),
-        lastNeedactionMessage: many2one('mail.message', {
-            compute: '_computeLastNeedactionMessage',
-            dependencies: ['needactionMessages'],
-        }),
-        /**
-         * Last non-transient message.
-         */
-        lastNonTransientMessage: many2one('mail.message', {
-            compute: '_computeLastNonTransientMessage',
-            dependencies: ['orderedNonTransientMessages'],
-        }),
-        /**
-         * Last seen message id of the channel by current partner.
-         *
-         * Also, it needs to be kept as an id because it's considered like a "date" and could stay
-         * even if corresponding message is deleted. It is basically used to know which
-         * messages are before or after it.
-         */
-        lastSeenByCurrentPartnerMessageId: attr({
-            compute: '_computeLastSeenByCurrentPartnerMessageId',
-            default: 0,
-            dependencies: [
-                'lastSeenByCurrentPartnerMessageId',
-                'messagingCurrentPartner',
-                'orderedMessages',
-                'orderedMessagesIsTransient',
-                // FIXME missing dependency 'orderedMessages.author', (task-2261221)
-            ],
-        }),
-        /**
-         * Local value of message unread counter, that means it is based on initial server value and
-         * updated with interface updates.
-         */
-        localMessageUnreadCounter: attr({
-            compute: '_computeLocalMessageUnreadCounter',
-            dependencies: [
-                'lastSeenByCurrentPartnerMessageId',
-                'messagingCurrentPartner',
-                'orderedMessages',
-                'serverLastMessageId',
-                'serverMessageUnreadCounter',
-            ],
-        }),
-        mainCache: one2one('mail.thread_cache', {
-            compute: '_computeMainCache',
-        }),
-        mass_mailing: attr({
-            default: false,
-        }),
-        members: many2many('mail.partner', {
-            inverse: 'memberThreads',
-        }),
-        /**
-         * Determines the message before which the "new message" separator must
-         * be positioned, if any.
-         */
-        messageAfterNewMessageSeparator: many2one('mail.message', {
-            compute: '_computeMessageAfterNewMessageSeparator',
-            dependencies: [
-                'lastSeenByCurrentPartnerMessageId',
-                'localMessageUnreadCounter',
-                'model',
-                'orderedMessages',
-            ],
-        }),
-        message_needaction_counter: attr({
-            default: 0,
-        }),
-        /**
-         * All messages that this thread is linked to.
-         * Note that this field is automatically computed by inverse
-         * computed field.
-         */
-        messages: many2many('mail.message', {
-            inverse: 'threads',
-            readonly: true,
-        }),
-        /**
-         * All messages that are contained on this channel on the server.
-         * Equivalent to the inverse of python field `channel_ids`.
-         */
-        messagesAsServerChannel: many2many('mail.message', {
-            inverse: 'serverChannels',
-        }),
-        messageSeenIndicators: one2many('mail.message_seen_indicator', {
-            inverse: 'thread',
-            isCausal: true,
-            readonly: true,
-        }),
-        messaging: many2one('mail.messaging', {
-            compute: '_computeMessaging',
-        }),
-        messagingCurrentPartner: many2one('mail.partner', {
-            related: 'messaging.currentPartner',
-        }),
-        model: attr({
-            required: true,
-        }),
-        model_name: attr(),
-        moderation: attr({
-            default: false,
-        }),
-        /**
-         * Partners that are moderating this thread (only applies to channels).
-         */
-        moderators: many2many('mail.partner', {
-            inverse: 'moderatedChannels',
-        }),
-        moduleIcon: attr(),
-        name: attr(),
-        needactionMessages: many2many('mail.message', {
-            compute: '_computeNeedactionMessages',
-            dependencies: ['messages'],
-        }),
-        /**
-         * Not a real field, used to trigger `_onChangeFollowersPartner` when one of
-         * the dependencies changes.
-         */
-        onChangeFollowersPartner: attr({
-            compute: '_onChangeFollowersPartner',
-            dependencies: [
-                'followersPartner',
-            ],
-        }),
-        /**
-         * Not a real field, used to trigger `_onChangeLastSeenByCurrentPartnerMessageId` when one of
-         * the dependencies changes.
-         */
-        onChangeLastSeenByCurrentPartnerMessageId: attr({
-            compute: '_onChangeLastSeenByCurrentPartnerMessageId',
-            dependencies: [
-                'lastSeenByCurrentPartnerMessageId',
-            ],
-        }),
-        /**
-         * Not a real field, used to trigger `_onChangeThreadViews` when one of
-         * the dependencies changes.
-         */
-        onChangeThreadView: attr({
-            compute: '_onChangeThreadViews',
-            dependencies: [
-                'threadViews',
-            ],
-        }),
-        /**
-         * Not a real field, used to trigger `_onIsServerPinnedChanged` when one of
-         * the dependencies changes.
-         */
-        onIsServerPinnedChanged: attr({
-            compute: '_onIsServerPinnedChanged',
-            dependencies: [
-                'isServerPinned',
-            ],
-        }),
-        /**
-         * Not a real field, used to trigger `_onServerFoldStateChanged` when one of
-         * the dependencies changes.
-         */
-        onServerFoldStateChanged: attr({
-            compute: '_onServerFoldStateChanged',
-            dependencies: [
-                'serverFoldState',
-            ],
-        }),
-        /**
-         * All messages ordered like they are displayed.
-         */
-        orderedMessages: many2many('mail.message', {
-            compute: '_computeOrderedMessages',
-            dependencies: ['messages'],
-        }),
-        /**
-         * Serves as compute dependency. (task-2261221)
-         */
-        orderedMessagesIsTransient: attr({
-            related: 'orderedMessages.isTransient',
-        }),
-        /**
-         * All messages ordered like they are displayed. This field does not
-         * contain transient messages which are not "real" records.
-         */
-        orderedNonTransientMessages: many2many('mail.message', {
-            compute: '_computeOrderedNonTransientMessages',
-            dependencies: [
-                'orderedMessages',
-                'orderedMessagesIsTransient',
-            ],
-        }),
-        /**
-         * Ordered typing members on this thread, excluding the current partner.
-         */
-        orderedOtherTypingMembers: many2many('mail.partner', {
-            compute: '_computeOrderedOtherTypingMembers',
-            dependencies: ['orderedTypingMembers'],
-        }),
-        /**
-         * Ordered typing members on this thread. Lower index means this member
-         * is currently typing for the longest time. This list includes current
-         * partner as typer.
-         */
-        orderedTypingMembers: many2many('mail.partner', {
-            compute: '_computeOrderedTypingMembers',
-            dependencies: [
-                'orderedTypingMemberLocalIds',
-                'typingMembers',
-            ],
-        }),
-        /**
-         * Technical attribute to manage ordered list of typing members.
-         */
-        orderedTypingMemberLocalIds: attr({
-            default: [],
-        }),
-        originThreadAttachments: one2many('mail.attachment', {
-            inverse: 'originThread',
-        }),
-        /**
-         * States the `mail.activity` that belongs to `this` and that are
-         * overdue (due earlier than today).
-         */
-        overdueActivities: one2many('mail.activity', {
-            compute: '_computeOverdueActivities',
-            dependencies: ['activitiesState'],
-        }),
-        partnerSeenInfos: one2many('mail.thread_partner_seen_info', {
-            inverse: 'thread',
-            isCausal: true,
-            readonly: true,
-        }),
-        /**
-         * Determine if there is a pending seen message change, which is a change
-         * of seen message requested by the client but not yet confirmed by the
-         * server.
-         */
-        pendingSeenMessageId: attr(),
-        public: attr(),
-        /**
-         * Determine the last fold state known by the server, which is the fold
-         * state displayed after initialization or when the last pending
-         * fold state change was confirmed by the server.
-         *
-         * This field should be considered read only in most situations. Only
-         * the code handling fold state change from the server should typically
-         * update it.
-         */
-        serverFoldState: attr({
-            default: 'closed',
-        }),
-        /**
-         * Last message id considered by the server.
-         *
-         * Useful to compute localMessageUnreadCounter field.
-         *
-         * @see localMessageUnreadCounter
-         */
-        serverLastMessageId: attr({
-            default: 0,
-        }),
-        /**
-         * Message unread counter coming from server.
-         *
-         * Value of this field is unreliable, due to dynamic nature of
-         * messaging. So likely outdated/unsync with server. Should use
-         * localMessageUnreadCounter instead, which smartly guess the actual
-         * message unread counter at all time.
-         *
-         * @see localMessageUnreadCounter
-         */
-        serverMessageUnreadCounter: attr({
-            default: 0,
-        }),
-        /**
-         * Determines the `mail.suggested_recipient_info` concerning `this`.
-         */
-        suggestedRecipientInfoList: one2many('mail.suggested_recipient_info', {
-            inverse: 'thread',
-        }),
-        threadViews: one2many('mail.thread_view', {
-            inverse: 'thread',
-        }),
-        /**
-         * States the `mail.activity` that belongs to `this` and that are due
-         * specifically today.
-         */
-        todayActivities: one2many('mail.activity', {
-            compute: '_computeTodayActivities',
-            dependencies: ['activitiesState'],
-        }),
-        /**
-         * Members that are currently typing something in the composer of this
-         * thread, including current partner.
-         */
-        typingMembers: many2many('mail.partner'),
-        /**
-         * Text that represents the status on this thread about typing members.
-         */
-        typingStatusText: attr({
-            compute: '_computeTypingStatusText',
-            default: '',
-            dependencies: ['orderedOtherTypingMembers'],
-        }),
-        uuid: attr(),
-    };
-
-    Thread.modelName = 'mail.thread';
-
-    return Thread;
-}
-
-registerNewModel('mail.thread', factory);
+        },
+    },
+});
+
+return defineFeatureSlice(
+    'mail/static/src/models/thread/thread.js',
+    actions,
+    model,
+);
 
 });

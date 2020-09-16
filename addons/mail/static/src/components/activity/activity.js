@@ -1,12 +1,7 @@
 odoo.define('mail/static/src/components/activity/activity.js', function (require) {
 'use strict';
 
-const components = {
-    ActivityMarkDonePopover: require('mail/static/src/components/activity_mark_done_popover/activity_mark_done_popover.js'),
-    FileUploader: require('mail/static/src/components/file_uploader/file_uploader.js'),
-    MailTemplate: require('mail/static/src/components/mail_template/mail_template.js'),
-};
-const useStore = require('mail/static/src/component_hooks/use_store/use_store.js');
+const usingModels = require('mail/static/src/component-mixins/using-models/using-models.js');
 
 const {
     auto_str_to_date,
@@ -14,10 +9,10 @@ const {
     getLangDatetimeFormat,
 } = require('web.time');
 
-const { Component, useState } = owl;
+const { Component, QWeb, useState } = owl;
 const { useRef } = owl.hooks;
 
-class Activity extends Component {
+class Activity extends usingModels(Component) {
 
     /**
      * @override
@@ -26,17 +21,6 @@ class Activity extends Component {
         super(...args);
         this.state = useState({
             areDetailsVisible: false,
-        });
-        useStore(props => {
-            const activity = this.env.models['mail.activity'].get(props.activityLocalId);
-            return {
-                activity: activity ? activity.__state : undefined,
-                assigneeNameOrDisplayName: (
-                    activity &&
-                    activity.assignee &&
-                    activity.assignee.nameOrDisplayName
-                ),
-            };
         });
         /**
          * Reference of the file uploader.
@@ -50,17 +34,13 @@ class Activity extends Component {
     //--------------------------------------------------------------------------
 
     /**
-     * @returns {mail.activity}
-     */
-    get activity() {
-        return this.env.models['mail.activity'].get(this.props.activityLocalId);
-    }
-
-    /**
      * @returns {string}
      */
     get assignedUserText() {
-        return _.str.sprintf(this.env._t("for %s"), this.activity.assignee.nameOrDisplayName);
+        return _.str.sprintf(
+            this.env._t("for %s"),
+            this.activity.$$$assignee(this).$$$nameOrDisplayName(this)
+        );
     }
 
     /**
@@ -68,7 +48,9 @@ class Activity extends Component {
      */
     get delayLabel() {
         const today = moment().startOf('day');
-        const momentDeadlineDate = moment(auto_str_to_date(this.activity.dateDeadline));
+        const momentDeadlineDate = moment(
+            auto_str_to_date(this.activity.$$$dateDeadline(this))
+        );
         // true means no rounding
         const diff = momentDeadlineDate.diff(today, 'days', true);
         if (diff === 0) {
@@ -88,7 +70,9 @@ class Activity extends Component {
      * @returns {string}
      */
     get formattedCreateDatetime() {
-        const momentCreateDate = moment(auto_str_to_date(this.activity.dateCreate));
+        const momentCreateDate = moment(
+            auto_str_to_date(this.activity.$$$dateCreate(this))
+        );
         const datetimeFormat = getLangDatetimeFormat();
         return momentCreateDate.format(datetimeFormat);
     }
@@ -97,7 +81,9 @@ class Activity extends Component {
      * @returns {string}
      */
     get formattedDeadlineDate() {
-        const momentDeadlineDate = moment(auto_str_to_date(this.activity.dateDeadline));
+        const momentDeadlineDate = moment(
+            auto_str_to_date(this.activity.$$$dateDeadline(this))
+        );
         const datetimeFormat = getLangDateFormat();
         return momentDeadlineDate.format(datetimeFormat);
     }
@@ -113,7 +99,10 @@ class Activity extends Component {
      * @returns {string}
      */
     get summary() {
-        return _.str.sprintf(this.env._t("“%s”"), this.activity.summary);
+        return _.str.sprintf(
+            this.env._t("“%s”"),
+            this.activity.$$$summary(this)
+        );
     }
 
     //--------------------------------------------------------------------------
@@ -124,10 +113,13 @@ class Activity extends Component {
      * @private
      * @param {CustomEvent} ev
      * @param {Object} ev.detail
-     * @param {mail.attachment} ev.detail.attachment
+     * @param {Attachment} ev.detail.attachment
      */
     _onAttachmentCreated(ev) {
-        this.activity.markAsDone({ attachments: [ev.detail.attachment] });
+        this.env.invoke('Activity/markAsDone',
+            this.activity,
+            { attachments: [ev.detail.attachment] }
+        );
     }
 
     /**
@@ -140,10 +132,13 @@ class Activity extends Component {
             ev.target.dataset.oeId &&
             ev.target.dataset.oeModel
         ) {
-            this.env.messaging.openProfile({
-                id: Number(ev.target.dataset.oeId),
-                model: ev.target.dataset.oeModel,
-            });
+            this.env.invoke('Messaging/openProfile',
+                this.env.messaging,
+                {
+                    id: Number(ev.target.dataset.oeId),
+                    model: ev.target.dataset.oeModel,
+                }
+            );
             // avoid following dummy href
             ev.preventDefault();
         }
@@ -155,7 +150,7 @@ class Activity extends Component {
      */
     _onClickCancel(ev) {
         ev.preventDefault();
-        this.activity.deleteServerRecord();
+        this.env.invoke('Activity/deleteServerRecord', this.activity);
     }
 
     /**
@@ -170,7 +165,7 @@ class Activity extends Component {
      * @param {MouseEvent} ev
      */
     _onClickEdit(ev) {
-        this.activity.edit();
+        this.env.invoke('Activity/edit', this.activity);
     }
 
     /**
@@ -184,12 +179,21 @@ class Activity extends Component {
 }
 
 Object.assign(Activity, {
-    components,
     props: {
-        activityLocalId: String,
+        activity: {
+            type: Object,
+            validate(p) {
+                if (p.constructor.modelName !== 'Activity') {
+                    return false;
+                }
+                return true;
+            },
+        },
     },
     template: 'mail.Activity',
 });
+
+QWeb.registerComponent('Activity', Activity);
 
 return Activity;
 

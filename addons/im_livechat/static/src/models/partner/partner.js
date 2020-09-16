@@ -2,22 +2,23 @@ odoo.define('im_livechat/static/src/models/partner/partner.js', function (requir
 'use strict';
 
 const {
-    registerClassPatchModel,
-} = require('mail/static/src/model/model_core.js');
+    'Feature/defineActions': defineActions,
+    'Feature/defineSlice': defineFeatureSlice,
+} = require('mail/static/src/model/utils.js');
 
 let nextPublicId = -1;
 
-registerClassPatchModel('mail.partner', 'im_livechat/static/src/models/partner/partner.js', {
-
-    //----------------------------------------------------------------------
-    // Public
-    //----------------------------------------------------------------------
-
-    getNextPublicId() {
+const actions = defineActions({
+    'Partner/getNextPublicId'() {
         const id = nextPublicId;
         nextPublicId -= 1;
         return id;
     },
 });
+
+return defineFeatureSlice(
+    'im_livechat/static/src/models/partner/partner.js',
+    actions,
+);
 
 });

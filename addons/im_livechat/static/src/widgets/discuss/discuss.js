@@ -13,8 +13,8 @@ Discuss.include({
      */
     _shouldHaveInviteButton() {
         if (
-            this.discuss.thread &&
-            this.discuss.thread.channel_type === 'livechat'
+            this.discuss.$$$thread() &&
+            this.discuss.$$$thread().$$$channelType() === 'livechat'
         ) {
             return true;
         }

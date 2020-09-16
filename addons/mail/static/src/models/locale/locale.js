@@ -1,38 +1,31 @@
 odoo.define('mail/static/src/models/locale/locale.js', function (require) {
 'use strict';
 
-const { registerNewModel } = require('mail/static/src/model/model_core.js');
-const { attr } = require('mail/static/src/model/model_field.js');
+const {
+    'Feature/defineModel': defineModel,
+    'Feature/defineSlice': defineFeatureSlice,
+    'Field/attr': attr,
+} = require('mail/static/src/model/utils.js');
 
-function factory(dependencies) {
-
-    class Locale extends dependencies['mail.model'] {
-
-        //----------------------------------------------------------------------
-        // Private
-        //----------------------------------------------------------------------
-
-        /**
-         * @private
-         * @returns {string}
-         */
-        _computeTextDirection() {
-            return this.env._t.database.parameters.direction;
-        }
-
-    }
-
-    Locale.fields = {
-        textDirection: attr({
-            compute: '_computeTextDirection',
+const model = defineModel({
+    name: 'Locale',
+    fields: {
+        $$$textDirection: attr({
+            /**
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @returns {string}
+             */
+            compute({ env }) {
+                return env._t.database.parameters.direction;
+            },
         }),
-    };
+    },
+});
 
-    Locale.modelName = 'mail.locale';
-
-    return Locale;
-}
-
-registerNewModel('mail.locale', factory);
+return defineFeatureSlice(
+    'mail/static/src/models/locale/locale.js',
+    model,
+);
 
 });

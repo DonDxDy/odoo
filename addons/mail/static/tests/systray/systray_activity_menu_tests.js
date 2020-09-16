@@ -6,7 +6,7 @@ const {
     afterNextRender,
     beforeEach,
     start,
-} = require('mail/static/src/utils/test_utils.js');
+} = require('mail/static/src/utils/test-utils.js');
 var ActivityMenu = require('mail.systray.ActivityMenu');
 
 var testUtils = require('web.test_utils');
@@ -260,7 +260,7 @@ QUnit.test('activity menu widget: close on messaging menu click', async function
     );
 
     await afterNextRender(() =>
-        document.querySelector(`.o_MessagingMenu_toggler`).click()
+        document.querySelector('.o-MessagingMenu-toggler').click()
     );
     assert.doesNotHaveClass(
         activityMenu.el.querySelector('.o_mail_systray_dropdown'),

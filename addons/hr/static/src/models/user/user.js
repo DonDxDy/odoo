@@ -2,17 +2,26 @@ odoo.define('hr/static/src/models/user/user.js', function (require) {
 'use strict';
 
 const {
-    registerFieldPatchModel,
-} = require('mail/static/src/model/model_core.js');
-const { one2one } = require('mail/static/src/model/model_field.js');
+    'Feature/defineModelExtension': defineModelExtension,
+    'Feature/defineSlice': defineFeatureSlice,
+    'Field/one2one': one2one,
+} = require('mail/static/src/model/utils.js');
 
-registerFieldPatchModel('mail.user', 'hr/static/src/models/user/user.js', {
-    /**
-     * Employee related to this user.
-     */
-    employee: one2one('hr.employee', {
-        inverse: 'user',
-    }),
+const modelExtension = defineModelExtension({
+    name: 'User',
+    fields: {
+        /**
+         * Employee related to this user.
+         */
+        $$$employee: one2one('Employee', {
+            inverse: '$$$user',
+        }),
+    },
 });
+
+return defineFeatureSlice(
+    'hr/static/src/models/user/user.js',
+    modelExtension,
+);
 
 });

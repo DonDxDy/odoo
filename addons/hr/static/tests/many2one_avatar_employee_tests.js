@@ -6,7 +6,7 @@ const {
     afterNextRender,
     beforeEach,
     start,
-} = require('mail/static/src/utils/test_utils.js');
+} = require('mail/static/src/utils/test-utils.js');
 
 const FormView = require('web.FormView');
 const KanbanView = require('web.KanbanView');
@@ -86,11 +86,11 @@ QUnit.module('hr', {}, function () {
         );
         assert.containsOnce(
             document.body,
-            '.o_ChatWindowHeader_name',
+            '.o-ChatWindowHeader-name',
             'should have opened chat window'
         );
         assert.strictEqual(
-            document.querySelector('.o_ChatWindowHeader_name').textContent,
+            document.querySelector('.o-ChatWindowHeader-name').textContent,
             "Mario",
             'chat window should be with clicked employee'
         );
@@ -105,12 +105,12 @@ QUnit.module('hr', {}, function () {
         );
         assert.containsN(
             document.body,
-            '.o_ChatWindowHeader_name',
+            '.o-ChatWindowHeader-name',
             2,
             'should have opened second chat window'
         );
         assert.strictEqual(
-            document.querySelectorAll('.o_ChatWindowHeader_name')[1].textContent,
+            document.querySelectorAll('.o-ChatWindowHeader-name')[1].textContent,
             "Luigi",
             'chat window should be with clicked employee'
         );
@@ -125,7 +125,7 @@ QUnit.module('hr', {}, function () {
         );
         assert.containsN(
             document.body,
-            '.o_ChatWindowHeader_name',
+            '.o-ChatWindowHeader-name',
             2,
             "should still have only 2 chat windows because third is the same partner as first"
         );

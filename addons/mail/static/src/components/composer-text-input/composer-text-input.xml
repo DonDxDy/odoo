@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mail.ComposerTextInput" owl="1">
+        <div class="o-ComposerTextInput">
+            <t t-if="composer">
+                <t t-if="composer.$$$hasSuggestions(mself)">
+                    <ComposerSuggestionList
+                        composer="composer"
+                        isBelow="hasMentionSuggestionsBelowPosition"
+                    />
+                </t>
+                <textarea class="o-ComposerTextInput-textarea" t-att-class="{ 'o-isComposerCompact': isCompact }" style="height: 0;" t-esc="composer.$$$textInputContent(mself)" t-att-placeholder="textareaPlaceholder" t-on-focusin="_onFocusinTextarea" t-on-focusout="_onFocusoutTextarea" t-on-keydown="_onKeydownTextarea" t-on-keyup="_onKeyupTextarea" t-on-input="_onInputTextarea" t-ref="textarea"/>
+            </t>
+        </div>
+    </t>
+
+</templates>

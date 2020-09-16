@@ -2,62 +2,103 @@ odoo.define('hr/static/src/models/partner/partner.js', function (require) {
 'use strict';
 
 const {
-    registerInstancePatchModel,
-    registerFieldPatchModel,
-} = require('mail/static/src/model/model_core.js');
-const { attr, one2one } = require('mail/static/src/model/model_field.js');
+    'Feature/defineActionExtensions': defineActionExtensions,
+    'Feature/defineActions': defineActions,
+    'Feature/defineModelExtension': defineModelExtension,
+    'Feature/defineSlice': defineFeatureSlice,
+    'Field/attr': attr,
+    'Field/one2one': one2one,
+} = require('mail/static/src/model/utils.js');
 
-registerInstancePatchModel('mail.partner', 'hr/static/src/models/partner/partner.js', {
-    //--------------------------------------------------------------------------
-    // Public
-    //--------------------------------------------------------------------------
-
-    /**
-     * Checks whether this partner has a related employee and links them if
-     * applicable.
-     */
-    async checkIsEmployee() {
-        await this.async(() => this.env.models['hr.employee'].performRpcSearchRead({
-            context: { active_test: false },
-            domain: [['user_partner_id', '=', this.id]],
-            fields: ['user_id', 'user_partner_id'],
-        }));
-        this.update({ hasCheckedEmployee: true });
-    },
+const actionExtensions = defineActionExtensions({
     /**
      * When a partner is an employee, its employee profile contains more useful
      * information to know who he is than its partner profile.
      *
-     * @override
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {function} param0.original
+     * @param {Partner} partner
+     * @param {Object} options
      */
-    async openProfile() {
-        // limitation of patch, `this._super` becomes unavailable after `await`
-        const _super = this._super.bind(this, ...arguments);
-        if (!this.employee && !this.hasCheckedEmployee) {
-            await this.async(() => this.checkIsEmployee());
+    async 'Activity/openProfile'(
+        { env, original },
+        partner,
+        options
+    ) {
+        if (
+            !partner.$$$employee(this) &&
+            !partner.$$$hasCheckedEmployee(this)
+        ) {
+            await env.invoke(
+                'Record/doAsync',
+                partner,
+                () => env.invoke('Partner/checkIsEmployee', partner)
+            );
         }
-        if (this.employee) {
-            return this.employee.openProfile();
+        if (partner.$$$employee(this)) {
+            return env.invoke(
+                'Employee/openProfile',
+                partner.$$$employee(this)
+            );
         }
-        return _super();
+        return original(partner, options);
     },
 });
 
-registerFieldPatchModel('mail.partner', 'hr/static/src/models/partner/partner.js', {
+const actions = defineActions({
     /**
-     * Employee related to this partner. It is computed through
-     * the inverse relation and should be considered read-only.
+     * Checks whether this partner has a related employee and links them if
+     * applicable.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Partner} partner
      */
-    employee: one2one('hr.employee', {
-        inverse: 'partner',
-    }),
-    /**
-     * Whether an attempt was already made to fetch the employee corresponding
-     * to this partner. This prevents doing the same RPC multiple times.
-     */
-    hasCheckedEmployee: attr({
-        default: false,
-    }),
+    async 'Partner/checkIsEmployee'(
+        { env },
+        partner
+    ) {
+        await env.invoke(
+            'Record/doAsync',
+            partner,
+            () => env.invoke('Employee/performRpcSearchRead', {
+                context: { active_test: false },
+                domain: [['user_partner_id', '=', partner.$$$id(this)]],
+                fields: ['user_id', 'user_partner_id'],
+            })
+        );
+        env.invoke('Record/update', partner, {
+            $$$hasCheckedEmployee: true,
+        });
+    },
 });
+
+const modelExtension = defineModelExtension({
+    name: 'Partner',
+    fields: {
+        /**
+         * Employee related to this partner. It is computed through
+         * the inverse relation and should be considered read-only.
+         */
+        $$$employee: one2one('Employee', {
+            inverse: '$$$partner',
+        }),
+        /**
+         * Whether an attempt was already made to fetch the employee corresponding
+         * to this partner. This prevents doing the same RPC multiple times.
+         */
+        $$$hasCheckedEmployee: attr({
+            default: false,
+        }),
+    }
+});
+
+return defineFeatureSlice(
+    'hr/static/src/models/partner/partner.js',
+    actionExtensions,
+    actions,
+    modelExtension,
+);
 
 });

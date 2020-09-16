@@ -1,18 +1,18 @@
 odoo.define('mail/static/src/components/activity/activity_tests.js', function (require) {
 'use strict';
 
-const components = {
-    Activity: require('mail/static/src/components/activity/activity.js'),
-};
-
+const Activity = require('mail/static/src/components/activity/activity.js');
+const usingModels = require('mail/static/src/component-mixins/using-models/using-models.js');
+const {
+    'Field/insert': insert,
+} = require('mail/static/src/model/utils.js');
 const {
     afterEach,
     afterNextRender,
     beforeEach,
     createRootComponent,
     start,
-} = require('mail/static/src/utils/test_utils.js');
-const useStore = require('mail/static/src/component_hooks/use_store/use_store.js');
+} = require('mail/static/src/utils/test-utils.js');
 
 const Bus = require('web.Bus');
 const { date_to_str } = require('web.time');
@@ -26,19 +26,20 @@ QUnit.module('activity_tests.js', {
     beforeEach() {
         beforeEach(this);
 
-        this.createActivityComponent = async function (activity) {
-            await createRootComponent(this, components.Activity, {
-                props: { activityLocalId: activity.localId },
+        this.createActivityComponent = async activity => {
+            await createRootComponent(this, Activity, {
+                props: { activity },
                 target: this.widget.el,
             });
         };
 
         this.start = async params => {
-            const { env, widget } = await start(Object.assign({}, params, {
+            const env = await start({
+                ...params,
                 data: this.data,
-            }));
+            });
             this.env = env;
-            this.widget = widget;
+            return env;
         };
     },
     afterEach() {
@@ -49,70 +50,73 @@ QUnit.module('activity_tests.js', {
 QUnit.test('activity simplest layout', async function (assert) {
     assert.expect(12);
 
-    await this.start();
-    const activity = this.env.models['mail.activity'].create({
-        id: 12,
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const env = await this.start();
+    const activity = env.invoke('Activity/create', {
+        $$$id: 12,
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_sidebar').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-sidebar',
         "should have activity sidebar"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_core').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-core',
         "should have activity core"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_user').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-user',
         "should have activity user"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_info').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-info',
         "should have activity info"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_note').length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Activity-note',
         "should not have activity note"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_details').length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Activity-details',
         "should not have activity details"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_mailTemplates').length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Activity-mailTemplates',
         "should not have activity mail templates"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_editButton').length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Activity-editButton',
         "should not have activity Edit button"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_cancelButton').length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Activity-cancelButton',
         "should not have activity Cancel button"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_markDoneButton').length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Activity-markDoneButton',
         "should not have activity Mark as Done button"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_uploadButton').length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Activity-uploadButton',
         "should not have activity Upload button"
     );
 });
@@ -120,25 +124,28 @@ QUnit.test('activity simplest layout', async function (assert) {
 QUnit.test('activity with note layout', async function (assert) {
     assert.expect(3);
 
-    await this.start();
-    const activity = this.env.models['mail.activity'].create({
-        id: 12,
-        note: 'There is no good or bad note',
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const env = await this.start();
+    const activity = env.invoke('Activity/create', {
+        $$$id: 12,
+        $$$note: 'There is no good or bad note',
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_note').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-note',
         "should have activity note"
     );
     assert.strictEqual(
-        document.querySelector('.o_Activity_note').textContent,
+        document.querySelector('.o-Activity-note').textContent,
         "There is no good or bad note",
         "activity note should be 'There is no good or bad note'"
     );
@@ -147,33 +154,37 @@ QUnit.test('activity with note layout', async function (assert) {
 QUnit.test('activity info layout when planned after tomorrow', async function (assert) {
     assert.expect(4);
 
-    await this.start();
+    const env = await this.start();
     const today = new Date();
     const fiveDaysFromNow = new Date();
     fiveDaysFromNow.setDate(today.getDate() + 5);
-    const activity = this.env.models['mail.activity'].create({
-        dateDeadline: date_to_str(fiveDaysFromNow),
-        id: 12,
-        state: 'planned',
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const activity = env.invoke('Activity/create', {
+        $$$dateDeadline: date_to_str(fiveDaysFromNow),
+        $$$id: 12,
+        $$$state: 'planned',
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_dueDateText').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-dueDateText',
         "should have activity delay"
     );
-    assert.ok(
-        document.querySelector('.o_Activity_dueDateText').classList.contains('o-planned'),
+    assert.hasClass(
+        document.querySelector('.o-Activity-dueDateText'),
+        'o-isPlanned',
         "activity delay should have the right color modifier class (planned)"
     );
     assert.strictEqual(
-        document.querySelector('.o_Activity_dueDateText').textContent,
+        document.querySelector('.o-Activity-dueDateText').textContent,
         "Due in 5 days:",
         "activity delay should have 'Due in 5 days:' as label"
     );
@@ -182,33 +193,37 @@ QUnit.test('activity info layout when planned after tomorrow', async function (a
 QUnit.test('activity info layout when planned tomorrow', async function (assert) {
     assert.expect(4);
 
-    await this.start();
+    const env = await this.start();
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
-    const activity = this.env.models['mail.activity'].create({
-        dateDeadline: date_to_str(tomorrow),
-        id: 12,
-        state: 'planned',
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const activity = env.invoke('Activity/create', {
+        $$$dateDeadline: date_to_str(tomorrow),
+        $$$id: 12,
+        $$$state: 'planned',
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_dueDateText').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-dueDateText',
         "should have activity delay"
     );
-    assert.ok(
-        document.querySelector('.o_Activity_dueDateText').classList.contains('o-planned'),
+    assert.hasClass(
+        document.querySelector('.o-Activity-dueDateText'),
+        'o-isPlanned',
         "activity delay should have the right color modifier class (planned)"
     );
     assert.strictEqual(
-        document.querySelector('.o_Activity_dueDateText').textContent,
+        document.querySelector('.o-Activity-dueDateText').textContent,
         'Tomorrow:',
         "activity delay should have 'Tomorrow:' as label"
     );
@@ -217,31 +232,35 @@ QUnit.test('activity info layout when planned tomorrow', async function (assert)
 QUnit.test('activity info layout when planned today', async function (assert) {
     assert.expect(4);
 
-    await this.start();
+    const env = await this.start();
     const today = new Date();
-    const activity = this.env.models['mail.activity'].create({
-        dateDeadline: date_to_str(today),
-        id: 12,
-        state: 'today',
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const activity = env.invoke('Activity/create', {
+        $$$dateDeadline: date_to_str(today),
+        $$$id: 12,
+        $$$state: 'today',
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_dueDateText').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-dueDateText',
         "should have activity delay"
     );
-    assert.ok(
-        document.querySelector('.o_Activity_dueDateText').classList.contains('o-today'),
+    assert.hasClass(
+        document.querySelector('.o-Activity-dueDateText'),
+        'o-isToday',
         "activity delay should have the right color modifier class (today)"
     );
     assert.strictEqual(
-        document.querySelector('.o_Activity_dueDateText').textContent,
+        document.querySelector('.o-Activity-dueDateText').textContent,
         "Today:",
         "activity delay should have 'Today:' as label"
     );
@@ -250,33 +269,37 @@ QUnit.test('activity info layout when planned today', async function (assert) {
 QUnit.test('activity info layout when planned yesterday', async function (assert) {
     assert.expect(4);
 
-    await this.start();
+    const env = await this.start();
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
-    const activity = this.env.models['mail.activity'].create({
-        dateDeadline: date_to_str(yesterday),
-        id: 12,
-        state: 'overdue',
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const activity = env.invoke('Activity/create', {
+        $$$dateDeadline: date_to_str(yesterday),
+        $$$id: 12,
+        $$$state: 'overdue',
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_dueDateText').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-dueDateText',
         "should have activity delay"
     );
-    assert.ok(
-        document.querySelector('.o_Activity_dueDateText').classList.contains('o-overdue'),
+    assert.hasClass(
+        document.querySelector('.o-Activity-dueDateText'),
+        'o-isOverdue',
         "activity delay should have the right color modifier class (overdue)"
     );
     assert.strictEqual(
-        document.querySelector('.o_Activity_dueDateText').textContent,
+        document.querySelector('.o-Activity-dueDateText').textContent,
         "Yesterday:",
         "activity delay should have 'Yesterday:' as label"
     );
@@ -285,33 +308,37 @@ QUnit.test('activity info layout when planned yesterday', async function (assert
 QUnit.test('activity info layout when planned before yesterday', async function (assert) {
     assert.expect(4);
 
-    await this.start();
+    const env = await this.start();
     const today = new Date();
     const fiveDaysBeforeNow = new Date();
     fiveDaysBeforeNow.setDate(today.getDate() - 5);
-    const activity = this.env.models['mail.activity'].create({
-        dateDeadline: date_to_str(fiveDaysBeforeNow),
-        id: 12,
-        state: 'overdue',
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const activity = env.invoke('Activity/create', {
+        $$$dateDeadline: date_to_str(fiveDaysBeforeNow),
+        $$$id: 12,
+        $$$state: 'overdue',
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_dueDateText').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-dueDateText',
         "should have activity delay"
     );
-    assert.ok(
-        document.querySelector('.o_Activity_dueDateText').classList.contains('o-overdue'),
+    assert.hasClass(
+        document.querySelector('.o-Activity-dueDateText'),
+        'o-isOverdue',
         "activity delay should have the right color modifier class (overdue)"
     );
     assert.strictEqual(
-        document.querySelector('.o_Activity_dueDateText').textContent,
+        document.querySelector('.o-Activity-dueDateText').textContent,
         "5 days overdue:",
         "activity delay should have '5 days overdue:' as label"
     );
@@ -320,30 +347,33 @@ QUnit.test('activity info layout when planned before yesterday', async function 
 QUnit.test('activity with a summary layout', async function (assert) {
     assert.expect(4);
 
-    await this.start();
-    const activity = this.env.models['mail.activity'].create({
-        id: 12,
-        summary: 'test summary',
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const env = await this.start();
+    const activity = env.invoke('Activity/create', {
+        $$$id: 12,
+        $$$summary: 'test summary',
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_summary').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-summary',
         "should have activity summary"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_type').length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Activity-type',
         "should not have the activity type as summary"
     );
     assert.strictEqual(
-        document.querySelector('.o_Activity_summary').textContent.trim(),
+        document.querySelector('.o-Activity-summary').textContent.trim(),
         "“test summary”",
         "should have the specific activity summary in activity summary"
     );
@@ -352,36 +382,42 @@ QUnit.test('activity with a summary layout', async function (assert) {
 QUnit.test('activity without summary layout', async function (assert) {
     assert.expect(5);
 
-    await this.start();
-    const activity = this.env.models['mail.activity'].create({
-        id: 12,
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
-        type: [['insert', { id: 1, displayName: "Fake type" }]],
+    const env = await this.start();
+    const activity = env.invoke('Activity/create', {
+        $$$id: 12,
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
+        $$$type: insert({
+            $$$id: 1,
+            $$$displayName: "Fake type",
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_type').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-type',
         "activity details should have an activity type section"
     );
     assert.strictEqual(
-        document.querySelector('.o_Activity_type').textContent.trim(),
+        document.querySelector('.o-Activity-type').textContent.trim(),
         "Fake type",
         "activity details should have the activity type display name in type section"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_summary.o_Activity_type').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-summary.o-Activity-type',
         "should have activity type as summary"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_summary:not(.o_Activity_type)').length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Activity-summary:not(.o-Activity-type)',
         "should not have a specific summary"
     );
 });
@@ -389,51 +425,60 @@ QUnit.test('activity without summary layout', async function (assert) {
 QUnit.test('activity details toggle', async function (assert) {
     assert.expect(5);
 
-    await this.start();
+    const env = await this.start();
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
-    const activity = this.env.models['mail.activity'].create({
-        creator: [['insert', { id: 1, display_name: "Admin" }]],
-        dateCreate: date_to_str(today),
-        dateDeadline: date_to_str(tomorrow),
-        id: 12,
-        state: 'planned',
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
-        type: [['insert', { id: 1, displayName: "Fake type" }]],
+    const activity = env.invoke('Activity/create', {
+        $$$creator: insert({
+            $$$displayName: "Admin",
+            $$$id: 1,
+        }),
+        $$$dateCreate: date_to_str(today),
+        $$$dateDeadline: date_to_str(tomorrow),
+        $$$id: 12,
+        $$$state: 'planned',
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
+        $$$type: insert({
+            $$$id: 1,
+            $$$displayName: "Fake type",
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_details').length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Activity-details',
         "activity details should not be visible by default"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_detailsButton').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-detailsButton',
         "activity should have a details button"
     );
 
     await afterNextRender(() =>
-        document.querySelector('.o_Activity_detailsButton').click()
+        document.querySelector('.o-Activity-detailsButton').click()
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_details').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-details',
         "activity details should be visible after clicking on details button"
     );
 
     await afterNextRender(() =>
-        document.querySelector('.o_Activity_detailsButton').click()
+        document.querySelector('.o-Activity-detailsButton').click()
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_details').length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Activity-details',
         "activity details should no longer be visible after clicking again on details button"
     );
 });
@@ -441,78 +486,96 @@ QUnit.test('activity details toggle', async function (assert) {
 QUnit.test('activity details layout', async function (assert) {
     assert.expect(11);
 
-    await this.start();
+    const env = await this.start();
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
-    const activity = this.env.models['mail.activity'].create({
-        assignee: [['insert', { id: 10, display_name: "Pauvre pomme" }]],
-        creator: [['insert', { id: 1, display_name: "Admin" }]],
-        dateCreate: date_to_str(today),
-        dateDeadline: date_to_str(tomorrow),
-        id: 12,
-        state: 'planned',
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
-        type: [['insert', { id: 1, displayName: "Fake type" }]],
+    const activity = env.invoke('Activity/create', {
+        $$$assignee: insert({
+            $$$displayName: "Pauvre pomme",
+            $$$id: 10,
+        }),
+        $$$creator: insert({
+            $$$displayName: "Admin",
+            $$$id: 1,
+        }),
+        $$$dateCreate: date_to_str(today),
+        $$$dateDeadline: date_to_str(tomorrow),
+        $$$id: 12,
+        $$$state: 'planned',
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
+        $$$type: insert({
+            $$$id: 1,
+            $$$displayName: "Fake type",
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_userAvatar').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-userAvatar',
         "should have activity user avatar"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_detailsButton').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-detailsButton',
         "activity should have a details button"
     );
 
     await afterNextRender(() =>
-        document.querySelector('.o_Activity_detailsButton').click()
+        document.querySelector('.o-Activity-detailsButton').click()
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_details').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-details',
         "activity details should be visible after clicking on details button"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_details .o_Activity_type').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        `
+            .o-Activity-details
+            .o-Activity-type
+        `,
         "activity details should have type"
     );
     assert.strictEqual(
-        document.querySelector('.o_Activity_details .o_Activity_type').textContent,
+        document.querySelector(`
+            .o-Activity-details
+            .o-Activity-type
+        `).textContent,
         "Fake type",
         "activity details type should be 'Fake type'"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_detailsCreation').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-detailsCreation',
         "activity details should have creation date "
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_detailsCreator').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-detailsCreator',
         "activity details should have creator"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_detailsAssignation').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-detailsAssignation',
         "activity details should have assignation information"
     );
     assert.strictEqual(
-        document.querySelector('.o_Activity_detailsAssignation').textContent.indexOf('Pauvre pomme'),
+        document.querySelector('.o-Activity-detailsAssignation').textContent.indexOf("Pauvre pomme"),
         0,
         "activity details assignation information should contain creator display name"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_detailsAssignationUserAvatar').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-detailsAssignationUserAvatar',
         "activity details should have user avatar"
     );
 });
@@ -520,51 +583,57 @@ QUnit.test('activity details layout', async function (assert) {
 QUnit.test('activity with mail template layout', async function (assert) {
     assert.expect(8);
 
-    await this.start();
-    const activity = this.env.models['mail.activity'].create({
-        id: 12,
-        mailTemplates: [['insert', { id: 1, name: "Dummy mail template" }]],
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const env = await this.start();
+    const activity = env.invoke('Activity/create', {
+        $$$id: 12,
+        $$$mailTemplates: insert({
+            $$$id: 1,
+            $$$name: "Dummy mail template",
+        }),
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_sidebar').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-sidebar',
         "should have activity sidebar"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_mailTemplates').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-mailTemplates',
         "should have activity mail templates"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_mailTemplate').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-mailTemplate',
         "should have activity mail template"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_MailTemplate_name').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-MailTemplate-name',
         "should have activity mail template name"
     );
     assert.strictEqual(
-        document.querySelector('.o_MailTemplate_name').textContent,
+        document.querySelector('.o-MailTemplate-name').textContent,
         "Dummy mail template",
         "should have activity mail template name"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_MailTemplate_preview').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-MailTemplate-preview',
         "should have activity mail template name preview button"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_MailTemplate_send').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-MailTemplate-send',
         "should have activity mail template name send button"
     );
 });
@@ -605,29 +674,31 @@ QUnit.test('activity with mail template: preview mail', async function (assert) 
             'Action should have "mail.compose.message" as res_model'
         );
     });
-
-    await this.start({ env: { bus } });
-    const activity = this.env.models['mail.activity'].create({
-        id: 12,
-        mailTemplates: [['insert', {
-            id: 1,
-            name: "Dummy mail template",
-        }]],
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const env = await this.start({ env: { bus } });
+    const activity = env.invoke('Activity/create', {
+        $$$id: 12,
+        $$$mailTemplates: insert({
+            $$$id: 1,
+            $$$name: "Dummy mail template",
+        }),
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_MailTemplate_preview').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-MailTemplate-preview',
         "should have activity mail template name preview button"
     );
 
-    document.querySelector('.o_MailTemplate_preview').click();
+    document.querySelector('.o-MailTemplate-preview').click();
     assert.verifySteps(
         ['do_action'],
         "should have called 'compose email' action correctly"
@@ -637,7 +708,7 @@ QUnit.test('activity with mail template: preview mail', async function (assert) 
 QUnit.test('activity with mail template: send mail', async function (assert) {
     assert.expect(7);
 
-    await this.start({
+    const env = await this.start({
         async mockRPC(route, args) {
             if (args.method === 'activity_send_mail') {
                 assert.step('activity_send_mail');
@@ -650,27 +721,30 @@ QUnit.test('activity with mail template: send mail', async function (assert) {
             }
         },
     });
-    const activity = this.env.models['mail.activity'].create({
-        id: 12,
-        mailTemplates: [['insert', {
-            id: 1,
-            name: "Dummy mail template",
-        }]],
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const activity = env.invoke('Activity/create', {
+        $$$id: 12,
+        $$$mailTemplates: insert({
+            $$$id: 1,
+            $$$name: "Dummy mail template",
+        }),
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_MailTemplate_send').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-MailTemplate-send',
         "should have activity mail template name send button"
     );
 
-    document.querySelector('.o_MailTemplate_send').click();
+    document.querySelector('.o-MailTemplate-send').click();
     assert.verifySteps(
         ['activity_send_mail'],
         "should have called activity_send_mail rpc"
@@ -680,30 +754,33 @@ QUnit.test('activity with mail template: send mail', async function (assert) {
 QUnit.test('activity upload document is available', async function (assert) {
     assert.expect(3);
 
-    await this.start();
+    const env = await this.start();
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
-    const activity = this.env.models['mail.activity'].create({
-        canWrite: true,
-        category: 'upload_file',
-        id: 12,
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const activity = env.invoke('Activity/create', {
+        $$$canWrite: true,
+        $$$category: 'upload_file',
+        $$$id: 12,
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_uploadButton').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-uploadButton',
         "should have activity upload button"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_FileUploader').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-FileUploader',
         "should have a file uploader"
     );
 });
@@ -711,44 +788,46 @@ QUnit.test('activity upload document is available', async function (assert) {
 QUnit.test('activity click on mark as done', async function (assert) {
     assert.expect(4);
 
-    await this.start();
+    const env = await this.start();
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
-    const activity = this.env.models['mail.activity'].create({
-        canWrite: true,
-        category: 'not_upload_file',
-        id: 12,
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const activity = env.invoke('Activity/create', {
+        $$$canWrite: true,
+        $$$category: 'not_upload_file',
+        $$$id: 12,
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
-
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_markDoneButton').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-markDoneButton',
         "should have activity Mark as Done button"
     );
 
     await afterNextRender(() => {
-        document.querySelector('.o_Activity_markDoneButton').click();
+        document.querySelector('.o-Activity-markDoneButton').click();
     });
-    assert.strictEqual(
-        document.querySelectorAll('.o_ActivityMarkDonePopover').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-ActivityMarkDonePopover',
         "should have opened the mark done popover"
     );
 
     await afterNextRender(() => {
-        document.querySelector('.o_Activity_markDoneButton').click();
+        document.querySelector('.o-Activity-markDoneButton').click();
     });
-    assert.strictEqual(
-        document.querySelectorAll('.o_ActivityMarkDonePopover').length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-ActivityMarkDonePopover',
         "should have closed the mark done popover"
     );
 });
@@ -756,34 +835,36 @@ QUnit.test('activity click on mark as done', async function (assert) {
 QUnit.test('activity mark as done popover should focus feedback input on open [REQUIRE FOCUS]', async function (assert) {
     assert.expect(3);
 
-    await this.start();
+    const env = await this.start();
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
-    const activity = this.env.models['mail.activity'].create({
-        canWrite: true,
-        category: 'not_upload_file',
-        id: 12,
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const activity = env.invoke('Activity/create', {
+        $$$canWrite: true,
+        $$$category: 'not_upload_file',
+        $$$id: 12,
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
-
     assert.containsOnce(
         document.body,
-        '.o_Activity',
+        '.o-Activity',
         "should have activity component"
     );
     assert.containsOnce(
         document.body,
-        '.o_Activity_markDoneButton',
+        '.o-Activity-markDoneButton',
         "should have activity Mark as Done button"
     );
 
     await afterNextRender(() => {
-        document.querySelector('.o_Activity_markDoneButton').click();
+        document.querySelector('.o-Activity-markDoneButton').click();
     });
     assert.strictEqual(
-        document.querySelector('.o_ActivityMarkDonePopover_feedback'),
+        document.querySelector('.o-ActivityMarkDonePopover-feedback'),
         document.activeElement,
         "the popover textarea should have the focus"
     );
@@ -821,27 +902,32 @@ QUnit.test('activity click on edit', async function (assert) {
             'Action should have activity id as res_id'
         );
     });
-
-    await this.start({ env: { bus } });
-    const activity = this.env.models['mail.activity'].create({
-        canWrite: true,
-        id: 12,
-        mailTemplates: [['insert', { id: 1, name: "Dummy mail template" }]],
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const env = await this.start({ env: { bus } });
+    const activity = env.invoke('Activity/create', {
+        $$$canWrite: true,
+        $$$id: 12,
+        $$$mailTemplates: insert({
+            $$$id: 1,
+            $$$name: "Dummy mail template",
+        }),
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_editButton').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-editButton',
         "should have activity edit button"
     );
 
-    document.querySelector('.o_Activity_editButton').click();
+    document.querySelector('.o-Activity-editButton').click();
     assert.verifySteps(
         ['do_action'],
         "should have called 'schedule activity' action correctly"
@@ -851,13 +937,15 @@ QUnit.test('activity click on edit', async function (assert) {
 QUnit.test('activity edition', async function (assert) {
     assert.expect(14);
 
-    this.data['mail.activity'].records.push({
-        can_write: true,
-        icon: 'fa-times',
-        id: 12,
-        res_id: 42,
-        res_model: 'res.partner',
-    });
+    this.data['mail.activity'].records.push(
+        {
+            can_write: true,
+            icon: 'fa-times',
+            id: 12,
+            res_id: 42,
+            res_model: 'res.partner',
+        }
+    );
     const bus = new Bus();
     bus.on('do-action', null, payload => {
         assert.step('do_action');
@@ -889,43 +977,41 @@ QUnit.test('activity edition', async function (assert) {
         this.data['mail.activity'].records[0].icon = 'fa-check';
         payload.options.on_close();
     });
-
-    await this.start({ env: { bus } });
-    const activity = this.env.models['mail.activity'].insert(
-        this.env.models['mail.activity'].convertData(
-            this.data['mail.activity'].records[0]
+    const env = await this.start({ env: { bus } });
+    const activity = env.invoke('Activity/insert',
+        env.invoke('Activity/convertData',
+            this.data['Activity'].records[0]
         )
     );
     await this.createActivityComponent(activity);
-
     assert.containsOnce(
         document.body,
-        '.o_Activity',
+        '.o-Activity',
         "should have activity component"
     );
     assert.containsOnce(
         document.body,
-        '.o_Activity_editButton',
+        '.o-Activity-editButton',
         "should have activity edit button"
     );
     assert.containsOnce(
         document.body,
-        '.o_Activity_icon',
+        '.o-Activity-icon',
         "should have activity icon"
     );
     assert.containsOnce(
         document.body,
-        '.o_Activity_icon.fa-times',
+        '.o-Activity-icon.fa-times',
         "should have initial activity icon"
     );
     assert.containsNone(
         document.body,
-        '.o_Activity_icon.fa-check',
+        '.o-Activity-icon.fa-check',
         "should not have new activity icon when not edited yet"
     );
 
     await afterNextRender(() => {
-        document.querySelector('.o_Activity_editButton').click();
+        document.querySelector('.o-Activity-editButton').click();
     });
     assert.verifySteps(
         ['do_action'],
@@ -933,12 +1019,12 @@ QUnit.test('activity edition', async function (assert) {
     );
     assert.containsNone(
         document.body,
-        '.o_Activity_icon.fa-times',
+        '.o-Activity-icon.fa-times',
         "should no more have initial activity icon once edited"
     );
     assert.containsOnce(
         document.body,
-        '.o_Activity_icon.fa-check',
+        '.o-Activity-icon.fa-check',
         "should now have new activity icon once edited"
     );
 });
@@ -946,7 +1032,7 @@ QUnit.test('activity edition', async function (assert) {
 QUnit.test('activity click on cancel', async function (assert) {
     assert.expect(7);
 
-    await this.start({
+    const env = await this.start({
         async mockRPC(route, args) {
             if (route === '/web/dataset/call_kw/mail.activity/unlink') {
                 assert.step('unlink');
@@ -958,75 +1044,71 @@ QUnit.test('activity click on cancel', async function (assert) {
             }
         },
     });
-    const activity = this.env.models['mail.activity'].create({
-        canWrite: true,
-        id: 12,
-        mailTemplates: [['insert', {
-            id: 1,
-            name: "Dummy mail template",
-        }]],
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const activity = env.invoke('Activity/create', {
+        $$$canWrite: true,
+        $$$id: 12,
+        $$$mailTemplates: insert({
+            $$$id: 1,
+            $$$name: "Dummy mail template",
+        }),
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
 
     // Create a parent component to surround the Activity component in order to be able
     // to check that activity component has been destroyed
-    class ParentComponent extends Component {
-        constructor(...args) {
-            super(... args);
-            useStore(props => {
-                const activity = this.env.models['mail.activity'].get(props.activityLocalId);
-                return {
-                    activity: activity ? activity.__state : undefined,
-                };
-            });
-        }
-
-        /**
-         * @returns {mail.activity}
-         */
-        get activity() {
-            return this.env.models['mail.activity'].get(this.props.activityLocalId);
-        }
-    }
-    ParentComponent.env = this.env;
+    class ParentComponent extends usingModels(Component) {}
+    ParentComponent.env = env;
     Object.assign(ParentComponent, {
         components,
-        props: { activityLocalId: String },
+        props: {
+            activity: Object,
+            validate(p) {
+                if (p.constructor.modelName !== 'Activity') {
+                    return false;
+                }
+                return true;
+            },
+        },
         template: xml`
             <div>
                 <p>parent</p>
                 <t t-if="activity">
-                    <Activity activityLocalId="activity.localId"/>
+                    <Activity activity="activity"/>
                 </t>
             </div>
         `,
     });
     await createRootComponent(this, ParentComponent, {
-        props: { activityLocalId: activity.localId },
+        props: {
+            activity,
+        },
         target: this.widget.el,
     });
 
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity',
         "should have activity component"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity_cancelButton').length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Activity-cancelButton',
         "should have activity cancel button"
     );
 
     await afterNextRender(() =>
-        document.querySelector('.o_Activity_cancelButton').click()
+        document.querySelector('.o-Activity-cancelButton').click()
     );
     assert.verifySteps(
         ['unlink'],
         "should have called unlink rpc after clicking on cancel"
     );
-    assert.strictEqual(
-        document.querySelectorAll('.o_Activity').length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Activity',
         "should no longer display activity after clicking on cancel"
     );
 });
@@ -1036,31 +1118,36 @@ QUnit.test('activity mark done popover close on ESCAPE', async function (assert)
     // component to have a parent in order to allow testing interactions the popover.
     assert.expect(2);
 
-    await this.start();
-    const activity = this.env.models['mail.activity'].create({
-        canWrite: true,
-        category: 'not_upload_file',
-        id: 12,
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const env = await this.start();
+    const activity = env.invoke('Activity/create', {
+        $$$canWrite: true,
+        $$$category: 'not_upload_file',
+        $$$id: 12,
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
-
     await this.createActivityComponent(activity);
     await afterNextRender(() => {
-        document.querySelector('.o_Activity_markDoneButton').click();
+        document.querySelector('.o-Activity-markDoneButton').click();
     });
     assert.containsOnce(
         document.body,
-        '.o_ActivityMarkDonePopover',
+        '.o-ActivityMarkDonePopover',
         "Popover component should be present"
     );
 
     await afterNextRender(() => {
-        const ev = new window.KeyboardEvent('keydown', { bubbles: true, key: "Escape" });
-        document.querySelector(`.o_ActivityMarkDonePopover`).dispatchEvent(ev);
+        const ev = new window.KeyboardEvent('keydown', {
+            bubbles: true,
+            key: 'Escape',
+        });
+        document.querySelector('.o-ActivityMarkDonePopover').dispatchEvent(ev);
     });
     assert.containsNone(
         document.body,
-        '.o_ActivityMarkDonePopover',
+        '.o-ActivityMarkDonePopover',
         "ESCAPE pressed should have closed the mark done popover"
     );
 });
@@ -1070,33 +1157,36 @@ QUnit.test('activity mark done popover click on discard', async function (assert
     // component to have a parent in order to allow testing interactions the popover.
     assert.expect(3);
 
-    await this.start();
-    const activity = this.env.models['mail.activity'].create({
-        canWrite: true,
-        category: 'not_upload_file',
-        id: 12,
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const env = await this.start();
+    const activity = env.invoke('Activity/create', {
+        $$$canWrite: true,
+        $$$category: 'not_upload_file',
+        $$$id: 12,
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
     await afterNextRender(() => {
-        document.querySelector('.o_Activity_markDoneButton').click();
+        document.querySelector('.o-Activity-markDoneButton').click();
     });
     assert.containsOnce(
         document.body,
-        '.o_ActivityMarkDonePopover',
+        '.o-ActivityMarkDonePopover',
         "Popover component should be present"
     );
     assert.containsOnce(
         document.body,
-        '.o_ActivityMarkDonePopover_discardButton',
+        '.o-ActivityMarkDonePopover-discardButton',
         "Popover component should contain the discard button"
     );
     await afterNextRender(() =>
-        document.querySelector('.o_ActivityMarkDonePopover_discardButton').click()
+        document.querySelector('.o-ActivityMarkDonePopover-discardButton').click()
     );
     assert.containsNone(
         document.body,
-        '.o_ActivityMarkDonePopover',
+        '.o-ActivityMarkDonePopover',
         "Discard button clicked should have closed the mark done popover"
     );
 });
@@ -1123,27 +1213,33 @@ QUnit.test('data-oe-id & data-oe-model link redirection on click', async functio
         );
         assert.step('do-action:openFormView_some.model_250');
     });
-    await this.start({ env: { bus } });
-    const activity = this.env.models['mail.activity'].create({
-        canWrite: true,
-        category: 'not_upload_file',
-        id: 12,
-        note: `<p><a href="#" data-oe-id="250" data-oe-model="some.model">some.model_250</a></p>`,
-        thread: [['insert', { id: 42, model: 'res.partner' }]],
+    const env = await this.start({ env: { bus } });
+    const activity = env.invoke('Activity/create', {
+        $$$canWrite: true,
+        $$$category: 'not_upload_file',
+        $$$id: 12,
+        $$$note: `<p><a href="#" data-oe-id="250" data-oe-model="some.model">some.model_250</a></p>`,
+        $$$thread: insert({
+            $$$id: 42,
+            $$$model: 'res.partner',
+        }),
     });
     await this.createActivityComponent(activity);
     assert.containsOnce(
         document.body,
-        '.o_Activity_note',
+        '.o-Activity-note',
         "activity should have a note"
     );
     assert.containsOnce(
-        document.querySelector('.o_Activity_note'),
+        document.querySelector('.o-Activity-note'),
         'a',
         "activity note should have a link"
     );
 
-    document.querySelector(`.o_Activity_note a`).click();
+    document.querySelector(`
+        .o-Activity-note
+        a
+    `).click();
     assert.verifySteps(
         ['do-action:openFormView_some.model_250'],
         "should have open form view on related record after click on link"

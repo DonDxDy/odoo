@@ -1,250 +1,287 @@
 odoo.define('mail/static/src/models/user/user.js', function (require) {
 'use strict';
 
-const { registerNewModel } = require('mail/static/src/model/model_core.js');
-const { attr, one2one } = require('mail/static/src/model/model_field.js');
+const {
+    'Feature/defineActions': defineActions,
+    'Feature/defineModel': defineModel,
+    'Feature/defineSlice': defineFeatureSlice,
+    'Field/attr': attr,
+    'Field/insert': insert,
+    'Field/one2one': one2one,
+    'Field/unlink': unlink,
+} = require('mail/static/src/model/utils.js');
 
-function factory(dependencies) {
-
-    class User extends dependencies['mail.model'] {
-
-        /**
-         * @override
-         */
-        _willDelete() {
-            if (this.env.messaging) {
-                if (this === this.env.messaging.currentUser) {
-                    this.env.messaging.update({ currentUser: [['unlink']] });
-                }
-            }
-            return super._willDelete(...arguments);
+const actions = defineActions({
+    /**
+     * @param {Object} _
+     * @param {Object} data
+     * @returns {Object}
+     */
+    'User/convertData'(
+        _,
+        data
+    ) {
+        const data2 = {};
+        if ('id' in data) {
+            data2.$$$id = data.id;
         }
-
-        //----------------------------------------------------------------------
-        // Public
-        //----------------------------------------------------------------------
-
-        /**
-         * @static
-         * @param {Object} data
-         * @returns {Object}
-         */
-        static convertData(data) {
-            const data2 = {};
-            if ('id' in data) {
-                data2.id = data.id;
+        if ('partner_id' in data) {
+            if (!data.partner_id) {
+                data2.$$$partner = unlink();
+            } else {
+                const partnerNameGet = data['partner_id'];
+                const partnerData = {
+                    $$$displayName: partnerNameGet[1],
+                    $$$id: partnerNameGet[0],
+                };
+                data2.$$$partner = insert(partnerData);
             }
-            if ('partner_id' in data) {
-                if (!data.partner_id) {
-                    data2.partner = [['unlink']];
-                } else {
-                    const partnerNameGet = data['partner_id'];
-                    const partnerData = {
-                        display_name: partnerNameGet[1],
-                        id: partnerNameGet[0],
-                    };
-                    data2.partner = [['insert', partnerData]];
-                }
-            }
-            return data2;
         }
-
-        /**
-         * Performs the `read` RPC on `res.users`.
-         *
-         * @static
-         * @param {Object} param0
-         * @param {Object} param0.context
-         * @param {string[]} param0.fields
-         * @param {integer[]} param0.ids
-         */
-        static async performRpcRead({ context, fields, ids }) {
-            const usersData = await this.env.services.rpc({
-                model: 'res.users',
-                method: 'read',
-                args: [ids],
-                kwargs: {
-                    context,
-                    fields,
-                },
-            }, { shadow: true });
-            return this.env.models['mail.user'].insert(usersData.map(userData =>
-                this.env.models['mail.user'].convertData(userData)
-            ));
-        }
-
-        /**
-         * Fetches the partner of this user.
-         */
-        async fetchPartner() {
-            return this.env.models['mail.user'].performRpcRead({
-                ids: [this.id],
-                fields: ['partner_id'],
-                context: { active_test: false },
-            });
-        }
-
-        /**
-         * Gets the chat between this user and the current user.
-         *
-         * If a chat is not appropriate, a notification is displayed instead.
-         *
-         * @returns {mail.thread|undefined}
-         */
-        async getChat() {
-            if (!this.partner) {
-                await this.async(() => this.fetchPartner());
-            }
-            if (!this.partner) {
-                // This user has been deleted from the server or never existed:
-                // - Validity of id is not verified at insert.
-                // - There is no bus notification in case of user delete from
-                //   another tab or by another user.
-                this.env.services['notification'].notify({
-                    message: this.env._t("You can only chat with existing users."),
-                    type: 'warning',
-                });
-                return;
-            }
-            // in other cases a chat would be valid, find it or try to create it
-            let chat = this.env.models['mail.thread'].find(thread =>
-                thread.channel_type === 'chat' &&
-                thread.correspondent === this.partner &&
-                thread.model === 'mail.channel' &&
-                thread.public === 'private'
+        return data2;
+    },
+    /**
+     * Fetches the partner of this user.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {User} user
+     */
+    async 'User/fetchPartner'(
+        { env },
+        user
+    ) {
+        return env.invoke('User/performRpcRead', {
+            ids: [user.$$$id(this)],
+            fields: ['partner_id'],
+            context: { active_test: false },
+        });
+    },
+    /**
+     * Gets the chat between this user and the current user.
+     *
+     * If a chat is not appropriate, a notification is displayed instead.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {User} user
+     * @returns {Thread|undefined}
+     */
+    async 'User/getChat'(
+        { env },
+        user
+    ) {
+        if (!user.$$$partner(this)) {
+            await env.invoke(
+                'Record/doAsync',
+                user,
+                () => env.invoke('User/fetchPartner', user)
             );
-            if (!chat ||!chat.isPinned) {
-                // if chat is not pinned then it has to be pinned client-side
-                // and server-side, which is a side effect of following rpc
-                chat = await this.async(() =>
-                    this.env.models['mail.thread'].performRpcCreateChat({
-                        partnerIds: [this.partner.id],
-                    })
+        }
+        if (!user.$$$partner(this)) {
+            // This user has been deleted from the server or never existed:
+            // - Validity of id is not verified at insert.
+            // - There is no bus notification in case of user delete from
+            //   another tab or by another user.
+            env.services['notification'].notify({
+                message: env._t("You can only chat with existing users."),
+                type: 'warning',
+            });
+            return;
+        }
+        // in other cases a chat would be valid, find it or try to create it
+        let chat = env.invoke('Thread/find', thread =>
+            thread.$$$channelType(this) === 'chat' &&
+            thread.$$$correspondent(this) === user.$$$partner(this) &&
+            thread.$$$model(this) === 'mail.channel' &&
+            thread.$$$public(this) === 'private'
+        );
+        if (!chat ||!chat.$$$isPinned(this)) {
+            // if chat is not pinned then it has to be pinned client-side
+            // and server-side, which is a side effect of following rpc
+            chat = await env.invoke(
+                'Record/doAsync',
+                user,
+                () => env.invoke('Thread/performRpcCreateChat', {
+                    partnerIds: [user.$$$partner(this).$$$id(this)],
+                })
+            );
+        }
+        if (!chat) {
+            env.services['notification'].notify({
+                message: env._t("An unexpected error occurred during the creation of the chat."),
+                type: 'warning',
+            });
+            return;
+        }
+        return chat;
+    },
+    /**
+     * Opens a chat between this user and the current user and returns it.
+     *
+     * If a chat is not appropriate, a notification is displayed instead.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {User} user
+     * @param {Object} [options] forwarded to @see `Thread/open`
+     * @returns {Thread|undefined}
+     */
+    async 'User/openChat'({ env }, user, options) {
+        const chat = await env.invoke(
+            'Record/doAsync',
+            user,
+            () => env.invoke('Userser/getChat', user)
+        );
+        if (!chat) {
+            return;
+        }
+        await env.invoke(
+            'Record/doAsync',
+            user,
+            () => env.invoke('Thread/open', chat, options)
+        );
+        return chat;
+    },
+    /**
+     * Opens the most appropriate view that is a profile for this user.
+     * Because user is a rather technical model to allow login, it's the
+     * partner profile that contains the most useful information.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {User} user
+     */
+    async 'User/openProfile'(
+        { env },
+        user
+    ) {
+        if (!user.$$$partner(this)) {
+            await env.invoke(
+                'Record/doAsync',
+                user,
+                () => env.invoke('User/fetchPartner', user)
+            );
+        }
+        if (!user.$$$partner(this)) {
+            // This user has been deleted from the server or never existed:
+            // - Validity of id is not verified at insert.
+            // - There is no bus notification in case of user delete from
+            //   another tab or by another user.
+            env.services['notification'].notify({
+                message: env._t("You can only open the profile of existing users."),
+                type: 'warning',
+            });
+            return;
+        }
+        return env.invoke('Partner/openProfile', user.$$$partner(this));
+    },
+    /**
+     * Performs the `read` RPC on `res.users`.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Object} param1
+     * @param {Object} param1.context
+     * @param {string[]} param1.fields
+     * @param {integer[]} param1.ids
+     */
+    async 'User/performRpcRead'(
+        { env },
+        {
+            context,
+            fields,
+            ids,
+        }
+    ) {
+        const usersData = await env.services.rpc({
+            model: 'res.users',
+            method: 'read',
+            args: [ids],
+            kwargs: {
+                context,
+                fields,
+            },
+        }, { shadow: true });
+        return env.invoke('User/insert', usersData.map(userData =>
+            env.invoke('User/convertData', userData)
+        ));
+    },
+});
+
+const model = defineModel({
+    name: 'User',
+    fields: {
+        $$$id: attr({
+            id: true,
+        }),
+        $$$displayName: attr({
+            /**
+             * @param {Object} param0
+             * @param {User} param0.record
+             * @returns {string|undefined}
+             */
+            compute({ record }) {
+                return (
+                    record.$$$displayName(this) ||
+                    (
+                        record.$$$partner(this) &&
+                        record.$$$partner(this).$$$displayName(this)
+                    )
                 );
-            }
-            if (!chat) {
-                this.env.services['notification'].notify({
-                    message: this.env._t("An unexpected error occurred during the creation of the chat."),
-                    type: 'warning',
-                });
-                return;
-            }
-            return chat;
-        }
-
-        /**
-         * Opens a chat between this user and the current user and returns it.
-         *
-         * If a chat is not appropriate, a notification is displayed instead.
-         *
-         * @param {Object} [options] forwarded to @see `mail.thread:open()`
-         * @returns {mail.thread|undefined}
-         */
-        async openChat(options) {
-            const chat = await this.async(() => this.getChat());
-            if (!chat) {
-                return;
-            }
-            await this.async(() => chat.open(options));
-            return chat;
-        }
-
-        /**
-         * Opens the most appropriate view that is a profile for this user.
-         * Because user is a rather technical model to allow login, it's the
-         * partner profile that contains the most useful information.
-         *
-         * @override
-         */
-        async openProfile() {
-            if (!this.partner) {
-                await this.async(() => this.fetchPartner());
-            }
-            if (!this.partner) {
-                // This user has been deleted from the server or never existed:
-                // - Validity of id is not verified at insert.
-                // - There is no bus notification in case of user delete from
-                //   another tab or by another user.
-                this.env.services['notification'].notify({
-                    message: this.env._t("You can only open the profile of existing users."),
-                    type: 'warning',
-                });
-                return;
-            }
-            return this.partner.openProfile();
-        }
-
-        //----------------------------------------------------------------------
-        // Private
-        //----------------------------------------------------------------------
-
-        /**
-         * @override
-         */
-        static _createRecordLocalId(data) {
-            return `${this.modelName}_${data.id}`;
-        }
-
-        /**
-         * @private
-         * @returns {string|undefined}
-         */
-        _computeDisplayName() {
-            return this.display_name || this.partner && this.partner.display_name;
-        }
-
-        /**
-         * @private
-         * @returns {string|undefined}
-         */
-        _computeNameOrDisplayName() {
-            return this.partner && this.partner.nameOrDisplayName || this.display_name;
-        }
-    }
-
-    User.fields = {
-        id: attr({
-            required: true,
+            },
         }),
-        display_name: attr({
-            compute: '_computeDisplayName',
-            dependencies: [
-                'display_name',
-                'partnerDisplayName',
-            ],
-        }),
-        model: attr({
+        $$$model: attr({
             default: 'res.user',
         }),
-        nameOrDisplayName: attr({
-            compute: '_computeNameOrDisplayName',
-            dependencies: [
-                'display_name',
-                'partnerNameOrDisplayName',
-            ]
+        $$$nameOrDisplayName: attr({
+            /**
+             * @param {Object} param0
+             * @param {User} param0.record
+             * @returns {string|undefined}
+             */
+            compute({ record }) {
+                return (
+                    (
+                        record.$$$partner(this) &&
+                        record.$$$partner(this).$$$nameOrDisplayName(this)
+                    ) ||
+                    record.$$$displayName(this)
+                );
+            },
         }),
-        partner: one2one('mail.partner', {
-            inverse: 'user',
+        $$$partner: one2one('Partner', {
+            inverse: '$$$user',
         }),
         /**
          * Serves as compute dependency.
          */
-        partnerDisplayName: attr({
-            related: 'partner.display_name',
+        $$$partnerDisplayName: attr({
+            related: '$$$partner.$$$displayName',
         }),
         /**
          * Serves as compute dependency.
          */
-        partnerNameOrDisplayName: attr({
-            related: 'partner.nameOrDisplayName',
+        $$$partnerNameOrDisplayName: attr({
+            related: '$$$partner.$$$nameOrDisplayName',
         }),
-    };
+    },
+    lifecycles: {
+        onDelete({ env, record }) {
+            if (env.messaging) {
+                if (record === env.messaging.$$$currentUser(this)) {
+                    env.invoke('Record/update', env.messaging, {
+                        $$$currentUser: unlink(),
+                    });
+                }
+            }
+        },
+    }
+});
 
-    User.modelName = 'mail.user';
-
-    return User;
-}
-
-registerNewModel('mail.user', factory);
+return defineFeatureSlice(
+    'mail/static/src/models/user/user.js',
+    actions,
+    model,
+);
 
 });

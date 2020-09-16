@@ -109,7 +109,7 @@ class Throttle {
         /**
          * Reference to the OWL envirionment. Useful to fine-tune control of
          * time flow in tests.
-         * @see mail/static/src/utils/test_utils.js:start.hasTimeControl
+         * @see mail/static/src/utils/test-utils.js:start.hasTimeControl
          */
         this.env = env;
         /**

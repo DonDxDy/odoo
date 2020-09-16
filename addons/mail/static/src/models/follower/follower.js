@@ -1,287 +1,346 @@
-odoo.define('mail/static/src/models/follower.follower.js', function (require) {
+odoo.define('mail/static/src/models/follower/follower.js', function (require) {
 'use strict';
 
-const { registerNewModel } = require('mail/static/src/model/model_core.js');
-const { attr, many2many, many2one } = require('mail/static/src/model/model_field.js');
+const {
+    'Feature/defineActions': defineActions,
+    'Feature/defineModel': defineModel,
+    'Feature/defineSlice': defineFeatureSlice,
+    'Field/attr': attr,
+    'Field/insert': insert,
+    'Field/link': link,
+    'Field/many2many': many2many,
+    'Field/many2one': many2one,
+    'Field/unlink': unlink,
+    'Field/unlinkAll': unlinkAll,
+} = require('mail/static/src/model/utils.js');
 
-function factory(dependencies) {
-
-    class Follower extends dependencies['mail.model'] {
-
-        //----------------------------------------------------------------------
-        // Public
-        //----------------------------------------------------------------------
-
-        /**
-         * @static
-         * @param {Object} data
-         * @returns {Object}
-         */
-        static convertData(data) {
-            const data2 = {};
-            if ('channel_id' in data) {
-                if (!data.channel_id) {
-                    data2.channel = [['unlink-all']];
-                } else {
-                    const channelData = {
-                        id: data.channel_id,
-                        model: 'mail.channel',
-                        name: data.name,
-                    };
-                    data2.channel = [['insert', channelData]];
-                }
-            }
-            if ('id' in data) {
-                data2.id = data.id;
-            }
-            if ('is_active' in data) {
-                data2.isActive = data.is_active;
-            }
-            if ('is_editable' in data) {
-                data2.isEditable = data.is_editable;
-            }
-            if ('partner_id' in data) {
-                if (!data.partner_id) {
-                    data2.partner = [['unlink-all']];
-                } else {
-                    const partnerData = {
-                        email: data.email,
-                        id: data.partner_id,
-                        name: data.name,
-                    };
-                    data2.partner = [['insert', partnerData]];
-                }
-            }
-            return data2;
-        }
-
-        /**
-         *  Close subtypes dialog
-         */
-        closeSubtypes() {
-            this._subtypesListDialog.delete();
-            this._subtypesListDialog = undefined;
-        }
-
-        /**
-         * Opens the most appropriate view that is a profile for this follower.
-         */
-        async openProfile() {
-            if (this.partner) {
-                return this.partner.openProfile();
-            }
-            return this.channel.openProfile();
-        }
-
-        /**
-         * Remove this follower from its related thread.
-         */
-        async remove() {
-            const partner_ids = [];
-            const channel_ids = [];
-            if (this.partner) {
-                partner_ids.push(this.partner.id);
+const actions = defineActions({
+    /**
+     * Close subtypes dialog
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Follower} follower
+     */
+    'Follower/closeSubtypes'(
+        { env },
+        follower
+    ) {
+        env.invoke('Record/delete', follower._subtypesListDialog);
+        follower._subtypesListDialog = undefined;
+    },
+    /**
+     * @param {Object} _
+     * @param {Object} data
+     * @returns {Object}
+     */
+    'Follower/convertData'(
+        _,
+        data
+    ) {
+        const data2 = {};
+        if ('channel_id' in data) {
+            if (!data.channel_id) {
+                data2.$$$channel = unlinkAll();
             } else {
-                channel_ids.push(this.channel.id);
+                const channelData = {
+                    $$$id: data.channel_id,
+                    $$$model: 'mail.channel',
+                    $$$name: data.name,
+                };
+                data2.$$$channel = insert(channelData);
             }
-            await this.async(() => this.env.services.rpc({
-                model: this.followedThread.model,
+        }
+        if ('id' in data) {
+            data2.$$$id = data.id;
+        }
+        if ('is_active' in data) {
+            data2.$$$isActive = data.is_active;
+        }
+        if ('is_editable' in data) {
+            data2.$$$isEditable = data.is_editable;
+        }
+        if ('partner_id' in data) {
+            if (!data.partner_id) {
+                data2.$$$partner = unlinkAll();
+            } else {
+                const partnerData = {
+                    $$$email: data.email,
+                    $$$id: data.partner_id,
+                    $$$name: data.name,
+                };
+                data2.$$$partner = insert(partnerData);
+            }
+        }
+        return data2;
+    },
+    /**
+     * Opens the most appropriate view that is a profile for this follower.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Follower} follower
+     */
+    async 'Follower/openProfile'(
+        { env },
+        follower
+    ) {
+        if (follower.$$$partner(this)) {
+            return env.invoke('Partner/openProfile', follower.$$$partner(this));
+        }
+        return env.invoke('Thread/openProfile', follower.$$$channel(this));
+    },
+    /**
+     * Remove this follower from its related thread.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Follower} follower
+     */
+    async 'Follower/remove'(
+        { env },
+        follower
+    ) {
+        const partner_ids = [];
+        const channel_ids = [];
+        if (follower.$$$partner(this)) {
+            partner_ids.push(follower.$$$partner(this).$$$id(this));
+        } else {
+            channel_ids.push(follower.$$$channel(this).$$$id(this));
+        }
+        await env.invoke(
+            'Record/doAsync',
+            follower,
+            () => env.services.rpc({
+                model: follower.$$$followedThread(this).$$$model(this),
                 method: 'message_unsubscribe',
-                args: [[this.followedThread.id], partner_ids, channel_ids]
-            }));
-            const followedThread = this.followedThread;
-            this.delete();
-            followedThread.fetchAndUpdateSuggestedRecipients();
-        }
-
-        /**
-         * @param {mail.follower_subtype} subtype
-         */
-        selectSubtype(subtype) {
-            if (!this.selectedSubtypes.includes(subtype)) {
-                this.update({ selectedSubtypes: [['link', subtype]] });
-            }
-        }
-
-        /**
-         * Show (editable) list of subtypes of this follower.
-         */
-        async showSubtypes() {
-            const subtypesData = await this.async(() => this.env.services.rpc({
-                route: '/mail/read_subscription_data',
-                params: { follower_id: this.id },
-            }));
-            this.update({ subtypes: [['unlink-all']] });
-            for (const data of subtypesData) {
-                const subtype = this.env.models['mail.follower_subtype'].insert(
-                    this.env.models['mail.follower_subtype'].convertData(data)
-                );
-                this.update({ subtypes: [['link', subtype]] });
-                if (data.followed) {
-                    this.update({ selectedSubtypes: [['link', subtype]] });
-                } else {
-                    this.update({ selectedSubtypes: [['unlink', subtype]] });
-                }
-            }
-            this._subtypesListDialog = this.env.messaging.dialogManager.open('mail.follower_subtype_list', {
-                follower: [['link', this]],
+                args: [
+                    [follower.$$$followedThread(this).$$$id(this)],
+                    partner_ids,
+                    channel_ids
+                ],
+            })
+        );
+        const followedThread = follower.$$$followedThread(this);
+        env.invoke('Record/delete', follower);
+        env.invoke('Thread/fetchAndUpdateSuggestedRecipients', followedThread);
+    },
+    /**
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Follower} follower
+     * @param {FollowerSubtype} subtype
+     */
+    'Follower/selectSubtype'(
+        { env },
+        follower,
+        subtype
+    ) {
+        if (!follower.$$$selectedSubtypes(this).includes(subtype)) {
+            env.invoke('Record/update', follower, {
+                $$$selectedSubtypes: link(subtype),
             });
         }
-
-        /**
-         * @param {mail.follower_subtype} subtype
-         */
-        unselectSubtype(subtype) {
-            if (this.selectedSubtypes.includes(subtype)) {
-                this.update({ selectedSubtypes: [['unlink', subtype]] });
-            }
-        }
-
-        /**
-         * Update server-side subscription of subtypes of this follower.
-         */
-        async updateSubtypes() {
-            if (this.selectedSubtypes.length === 0) {
-                this.remove();
+    },
+    /**
+     * Show (editable) list of subtypes of this follower.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Follower} follower
+     */
+    async 'Follower/showSubtypes'(
+        { env },
+        follower
+    ) {
+        const subtypesData = await env.invoke(
+            'Record/doAsync',
+            follower,
+            () => env.services.rpc({
+                route: '/mail/read_subscription_data',
+                params: {
+                    follower_id: follower.$$$id(this),
+                },
+            })
+        );
+        env.invoke('Record/update', follower, {
+            $$$subtypes: unlinkAll(),
+        });
+        for (const data of subtypesData) {
+            const subtype = env.invoke('FollowerSubtype/insert',
+                env.invoke('FollowerSubtype/convertData', data)
+            );
+            env.invoke('Record/update', follower, {
+                $$$subtypes: link(subtype),
+            });
+            if (data.followed) {
+                env.invoke('Record/update', follower, {
+                    $$$selectedSubtypes: link(subtype),
+                });
             } else {
-                const kwargs = {
-                    subtype_ids: this.selectedSubtypes.map(subtype => subtype.id),
-                };
-                if (this.partner) {
-                    kwargs.partner_ids = [this.partner.id];
-                } else {
-                    kwargs.channel_ids = [this.channel.id];
-                }
-                await this.async(() => this.env.services.rpc({
-                    model: this.followedThread.model,
+                env.invoke('Record/update', follower, {
+                    $$$selectedSubtypes: unlink(subtype),
+                });
+            }
+        }
+        follower._subtypesListDialog = env.invoke('DialogManager/open',
+            env.messaging.$$$dialogManager(this),
+            'FollowerSubtypeList',
+            {
+                $$$follower: link(this),
+            }
+        );
+    },
+    /**
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Follower} follower
+     * @param {FollowerSubtype} subtype
+     */
+    'Follower/unselectSubtype'(
+        { env },
+        follower,
+        subtype
+    ) {
+        if (follower.$$$selectedSubtypes(this).includes(subtype)) {
+            env.invoke('Record/update', follower, {
+                $$$selectedSubtypes: unlink(subtype),
+            });
+        }
+    },
+    /**
+     * Update server-side subscription of subtypes of this follower.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Follower} follower
+     */
+    async 'Follower/updateSubtypes'(
+        { env },
+        follower
+    ) {
+        if (follower.$$$selectedSubtypes(this).length === 0) {
+            env.invoke('Follower/remove', follower);
+        } else {
+            const kwargs = {
+                subtype_ids: follower.$$$selectedSubtypes(this).map(
+                    subtype => subtype.$$$id(this)
+                ),
+            };
+            if (follower.$$$partner(this)) {
+                kwargs.partner_ids = [follower.$$$partner(this).$$$id(this)];
+            } else {
+                kwargs.channel_ids = [follower.$$$channel(this).$$$id(this)];
+            }
+            await env.invoke(
+                'Record/doAsync',
+                follower,
+                () => env.services.rpc({
+                    model: follower.$$$followedThread(this).$$$model(this),
                     method: 'message_subscribe',
-                    args: [[this.followedThread.id]],
+                    args: [[follower.$$$followedThread(this).$$$id(this)]],
                     kwargs,
-                }));
-            }
-            this.closeSubtypes();
+                })
+            );
         }
+        env.invoke('Follower/closeSubtypes', follower);
+    },
+});
 
-        //----------------------------------------------------------------------
-        // Private
-        //----------------------------------------------------------------------
-
-        /**
-         * @override
-         */
-        static _createRecordLocalId(data) {
-            return `${this.modelName}_${data.id}`;
-        }
-
-        /**
-         * @private
-         * @returns {string}
-         */
-        _computeName() {
-            if (this.channel) {
-                return this.channel.name;
-            }
-            if (this.partner) {
-                return this.partner.name;
-            }
-            return '';
-        }
-
-        /**
-         * @private
-         * @returns {integer}
-         */
-        _computeResId() {
-            if (this.partner) {
-                return this.partner.id;
-            }
-            if (this.channel) {
-                return this.channel.id;
-            }
-            return 0;
-        }
-
-        /**
-         * @private
-         * @returns {string}
-         */
-        _computeResModel() {
-            if (this.partner) {
-                return this.partner.model;
-            }
-            if (this.channel) {
-                return this.channel.model;
-            }
-            return '';
-        }
-
-    }
-
-    Follower.fields = {
-        resId: attr({
-            compute: '_computeResId',
-            default: 0,
-            dependencies: [
-                'channelId',
-                'partnerId',
-            ],
+const model = defineModel({
+    name: 'Follower',
+    fields: {
+        $$$channel: many2one('Thread'),
+        $$$channelId: attr({
+            related: '$$$channel.$$$id',
         }),
-        channel: many2one('mail.thread'),
-        channelId: attr({
-            related: 'channel.id',
+        $$$channelModel: attr({
+            related: '$$$channel.$$$model',
         }),
-        channelModel: attr({
-            related: 'channel.model',
+        $$$channelName: attr({
+            related: '$$$channel.$$$name',
         }),
-        channelName: attr({
-            related: 'channel.name',
+        $$$followedThread: many2one('Thread', {
+            inverse: '$$$followers',
         }),
-        followedThread: many2one('mail.thread', {
-            inverse: 'followers',
+        $$$id: attr({
+            id: true,
         }),
-        id: attr({
-            required: true,
-        }),
-        isActive: attr({
+        $$$isActive: attr({
             default: true,
         }),
-        isEditable: attr({
+        $$$isEditable: attr({
             default: false,
         }),
-        name: attr({
-            compute: '_computeName',
-            dependencies: [
-                'channelName',
-                'partnerName',
-            ],
+        $$$name: attr({
+            /**
+             * @param {Object} param0
+             * @param {Follower} param0.record
+             * @returns {string}
+             */
+            compute({ record }) {
+                if (record.$$$channel(this)) {
+                    return record.$$$channel(this).$$$name(this);
+                }
+                if (record.$$$partner(this)) {
+                    return record.$$$partner(this).$$$name(this);
+                }
+                return '';
+            },
         }),
-        partner: many2one('mail.partner'),
-        partnerId: attr({
-            related: 'partner.id',
+        $$$partner: many2one('Partner'),
+        $$$partnerId: attr({
+            related: '$$$partner.$$$id',
         }),
-        partnerModel: attr({
-            related: 'partner.model',
+        $$$partnerModel: attr({
+            related: '$$$partner.$$$model',
         }),
-        partnerName: attr({
-            related: 'partner.name',
+        $$$partnerName: attr({
+            related: '$$$partner.$$$name',
         }),
-        resModel: attr({
-            compute: '_computeResModel',
+        $$$resId: attr({
+            /**
+             * @param {Object} param0
+             * @param {Follower} param0.record
+             * @returns {integer}
+             */
+            compute({ record }) {
+                if (record.$$$partner(this)) {
+                    return record.$$$partner(this).$$$id(this);
+                }
+                if (record.$$$channel(this)) {
+                    return record.$$$channel(this).$$$id(this);
+                }
+                return 0;
+            },
+            default: 0,
+        }),
+        $$$resModel: attr({
+            /**
+             * @param {Object} param0
+             * @param {Follower} param0.record
+             * @returns {string}
+             */
+            compute({ record }) {
+                if (record.$$$partner(this)) {
+                    return record.$$$partner(this).$$$model(this);
+                }
+                if (record.$$$channel(this)) {
+                    return record.$$$channel(this).$$$model(this);
+                }
+                return '';
+            },
             default: '',
-            dependencies: [
-                'channelModel',
-                'partnerModel',
-            ],
         }),
-        selectedSubtypes: many2many('mail.follower_subtype'),
-        subtypes: many2many('mail.follower_subtype'),
-    };
+        $$$selectedSubtypes: many2many('FollowerSubtype'),
+        $$$subtypes: many2many('FollowerSubtype'),
+    },
+});
 
-    Follower.modelName = 'mail.follower';
-
-    return Follower;
-}
-
-registerNewModel('mail.follower', factory);
+return defineFeatureSlice(
+    'mail/static/src/models/follower/follower.js',
+    actions,
+    model,
+);
 
 });

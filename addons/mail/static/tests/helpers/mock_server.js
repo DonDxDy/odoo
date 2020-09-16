@@ -1,7 +1,7 @@
 odoo.define('mail.MockServer', function (require) {
 "use strict";
 
-const { nextAnimationFrame } = require('mail/static/src/utils/test_utils.js');
+const { nextAnimationFrame } = require('mail/static/src/utils/test-utils.js');
 
 const MockServer = require('web.MockServer');
 

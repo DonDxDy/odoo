@@ -1,10 +1,8 @@
 odoo.define('mail/static/src/components/chatter/chatter_tests', function (require) {
 'use strict';
 
-const components = {
-    Chatter: require('mail/static/src/components/chatter/chatter.js'),
-    Composer: require('mail/static/src/components/composer/composer.js'),
-};
+const Chatter = require('mail/static/src/components/chatter/chatter.js');
+const Composer = require('mail/static/src/components/composer/composer.js');
 const {
     afterEach,
     afterNextRender,
@@ -12,7 +10,7 @@ const {
     createRootComponent,
     nextAnimationFrame,
     start,
-} = require('mail/static/src/utils/test_utils.js');
+} = require('mail/static/src/utils/test-utils.js');
 
 QUnit.module('mail', {}, function () {
 QUnit.module('components', {}, function () {
@@ -22,27 +20,32 @@ QUnit.module('chatter_tests.js', {
         beforeEach(this);
 
         this.createChatterComponent = async ({ chatter }, otherProps) => {
-            const props = Object.assign({ chatterLocalId: chatter.localId }, otherProps);
-            await createRootComponent(this, components.Chatter, {
-                props,
+            await createRootComponent(this, Chatter, {
+                props: {
+                    chatter,
+                    ...otherProps,
+                },
                 target: this.widget.el,
             });
         };
 
         this.createComposerComponent = async (composer, otherProps) => {
-            const props = Object.assign({ composerLocalId: composer.localId }, otherProps);
-            await createRootComponent(this, components.Composer, {
-                props,
+            await createRootComponent(this, Composer, {
+                props: {
+                    composer,
+                    ...otherProps,
+                },
                 target: this.widget.el,
             });
         };
 
         this.start = async params => {
-            const { env, widget } = await start(Object.assign({}, params, {
+            const env = await start({
+                ...params,
                 data: this.data,
-            }));
+            });
             this.env = env;
-            this.widget = widget;
+            return env;
         };
     },
     afterEach() {
@@ -53,50 +56,55 @@ QUnit.module('chatter_tests.js', {
 QUnit.test('base rendering when chatter has no attachment', async function (assert) {
     assert.expect(6);
 
-    this.data['res.partner'].records.push({ id: 100 });
     for (let i = 0; i < 60; i++) {
-        this.data['mail.message'].records.push({
-            body: "not empty",
-            model: 'res.partner',
-            res_id: 100,
-        });
+        this.data['mail.message'].records.push(
+            {
+                body: "not empty",
+                model: 'res.partner',
+                res_id: 100,
+            }
+        );
     }
-    await this.start();
-    const chatter = this.env.models['mail.chatter'].create({
-        threadId: 100,
-        threadModel: 'res.partner',
+    this.data['res.partner'].records.push(
+        { id: 100 }
+    );
+    const env = await this.start();
+    const chatter = env.invoke('Chatter/create', {
+        $$$threadId: 100,
+        $$$threadModel: 'res.partner',
     });
     await this.createChatterComponent({ chatter });
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Chatter',
         "should have a chatter"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_ChatterTopbar`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-ChatterTopbar',
         "should have a chatter topbar"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter_attachmentBox`).length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Chatter-attachmentBox',
         "should not have an attachment box in the chatter"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter_thread`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Chatter-thread',
         "should have a thread in the chatter"
     );
     assert.strictEqual(
-        document.querySelector(`.o_Chatter_thread`).dataset.threadLocalId,
-        this.env.models['mail.thread'].find(thread =>
-            thread.id === 100 &&
-            thread.model === 'res.partner'
-        ).localId,
+        document.querySelector('.o-Chatter-thread').dataset.threadLocalId,
+        env.invoke('Thread/findFromId', {
+            $$$id: 100,
+            $$$model: 'res.partner',
+        }).localId,
         "thread should have the right thread local id"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Message`).length,
+    assert.containsN(
+        document.body,
+        '.o-Message',
         30,
         "the first 30 messages of thread should be loaded"
     );
@@ -105,48 +113,48 @@ QUnit.test('base rendering when chatter has no attachment', async function (asse
 QUnit.test('base rendering when chatter has no record', async function (assert) {
     assert.expect(8);
 
-    await this.start();
-    const chatter = this.env.models['mail.chatter'].create({
-        threadModel: 'res.partner',
+    const env = await this.start();
+    const chatter = env.invoke('Chatter/create', {
+        $$$threadModel: 'res.partner',
     });
     await this.createChatterComponent({ chatter });
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Chatter',
         "should have a chatter"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_ChatterTopbar`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-ChatterTopbar',
         "should have a chatter topbar"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter_attachmentBox`).length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Chatter-attachmentBox',
         "should not have an attachment box in the chatter"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter_thread`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Chatter-thread',
         "should have a thread in the chatter"
     );
     assert.ok(
-        chatter.thread.isTemporary,
+        chatter.$$$thread().$$$isTemporary(),
         "thread should have a temporary thread linked to chatter"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Message`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Message',
         "should have a message"
     );
     assert.strictEqual(
-        document.querySelector(`.o_Message_content`).textContent,
+        document.querySelector('.o-Message-content').textContent,
         "Creating a new record...",
         "should have the 'Creating a new record ...' message"
     );
     assert.containsNone(
         document.body,
-        '.o_MessageList_loadMore',
+        '.o-MessageList-loadMore',
         "should not have the 'load more' button"
     );
 });
@@ -154,7 +162,6 @@ QUnit.test('base rendering when chatter has no record', async function (assert) 
 QUnit.test('base rendering when chatter has attachments', async function (assert) {
     assert.expect(3);
 
-    this.data['res.partner'].records.push({ id: 100 });
     this.data['ir.attachment'].records.push(
         {
             mimetype: 'text/plain',
@@ -169,25 +176,28 @@ QUnit.test('base rendering when chatter has attachments', async function (assert
             res_model: 'res.partner',
         }
     );
-    await this.start();
-    const chatter = this.env.models['mail.chatter'].create({
-        threadId: 100,
-        threadModel: 'res.partner',
+    this.data['res.partner'].records.push(
+        { id: 100 }
+    );
+    const env = await this.start();
+    const chatter = env.invoke('Chatter/create', {
+        $$$threadId: 100,
+        $$$threadModel: 'res.partner',
     });
     await this.createChatterComponent({ chatter });
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Chatter',
         "should have a chatter"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_ChatterTopbar`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-ChatterTopbar',
         "should have a chatter topbar"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter_attachmentBox`).length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Chatter-attachmentBox',
         "should not have an attachment box in the chatter"
     );
 });
@@ -195,7 +205,6 @@ QUnit.test('base rendering when chatter has attachments', async function (assert
 QUnit.test('show attachment box', async function (assert) {
     assert.expect(6);
 
-    this.data['res.partner'].records.push({ id: 100 });
     this.data['ir.attachment'].records.push(
         {
             mimetype: 'text/plain',
@@ -210,44 +219,47 @@ QUnit.test('show attachment box', async function (assert) {
             res_model: 'res.partner',
         }
     );
-    await this.start();
-    const chatter = this.env.models['mail.chatter'].create({
-        threadId: 100,
-        threadModel: 'res.partner',
+    this.data['res.partner'].records.push(
+        { id: 100 }
+    );
+    const env = await this.start();
+    const chatter = env.invoke('Chatter/create', {
+        $$$threadId: 100,
+        $$$threadModel: 'res.partner',
     });
     await this.createChatterComponent({ chatter });
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Chatter',
         "should have a chatter"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_ChatterTopbar`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-ChatterTopbar',
         "should have a chatter topbar"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_ChatterTopbar_buttonAttachments`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-ChatterTopbar-buttonAttachments',
         "should have an attachments button in chatter topbar"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_ChatterTopbar_buttonAttachmentsCount`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-ChatterTopbar-buttonAttachmentsCount',
         "attachments button should have a counter"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter_attachmentBox`).length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Chatter-attachmentBox',
         "should not have an attachment box in the chatter"
     );
 
     await afterNextRender(() =>
-        document.querySelector(`.o_ChatterTopbar_buttonAttachments`).click()
+        document.querySelector('.o-ChatterTopbar-buttonAttachments').click()
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter_attachmentBox`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Chatter-attachmentBox',
         "should have an attachment box in the chatter"
     );
 });
@@ -255,81 +267,83 @@ QUnit.test('show attachment box', async function (assert) {
 QUnit.test('composer show/hide on log note/send message [REQUIRE FOCUS]', async function (assert) {
     assert.expect(10);
 
-    this.data['res.partner'].records.push({ id: 100 });
-    await this.start();
-    const chatter = this.env.models['mail.chatter'].create({
-        threadId: 100,
-        threadModel: 'res.partner',
+    this.data['res.partner'].records.push(
+        { id: 100 }
+    );
+    const env = await this.start();
+    const chatter = env.invoke('Chatter/create', {
+        $$$threadId: 100,
+        $$$threadModel: 'res.partner',
     });
     await this.createChatterComponent({ chatter });
-    assert.strictEqual(
-        document.querySelectorAll(`.o_ChatterTopbar_buttonSendMessage`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-ChatterTopbar-buttonSendMessage',
         "should have a send message button"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_ChatterTopbar_buttonLogNote`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-ChatterTopbar-buttonLogNote',
         "should have a log note button"
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter_composer`).length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Chatter-composer',
         "should not have a composer"
     );
 
     await afterNextRender(() =>
-        document.querySelector(`.o_ChatterTopbar_buttonSendMessage`).click()
+        document.querySelector('.o-ChatterTopbar-buttonSendMessage').click()
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter_composer`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Chatter-composer',
         "should have a composer"
     );
     assert.hasClass(
-        document.querySelector('.o_Chatter_composer'),
-        'o-focused',
+        document.querySelector('.o-Chatter-composer'),
+        'o-isFocused',
         "composer 'send message' in chatter should have focus just after being displayed"
     );
 
     await afterNextRender(() =>
-        document.querySelector(`.o_ChatterTopbar_buttonLogNote`).click()
+        document.querySelector('.o-ChatterTopbar-buttonLogNote').click()
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter_composer`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Chatter-composer',
         "should still have a composer"
     );
     assert.hasClass(
-        document.querySelector('.o_Chatter_composer'),
-        'o-focused',
+        document.querySelector('.o-Chatter-composer'),
+        'o-isFocused',
         "composer 'log note' in chatter should have focus just after being displayed"
     );
 
     await afterNextRender(() =>
-        document.querySelector(`.o_ChatterTopbar_buttonLogNote`).click()
+        document.querySelector('.o-ChatterTopbar-buttonLogNote').click()
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter_composer`).length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Chatter-composer',
         "should have no composer anymore"
     );
 
     await afterNextRender(() =>
-        document.querySelector(`.o_ChatterTopbar_buttonSendMessage`).click()
+        document.querySelector('.o-ChatterTopbar-buttonSendMessage').click()
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter_composer`).length,
-        1,
+    assert.containsOnce(
+        document.body,
+        '.o-Chatter-composer',
         "should have a composer"
     );
 
     await afterNextRender(() =>
-        document.querySelector(`.o_ChatterTopbar_buttonSendMessage`).click()
+        document.querySelector('.o-ChatterTopbar-buttonSendMessage').click()
     );
-    assert.strictEqual(
-        document.querySelectorAll(`.o_Chatter_composer`).length,
-        0,
+    assert.containsNone(
+        document.body,
+        '.o-Chatter-composer',
         "should have no composer anymore"
     );
 });
@@ -337,23 +351,26 @@ QUnit.test('composer show/hide on log note/send message [REQUIRE FOCUS]', async 
 QUnit.test('should not display user notification messages in chatter', async function (assert) {
     assert.expect(1);
 
-    this.data['res.partner'].records.push({ id: 100 });
-    this.data['mail.message'].records.push({
-        id: 102,
-        message_type: 'user_notification',
-        model: 'res.partner',
-        res_id: 100,
-    });
-    await this.start();
-    const chatter = this.env.models['mail.chatter'].create({
-        threadId: 100,
-        threadModel: 'res.partner',
+    this.data['mail.message'].records.push(
+        {
+            id: 102,
+            message_type: 'user_notification',
+            model: 'res.partner',
+            res_id: 100,
+        }
+    );
+    this.data['res.partner'].records.push(
+        { id: 100 }
+    );
+    const env = await this.start();
+    const chatter = env.invoke('Chatter/create', {
+        $$$threadId: 100,
+        $$$threadModel: 'res.partner',
     });
     await this.createChatterComponent({ chatter });
-
     assert.containsNone(
         document.body,
-        '.o_Message',
+        '.o-Message',
         "should display no messages"
     );
 });
@@ -361,33 +378,35 @@ QUnit.test('should not display user notification messages in chatter', async fun
 QUnit.test('post message with "CTRL-Enter" keyboard shortcut', async function (assert) {
     assert.expect(2);
 
-    this.data['res.partner'].records.push({ id: 100 });
-    await this.start();
-    const chatter = this.env.models['mail.chatter'].create({
-        threadId: 100,
-        threadModel: 'res.partner',
+    this.data['res.partner'].records.push(
+        { id: 100 }
+    );
+    const env = await this.start();
+    const chatter = env.invoke('Chatter/create', {
+        $$$threadId: 100,
+        $$$threadModel: 'res.partner',
     });
     await this.createChatterComponent({ chatter });
     assert.containsNone(
         document.body,
-        '.o_Message',
+        '.o-Message',
         "should not have any message initially in chatter"
     );
 
     await afterNextRender(() =>
-        document.querySelector('.o_ChatterTopbar_buttonSendMessage').click()
+        document.querySelector('.o-ChatterTopbar-buttonSendMessage').click()
     );
     await afterNextRender(() => {
-        document.querySelector(`.o_ComposerTextInput_textarea`).focus();
+        document.querySelector('.o-ComposerTextInput-textarea').focus();
         document.execCommand('insertText', false, "Test");
     });
     await afterNextRender(() => {
         const kevt = new window.KeyboardEvent('keydown', { ctrlKey: true, key: "Enter" });
-        document.querySelector('.o_ComposerTextInput_textarea').dispatchEvent(kevt);
+        document.querySelector('.o-ComposerTextInput-textarea').dispatchEvent(kevt);
     });
     assert.containsOnce(
         document.body,
-        '.o_Message',
+        '.o-Message',
         "should now have single message in chatter after posting message from pressing 'CTRL-Enter' in text input of composer"
     );
 });
@@ -395,33 +414,35 @@ QUnit.test('post message with "CTRL-Enter" keyboard shortcut', async function (a
 QUnit.test('post message with "META-Enter" keyboard shortcut', async function (assert) {
     assert.expect(2);
 
-    this.data['res.partner'].records.push({ id: 100 });
-    await this.start();
-    const chatter = this.env.models['mail.chatter'].create({
-        threadId: 100,
-        threadModel: 'res.partner',
+    this.data['res.partner'].records.push(
+        { id: 100 }
+    );
+    const env = await this.start();
+    const chatter = env.invoke('Chatter/create', {
+        $$$threadId: 100,
+        $$$threadModel: 'res.partner',
     });
     await this.createChatterComponent({ chatter });
     assert.containsNone(
         document.body,
-        '.o_Message',
+        '.o-Message',
         "should not have any message initially in chatter"
     );
 
     await afterNextRender(() =>
-        document.querySelector('.o_ChatterTopbar_buttonSendMessage').click()
+        document.querySelector('.o-ChatterTopbar-buttonSendMessage').click()
     );
     await afterNextRender(() => {
-        document.querySelector(`.o_ComposerTextInput_textarea`).focus();
+        document.querySelector('.o-ComposerTextInput-textarea').focus();
         document.execCommand('insertText', false, "Test");
     });
     await afterNextRender(() => {
         const kevt = new window.KeyboardEvent('keydown', { key: "Enter", metaKey: true });
-        document.querySelector('.o_ComposerTextInput_textarea').dispatchEvent(kevt);
+        document.querySelector('.o-ComposerTextInput-textarea').dispatchEvent(kevt);
     });
     assert.containsOnce(
         document.body,
-        '.o_Message',
+        '.o-Message',
         "should now have single message in channel after posting message from pressing 'META-Enter' in text input of composer"
     );
 });
@@ -432,32 +453,34 @@ QUnit.test('do not post message with "Enter" keyboard shortcut', async function 
     // programmatically crafted events...
     assert.expect(2);
 
-    this.data['res.partner'].records.push({ id: 100 });
-    await this.start();
-    const chatter = this.env.models['mail.chatter'].create({
-        threadId: 100,
-        threadModel: 'res.partner',
+    this.data['res.partner'].records.push(
+        { id: 100 }
+    );
+    const env = await this.start();
+    const chatter = env.invoke('Chatter/create', {
+        $$$threadId: 100,
+        $$$threadModel: 'res.partner',
     });
     await this.createChatterComponent({ chatter });
     assert.containsNone(
         document.body,
-        '.o_Message',
+        '.o-Message',
         "should not have any message initially in chatter"
     );
 
     await afterNextRender(() =>
-        document.querySelector('.o_ChatterTopbar_buttonSendMessage').click()
+        document.querySelector('.o-ChatterTopbar-buttonSendMessage').click()
     );
     await afterNextRender(() => {
-        document.querySelector(`.o_ComposerTextInput_textarea`).focus();
+        document.querySelector('.o-ComposerTextInput-textarea').focus();
         document.execCommand('insertText', false, "Test");
     });
     const kevt = new window.KeyboardEvent('keydown', { key: "Enter" });
-    document.querySelector('.o_ComposerTextInput_textarea').dispatchEvent(kevt);
+    document.querySelector('.o-ComposerTextInput-textarea').dispatchEvent(kevt);
     await nextAnimationFrame();
     assert.containsNone(
         document.body,
-        '.o_Message',
+        '.o-Message',
         "should still not have any message in mailing channel after pressing 'Enter' in text input of composer"
     );
 });

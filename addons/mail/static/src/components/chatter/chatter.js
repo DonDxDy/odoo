@@ -1,43 +1,19 @@
 odoo.define('mail/static/src/components/chatter/chatter.js', function (require) {
 'use strict';
 
-const components = {
-    ActivityBox: require('mail/static/src/components/activity_box/activity_box.js'),
-    AttachmentBox: require('mail/static/src/components/attachment_box/attachment_box.js'),
-    ChatterTopbar: require('mail/static/src/components/chatter_topbar/chatter_topbar.js'),
-    Composer: require('mail/static/src/components/composer/composer.js'),
-    ThreadView: require('mail/static/src/components/thread_view/thread_view.js'),
-};
-const useStore = require('mail/static/src/component_hooks/use_store/use_store.js');
-const useUpdate = require('mail/static/src/component_hooks/use_update/use_update.js');
+const useUpdate = require('mail/static/src/component-hooks/use-update/use-update.js');
+const usingModels = require('mail/static/src/component-mixins/using-models/using-models.js');
 
-const { Component } = owl;
+const { Component, QWeb } = owl;
 const { useRef } = owl.hooks;
 
-class Chatter extends Component {
+class Chatter extends usingModels(Component) {
 
     /**
      * @override
      */
     constructor(...args) {
         super(...args);
-        useStore(props => {
-            const chatter = this.env.models['mail.chatter'].get(props.chatterLocalId);
-            const thread = chatter ? chatter.thread : undefined;
-            let attachments = [];
-            if (thread) {
-                attachments = thread.allAttachments;
-            }
-            return {
-                attachments: attachments.map(attachment => attachment.__state),
-                chatter: chatter ? chatter.__state : undefined,
-                thread: thread ? thread.__state : undefined,
-            };
-        }, {
-            compareDepth: {
-                attachments: 1,
-            },
-        });
         useUpdate({ func: () => this._update() });
         /**
          * Reference of the composer. Useful to focus it.
@@ -50,17 +26,6 @@ class Chatter extends Component {
     }
 
     //--------------------------------------------------------------------------
-    // Public
-    //--------------------------------------------------------------------------
-
-    /**
-     * @returns {mail.chatter}
-     */
-    get chatter() {
-        return this.env.models['mail.chatter'].get(this.props.chatterLocalId);
-    }
-
-    //--------------------------------------------------------------------------
     // Private
     //--------------------------------------------------------------------------
 
@@ -69,8 +34,8 @@ class Chatter extends Component {
      */
     _notifyRendered() {
         this.trigger('o-chatter-rendered', {
-            attachments: this.chatter.thread.allAttachments,
-            thread: this.chatter.thread.localId,
+            attachments: this.chatter.$$$thread(this).$$$allAttachments(this),
+            thread: this.chatter.$$$thread(this),
         });
     }
 
@@ -81,11 +46,11 @@ class Chatter extends Component {
         if (!this.chatter) {
             return;
         }
-        if (this.chatter.thread) {
+        if (this.chatter.$$$thread(this)) {
             this._notifyRendered();
         }
-        if (this.chatter.isDoFocus) {
-            this.chatter.update({ isDoFocus: false });
+        if (this.chatter.$$$isDoFocus(this)) {
+            this.env.invoke('Record/update', this.chatter, { $$$isDoFocus: false });
             const composer = this._composerRef.comp;
             if (composer) {
                 composer.focus();
@@ -101,7 +66,9 @@ class Chatter extends Component {
      * @private
      */
     _onComposerMessagePosted() {
-        this.chatter.update({ isComposerVisible: false });
+        this.env.invoke('Record/update', this.chatter, {
+            $$$isComposerVisible: false
+        });
     }
 
     /**
@@ -118,12 +85,21 @@ class Chatter extends Component {
 }
 
 Object.assign(Chatter, {
-    components,
     props: {
-        chatterLocalId: String,
+        chatter: {
+            type: Object,
+            validate(p) {
+                if (p.constructor.modelName !== 'Chatter') {
+                    return false;
+                }
+                return true;
+            },
+        },
     },
     template: 'mail.Chatter',
 });
+
+QWeb.registerComponent('Chatter', Chatter);
 
 return Chatter;
 

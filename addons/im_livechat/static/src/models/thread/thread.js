@@ -2,24 +2,29 @@ odoo.define('im_livechat/static/src/models/thread/thread.js', function (require)
 'use strict';
 
 const {
-    registerClassPatchModel,
-    registerInstancePatchModel,
-} = require('mail/static/src/model/model_core.js');
+    'Feature/defineActionExtensions': defineActionExtensions,
+    'Feature/defineModelExtension': defineModelExtension,
+    'Feature/defineSlice': defineFeatureSlice,
+    'Field/insert': insert,
+    'Field/link': link,
+    'Field/unlink': unlink,
+} = require('mail/static/src/model/utils.js');
 
-registerClassPatchModel('mail.thread', 'im_livechat/static/src/models/thread/thread.js', {
-
-    //----------------------------------------------------------------------
-    // Public
-    //----------------------------------------------------------------------
-
+const actionExtensions = defineActionExtensions({
     /**
-     * @override
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {function} param0.original
+     * @param {Object} data
      */
-    convertData(data) {
-        const data2 = this._super(data);
+    'Thread/convertData'(
+        { env, original },
+        data
+    ) {
+        const data2 = original(data);
         if ('livechat_visitor' in data && data.livechat_visitor) {
-            if (!data2.members) {
-                data2.members = [];
+            if (!data2.$$$members) {
+                data2.$$$members = [];
             }
             // `livechat_visitor` without `id` is the anonymous visitor.
             if (!data.livechat_visitor.id) {
@@ -39,59 +44,93 @@ registerClassPatchModel('mail.thread', 'im_livechat/static/src/models/thread/thr
                  * of polluting the database, it is therefore acceptable and
                  * easier to handle one temporary partner per channel.
                  */
-                data2.members.push(['unlink', this.env.messaging.publicPartner]);
-                const partner = this.env.models['mail.partner'].create(
-                    Object.assign(
-                        this.env.models['mail.partner'].convertData(data.livechat_visitor),
-                        { id: this.env.models['mail.partner'].getNextPublicId() }
+                data2.$$$members.push(
+                    unlink(
+                        env.messaging.$$$publicPartner()
                     )
                 );
-                data2.members.push(['link', partner]);
-                data2.correspondent = [['link', partner]];
+                const partner = env.invoke('Partner/create', {
+                    ...env.invoke('Partner/convertData', data.livechat_visitor),
+                    $$$id: env.invoke('Partner/getNextPublicId'),
+                });
+                data2.$$$members.push(link(partner));
+                data2.$$$correspondent = link(partner);
             } else {
-                const partnerData = this.env.models['mail.partner'].convertData(data.livechat_visitor);
-                data2.members.push(['insert', partnerData]);
-                data2.correspondent = [['insert', partnerData]];
+                const partnerData = env.invoke(
+                    'Partner/convertData',
+                    data.livechat_visitor
+                );
+                data2.$$$members.push(insert(partnerData));
+                data2.$$$correspondent = insert(partnerData);
             }
         }
         return data2;
     },
 });
 
-registerInstancePatchModel('mail.thread', 'im_livechat/static/src/models/thread/thread.js', {
-
-    //----------------------------------------------------------------------
-    // Private
-    //----------------------------------------------------------------------
-
-    /**
-     * @override
-     */
-    _computeCorrespondent() {
-        if (this.channel_type === 'livechat') {
-            // livechat correspondent never change: always the public member.
-            return [];
-        }
-        return this._super();
-    },
-    /**
-     * @override
-     */
-    _computeDisplayName() {
-        if (this.channel_type === 'livechat' && this.correspondent) {
-            if (this.correspondent.country) {
-                return `${this.correspondent.nameOrDisplayName} (${this.correspondent.country.name})`;
-            }
-            return this.correspondent.nameOrDisplayName;
-        }
-        return this._super();
-    },
-    /**
-     * @override
-     */
-    _computeIsChatChannel() {
-        return this.channel_type === 'livechat' || this._super();
+const modelExtension = defineModelExtension({
+    name: 'Thread',
+    fields: {
+        $$$correspondent: {
+            /**
+             * @param {Object} param0
+             * @param {function} param0.original
+             * @param {Thread} param0.record
+             * @returns {Partner}
+             */
+            extendedCompute({ original, record }) {
+                if (record.$$$channelType(this) === 'livechat') {
+                    // livechat correspondent never change: always the public member.
+                    return [];
+                }
+                return original(record);
+            },
+        },
+        $$$displayName: {
+            /**
+             * @param {Object} param0
+             * @param {function} param0.original
+             * @param {Thread} param0.record
+             * @returns {string}
+             */
+            extendedCompute({ original, record }) {
+                if (
+                    record.$$$channelType(this) === 'livechat' &&
+                    record.$$$correspondent(this)
+                ) {
+                    if (record.$$$correspondent(this).$$$country(this)) {
+                        return `${
+                            record.$$$correspondent(this).$$$nameOrDisplayName(this)
+                        } (${
+                            record.$$$correspondent(this).$$$country(this).$$$name(this)
+                        })`;
+                    }
+                    return record.$$$correspondent(this).$$$nameOrDisplayName(this);
+                }
+                return original(record);
+            },
+        },
+        $$$isChatChannel: {
+            /**
+             * @param {Object} param0
+             * @param {function} param0.original
+             * @param {Thread} param0.record
+             * @returns {boolean}
+             */
+            extendedCompute({ original, record }) {
+                return (
+                    record.$$$channelType(this) === 'livechat' ||
+                    original(record)
+                );
+            },
+        },
     },
 });
+
+return defineFeatureSlice(
+    'im_livechat/static/src/models/thread/thread.js',
+    actionExtensions,
+    modelExtension,
+);
 
 });

@@ -1,0 +1,24 @@
+// ------------------------------------------------------------------
+// Layout
+// ------------------------------------------------------------------
+
+.o-ChatterContainer {
+    display: flex;
+    flex: 1 1 auto;
+}
+
+.o-ChatterContainer-noChatter {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.o-ChatterContainer-noChatterIcon {
+    margin-right: map-get($spacers, 2);
+}
+
+// ------------------------------------------------------------------
+// Style
+// ------------------------------------------------------------------
+

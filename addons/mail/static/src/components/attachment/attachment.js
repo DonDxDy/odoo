@@ -1,27 +1,17 @@
 odoo.define('mail/static/src/components/attachment/attachment.js', function (require) {
 'use strict';
 
-const useStore = require('mail/static/src/component_hooks/use_store/use_store.js');
+const usingModels = require('mail/static/src/component-mixins/using-models/using-models.js');
 
-const components = {
-    AttachmentDeleteConfirmDialog: require('mail/static/src/components/attachment_delete_confirm_dialog/attachment_delete_confirm_dialog.js'),
-};
+const { Component, QWeb, useState } = owl;
 
-const { Component, useState } = owl;
-
-class Attachment extends Component {
+class Attachment extends usingModels(Component) {
 
     /**
      * @override
      */
     constructor(...args) {
         super(...args);
-        useStore(props => {
-            const attachment = this.env.models['mail.attachment'].get(props.attachmentLocalId);
-            return {
-                attachment: attachment ? attachment.__state : undefined,
-            };
-        });
         this.state = useState({
             hasDeleteConfirmDialog: false,
         });
@@ -32,24 +22,17 @@ class Attachment extends Component {
     //--------------------------------------------------------------------------
 
     /**
-     * @returns {mail.attachment}
-     */
-    get attachment() {
-        return this.env.models['mail.attachment'].get(this.props.attachmentLocalId);
-    }
-
-    /**
      * Return the url of the attachment. Temporary attachments, a.k.a. uploading
      * attachments, do not have an url.
      *
      * @returns {string}
      */
     get attachmentUrl() {
-        if (this.attachment.isTemporary) {
+        if (this.attachment.$$$isTemporary(this)) {
             return '';
         }
         return this.env.session.url('/web/content', {
-            id: this.attachment.id,
+            id: this.attachment.$$$id(this),
             download: true,
         });
     }
@@ -60,10 +43,10 @@ class Attachment extends Component {
      * @returns {string} 'card', 'hover' or 'none'
      */
     get detailsMode() {
-        if (this.props.detailsMode !== 'auto') {
-            return this.props.detailsMode;
+        if (this.detailsMode !== 'auto') {
+            return this.detailsMode;
         }
-        if (this.attachment.fileType !== 'image') {
+        if (this.attachment.$$$fileType(this) !== 'image') {
             return 'card';
         }
         return 'hover';
@@ -75,7 +58,7 @@ class Attachment extends Component {
      * @returns {string}
      */
     get imageStyle() {
-        if (this.attachment.fileType !== 'image') {
+        if (this.attachment.$$$fileType(this) !== 'image') {
             return '';
         }
         if (this.env.isQUnitTest) {
@@ -90,7 +73,9 @@ class Attachment extends Component {
         } else {
             size = '160x160';
         }
-        return `background-image:url(/web/image/${this.attachment.id}/${size}/?crop=true);`;
+        return `background-image:url(/web/image/${
+            this.attachment.$$$id(this)
+        }/${size}/?crop=true);`;
     }
 
     //--------------------------------------------------------------------------
@@ -105,7 +90,12 @@ class Attachment extends Component {
      */
     _onClickDownload(ev) {
         ev.stopPropagation();
-        this.env.services.navigate(`/web/content/ir.attachment/${this.attachment.id}/datas`, { download: true });
+        this.env.services.navigate(
+            `/web/content/ir.attachment/${
+                this.attachment.$$$id(this)
+            }/datas`,
+            { download: true }
+        );
     }
 
     /**
@@ -115,14 +105,12 @@ class Attachment extends Component {
      * @param {MouseEvent} ev
      */
     _onClickImage(ev) {
-        if (!this.attachment.isViewable) {
+        if (!this.attachment.$$$isViewable(this)) {
             return;
         }
-        this.env.models['mail.attachment'].view({
+        this.env.invoke('Attachment/view', {
             attachment: this.attachment,
-            attachments: this.props.attachmentLocalIds.map(
-                attachmentLocalId => this.env.models['mail.attachment'].get(attachmentLocalId)
-            ),
+            attachments: this.attachments,
         });
     }
 
@@ -132,9 +120,9 @@ class Attachment extends Component {
      */
     _onClickUnlink(ev) {
         ev.stopPropagation();
-        if (this.attachment.isLinkedToComposer) {
-            this.attachment.remove();
-            this.trigger('o-attachment-removed', { attachmentLocalId: this.props.attachmentLocalId });
+        if (this.attachment.$$$isLinkedToComposer(this)) {
+            this.env.invoke('Attachment/remove', this.attachment);
+            this.trigger('o-attachment-removed', { attachment: this.attachment });
         } else {
             this.state.hasDeleteConfirmDialog = true;
         }
@@ -149,9 +137,8 @@ class Attachment extends Component {
 }
 
 Object.assign(Attachment, {
-    components,
     defaultProps: {
-        attachmentLocalIds: [],
+        attachments: [],
         detailsMode: 'auto',
         imageSize: 'medium',
         isDownloadable: false,
@@ -160,10 +147,26 @@ Object.assign(Attachment, {
         showFilename: true,
     },
     props: {
-        attachmentLocalId: String,
-        attachmentLocalIds: {
+        attachment: {
+            type: Object,
+            validate(p) {
+                if (p.constructor.modelName !== 'Attachment') {
+                    return false;
+                }
+                return true;
+            },
+        },
+        attachments: {
             type: Array,
-            element: String,
+            element: Object,
+            validate(p) {
+                for (const i of p) {
+                    if (i.constructor.modelName !== 'Attachment') {
+                        return false;
+                    }
+                }
+                return true;
+            },
         },
         detailsMode: {
             type: String,
@@ -180,6 +183,8 @@ Object.assign(Attachment, {
     },
     template: 'mail.Attachment',
 });
+
+QWeb.registerComponent('Attachment', Attachment);
 
 return Attachment;
 

@@ -1,82 +1,73 @@
 odoo.define('mail/static/src/models/notification/notification.js', function (require) {
 'use strict';
 
-const { registerNewModel } = require('mail/static/src/model/model_core.js');
-const { attr, many2one } = require('mail/static/src/model/model_field.js');
+const {
+    'Feature/defineActions': defineActions,
+    'Feature/defineModel': defineModel,
+    'Feature/defineSlice': defineFeatureSlice,
+    'Field/attr': attr,
+    'Field/insert': insert,
+    'Field/many2one': many2one,
+    'Field/unlinkAll': unlinkAll,
+} = require('mail/static/src/model/utils.js');
 
-function factory(dependencies) {
-
-    class Notification extends dependencies['mail.model'] {
-
-        //----------------------------------------------------------------------
-        // Public
-        //----------------------------------------------------------------------
-
-        /**
-         * @static
-         * @param {Object} data
-         * @return {Object}
-         */
-        static convertData(data) {
-            const data2 = {};
-            if ('failure_type' in data) {
-                data2.failure_type = data.failure_type;
-            }
-            if ('id' in data) {
-                data2.id = data.id;
-            }
-            if ('notification_status' in data) {
-                data2.notification_status = data.notification_status;
-            }
-            if ('notification_type' in data) {
-                data2.notification_type = data.notification_type;
-            }
-            if ('res_partner_id' in data) {
-                if (!data.res_partner_id) {
-                    data2.partner = [['unlink-all']];
-                } else {
-                    data2.partner = [
-                        ['insert', {
-                            display_name: data.res_partner_id[1],
-                            id: data.res_partner_id[0],
-                        }],
-                    ];
-                }
-            }
-            return data2;
+const actions = defineActions({
+    /**
+     * @param {Object} _
+     * @param {Object} data
+     * @return {Object}
+     */
+    'Notification/convertData'(
+        _,
+        data
+    ) {
+        const data2 = {};
+        if ('failure_type' in data) {
+            data2.$$$failureType = data.failure_type;
         }
-
-        //----------------------------------------------------------------------
-        // Private
-        //----------------------------------------------------------------------
-
-        /**
-         * @override
-         */
-        static _createRecordLocalId(data) {
-            return `${this.modelName}_${data.id}`;
+        if ('id' in data) {
+            data2.$$$id = data.id;
         }
+        if ('notification_status' in data) {
+            data2.$$$status = data.notification_status;
+        }
+        if ('notification_type' in data) {
+            data2.$$$type = data.notification_type;
+        }
+        if ('res_partner_id' in data) {
+            if (!data.res_partner_id) {
+                data2.$$$partner = unlinkAll();
+            } else {
+                data2.$$$partner = insert({
+                    $$$displayName: data.res_partner_id[1],
+                    $$$id: data.res_partner_id[0],
+                });
+            }
+        }
+        return data2;
+    },
+});
 
-    }
-
-    Notification.fields = {
-        failure_type: attr(),
-        id: attr({
-            required: true,
+const model = defineModel({
+    name: 'Notification',
+    fields: {
+        $$$failureType: attr(),
+        $$$id: attr({
+            id: true,
         }),
-        message: many2one('mail.message', {
-            inverse: 'notifications',
+        $$$message: many2one('Message', {
+            inverse: '$$$notifications',
         }),
-        notification_status: attr(),
-        notification_type: attr(),
-        partner: many2one('mail.partner'),
-    };
+        $$$partner: many2one('Partner'),
+        $$$status: attr(),
+        $$$type: attr(),
+    },
+});
 
-    Notification.modelName = 'mail.notification';
-
-    return Notification;
-}
-
-registerNewModel('mail.notification', factory);
+return defineFeatureSlice(
+    'mail/static/src/models/notification/notification.js',
+    actions,
+    model,
+);
 
 });

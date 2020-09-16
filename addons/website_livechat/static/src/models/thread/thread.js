@@ -2,44 +2,55 @@ odoo.define('website_livechat/static/src/models/thread/thread.js', function (req
 'use strict';
 
 const {
-    registerClassPatchModel,
-    registerFieldPatchModel,
-} = require('mail/static/src/model/model_core.js');
-const { many2one } = require('mail/static/src/model/model_field.js');
+    'Feature/defineActionExtensions': defineActionExtensions,
+    'Feature/defineModelExtension': defineModelExtension,
+    'Feature/defineSlice': defineFeatureSlice,
+    'Field/insert': insert,
+    'Field/many2one': many2one,
+    'Field/unlink': unlink,
+} = require('mail/static/src/model/utils.js');
 
-registerClassPatchModel('mail.thread', 'website_livechat/static/src/models/thread/thread.js', {
-
-    //----------------------------------------------------------------------
-    // Public
-    //----------------------------------------------------------------------
-
+const actionExtensions = defineActionExtensions({
     /**
-     * @override
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {function} param0.original
+     * @param {Object} data
      */
-    convertData(data) {
-        const data2 = this._super(data);
+    'Thread/convertData'(
+        { env, original },
+        data
+    ) {
+        const data2 = original(data);
         if ('visitor' in data) {
             if (data.visitor) {
-                data2.visitor = [[
-                    'insert',
-                    this.env.models['website_livechat.visitor'].convertData(data.visitor)
-                ]];
+                data2.$$$visitor = insert(
+                    env.invoke('Visitor/convertData', data.visitor)
+                );
             } else {
-                data2.visitor = [['unlink']];
+                data2.$$$visitor = unlink();
             }
         }
         return data2;
     },
-
 });
 
-registerFieldPatchModel('mail.thread', 'website_livechat/static/src/models/thread/thread.js', {
-    /**
-     * Visitor connected to the livechat.
-     */
-    visitor: many2one('website_livechat.visitor', {
-        inverse: 'threads',
-    }),
+const modelExtension = defineModelExtension({
+    name: 'Thread',
+    fields: {
+        /**
+         * Visitor connected to the livechat.
+         */
+        $$$visitor: many2one('Visitor', {
+            inverse: '$$$threads',
+        }),
+    },
 });
+
+return defineFeatureSlice(
+    'website_livechat/static/src/models/thread/thread.js',
+    actionExtensions,
+    modelExtension,
+);
 
 });

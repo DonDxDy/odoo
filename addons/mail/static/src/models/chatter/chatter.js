@@ -1,209 +1,194 @@
 odoo.define('mail/static/src/models/chatter/chatter.js', function (require) {
 'use strict';
 
-const { registerNewModel } = require('mail/static/src/model/model_core.js');
-const { attr, many2one, one2one } = require('mail/static/src/model/model_field.js');
+const {
+    'Feature/defineActions': defineActions,
+    'Feature/defineModel': defineModel,
+    'Feature/defineSlice': defineFeatureSlice,
+    'Field/attr': attr,
+    'Field/create': create,
+    'Field/insert': insert,
+    'Field/link': link,
+    'Field/many2one': many2one,
+    'Field/one2one': one2one,
+} = require('mail/static/src/model/utils.js');
 
-function factory(dependencies) {
+const getThreadNextTemporaryId = (function () {
+    let tmpId = 0;
+    return () => {
+        tmpId -= 1;
+        return tmpId;
+    };
+})();
 
-    const getThreadNextTemporaryId = (function () {
-        let tmpId = 0;
-        return () => {
-            tmpId -= 1;
-            return tmpId;
-        };
-    })();
+const getMessageNextTemporaryId = (function () {
+    let tmpId = 0;
+    return () => {
+        tmpId -= 1;
+        return tmpId;
+    };
+})();
 
-    const getMessageNextTemporaryId = (function () {
-        let tmpId = 0;
-        return () => {
-            tmpId -= 1;
-            return tmpId;
-        };
-    })();
-
-    class Chatter extends dependencies['mail.model'] {
-
-        /**
-         * @override
-         */
-        _willDelete() {
-            this._stopAttachmentsLoading();
-            return super._willDelete(...arguments);
+const actions = defineActions({
+    /**
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Chatter} chatter
+     */
+    'Chatter/focus'(
+        { env },
+        chatter
+    ) {
+        env.invoke('Record/update', chatter, {
+            $$$isDoFocus: true,
+        });
+    },
+    /**
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Chatter} chatter
+     */
+    async 'Chatter/refresh'(
+        { env },
+        chatter
+    ) {
+        if (chatter.$$$hasActivities(this)) {
+            env.invoke('Thread/refreshActivities',
+                chatter.$$$thread(this)
+            );
         }
-
-        //----------------------------------------------------------------------
-        // Public
-        //----------------------------------------------------------------------
-
-        focus() {
-            this.update({ isDoFocus: true });
+        if (chatter.$$$hasFollowers(this)) {
+            env.invoke('Thread/refreshFollowers',
+                chatter.$$$thread(this)
+            );
+            env.invoke('Thread/fetchAndUpdateSuggestedRecipients',
+                chatter.$$$thread(this)
+            );
         }
-
-        async refresh() {
-            if (this.hasActivities) {
-                this.thread.refreshActivities();
+        if (chatter.$$$hasMessageList(this)) {
+            env.invoke('Thread/refresh',
+                chatter.$$$thread(this)
+            );
+        }
+    },
+    /**
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Chatter} chatter
+     */
+    'Chatter/showLogNote'(
+        { env },
+        chatter
+    ) {
+        env.invoke('Record/update', chatter, {
+            $$$isComposerVisible: true,
+        });
+        env.invoke('Record/update',
+            chatter.$$$thread(this).$$$composer(this),
+            {
+                $$$isLog: true,
             }
-            if (this.hasFollowers) {
-                this.thread.refreshFollowers();
-                this.thread.fetchAndUpdateSuggestedRecipients();
+        );
+        env.invoke('Chatter/focus', chatter);
+    },
+    /**
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Chatter} chatter
+     */
+    'Chatter/showSendMessage'(
+        { env },
+        chatter
+    ) {
+        env.invoke('Record/update', chatter, {
+            $$$isComposerVisible: true,
+        });
+        env.invoke('Record/update',
+            chatter.$$$thread(this).$$$composer(this),
+            {
+                $$$isLog: false,
             }
-            if (this.hasMessageList) {
-                this.thread.refresh();
-            }
-        }
+        );
+        env.invoke('Chatter/focus', chatter);
+    },
+    /**
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Chatter} chatter
+     */
+    'Chatter/toggleActivityBoxVisibility'(
+        { env },
+        chatter
+    ) {
+        env.invoke('Record/update', chatter, {
+            $$$isActivityBoxVisible: !chatter.$$$isActivityBoxVisible(this),
+        });
+    },
+    /**
+     * @private
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Chatter} chatter
+     */
+    'Chatter/_prepareAttachmentsLoading'(
+        { env },
+        chatter
+    ) {
+        chatter._isPreparingAttachmentsLoading = true;
+        chatter._attachmentsLoaderTimeout = env.browser.setTimeout(() => {
+            env.invoke('Record/update', chatter, {
+                $$$isShowingAttachmentsLoading: true,
+            });
+            chatter._isPreparingAttachmentsLoading = false;
+        }, env.loadingBaseDelayDuration);
+    },
+    /**
+     * @private
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Chatter} chatter
+     */
+    'Chatter/_stopAttachmentsLoading'(
+        { env },
+        chatter
+    ) {
+        env.browser.clearTimeout(chatter._attachmentsLoaderTimeout);
+        chatter._attachmentsLoaderTimeout = null;
+        env.invoke('Record/update', chatter, {
+            $$$isShowingAttachmentsLoading: false,
+        });
+        chatter._isPreparingAttachmentsLoading = false;
+    },
+});
 
-        showLogNote() {
-            this.update({ isComposerVisible: true });
-            this.thread.composer.update({ isLog: true });
-            this.focus();
-        }
-
-        showSendMessage() {
-            this.update({ isComposerVisible: true });
-            this.thread.composer.update({ isLog: false });
-            this.focus();
-        }
-
-        toggleActivityBoxVisibility() {
-            this.update({ isActivityBoxVisible: !this.isActivityBoxVisible });
-        }
-
-        //----------------------------------------------------------------------
-        // Private
-        //----------------------------------------------------------------------
-
-        /**
-         * @private
-         * @returns {boolean}
-         */
-        _computeHasThreadView() {
-            return this.thread && this.hasMessageList;
-        }
-
-        /**
-         * @private
-         * @returns {boolean}
-         */
-        _computeIsDisabled() {
-            return !this.thread || this.thread.isTemporary;
-        }
-
-        /**
-         * @private
-         */
-        _onThreadIdOrThreadModelChanged() {
-            if (this.threadId) {
-                if (this.thread && this.thread.isTemporary) {
-                    this.thread.delete();
-                }
-                this.update({
-                    isAttachmentBoxVisible: this.isAttachmentBoxVisibleInitially,
-                    thread: [['insert', {
-                        // If the thread was considered to have the activity
-                        // mixin once, it will have it forever.
-                        hasActivities: this.hasActivities ? true : undefined,
-                        id: this.threadId,
-                        model: this.threadModel,
-                    }]],
-                });
-                if (this.hasActivities) {
-                    this.thread.refreshActivities();
-                }
-                if (this.hasFollowers) {
-                    this.thread.refreshFollowers();
-                    this.thread.fetchAndUpdateSuggestedRecipients();
-                }
-                if (this.hasMessageList) {
-                    this.thread.refresh();
-                }
-            } else if (!this.thread || !this.thread.isTemporary) {
-                const currentPartner = this.env.messaging.currentPartner;
-                const message = this.env.models['mail.message'].create({
-                    author: [['link', currentPartner]],
-                    body: this.env._t("Creating a new record..."),
-                    id: getMessageNextTemporaryId(),
-                    isTemporary: true,
-                });
-                const nextId = getThreadNextTemporaryId();
-                this.update({
-                    isAttachmentBoxVisible: false,
-                    thread: [['insert', {
-                        areAttachmentsLoaded: true,
-                        id: nextId,
-                        isTemporary: true,
-                        model: this.threadModel,
-                    }]],
-                });
-                for (const cache of this.thread.caches) {
-                    cache.update({ messages: [['link', message]] });
-                }
-            }
-        }
-
-        /**
-         * @private
-         */
-        _onThreadIsLoadingAttachmentsChanged() {
-            if (!this.thread.isLoadingAttachments) {
-                this._stopAttachmentsLoading();
-                return;
-            }
-            if (this._isPreparingAttachmentsLoading || this.isShowingAttachmentsLoading) {
-                return;
-            }
-            this._prepareAttachmentsLoading();
-        }
-
-        /**
-         * @private
-         */
-        _prepareAttachmentsLoading() {
-            this._isPreparingAttachmentsLoading = true;
-            this._attachmentsLoaderTimeout = this.env.browser.setTimeout(() => {
-                this.update({ isShowingAttachmentsLoading: true });
-                this._isPreparingAttachmentsLoading = false;
-            }, this.env.loadingBaseDelayDuration);
-        }
-
-        /**
-         * @private
-         */
-        _stopAttachmentsLoading() {
-            this.env.browser.clearTimeout(this._attachmentsLoaderTimeout);
-            this._attachmentsLoaderTimeout = null;
-            this.update({ isShowingAttachmentsLoading: false });
-            this._isPreparingAttachmentsLoading = false;
-        }
-
-    }
-
-    Chatter.fields = {
-        composer: many2one('mail.composer', {
-            related: 'thread.composer',
+const model = defineModel({
+    name: 'Chatter',
+    fields: {
+        $$$composer: many2one('Composer', {
+            related: '$$$thread.$$$composer',
         }),
-        context: attr({
+        $$$context: attr({
             default: {},
         }),
         /**
          * Determines whether `this` should display an activity box.
          */
-        hasActivities: attr({
+        $$$hasActivities: attr({
             default: true,
         }),
-        hasExternalBorder: attr({
+        $$$hasExternalBorder: attr({
             default: true,
         }),
         /**
          * Determines whether `this` should display followers menu.
          */
-        hasFollowers: attr({
+        $$$hasFollowers: attr({
             default: true,
         }),
         /**
          * Determines whether `this` should display a message list.
          */
-        hasMessageList: attr({
+        $$$hasMessageList: attr({
             default: true,
         }),
         /**
@@ -213,62 +198,147 @@ function factory(dependencies) {
          * Also, the message list shoud not manage the scroll if it shares it
          * with the rest of the page.
          */
-        hasMessageListScrollAdjust: attr({
+        $$$hasMessageListScrollAdjust: attr({
             default: false,
         }),
         /**
          * Determines whether `this.thread` should be displayed.
          */
-        hasThreadView: attr({
-            compute: '_computeHasThreadView',
-            dependencies: [
-                'hasMessageList',
-                'thread',
-            ],
+        $$$hasThreadView: attr({
+            /**
+             * @param {Object} param0
+             * @param {Chatter} param0.record
+             * @returns {boolean}
+             */
+            compute({ record }) {
+                return (
+                    record.$$$thread(this) &&
+                    record.$$$hasMessageList(this)
+                );
+            },
         }),
-        hasTopbarCloseButton: attr({
+        $$$hasTopbarCloseButton: attr({
             default: false,
         }),
-        isActivityBoxVisible: attr({
+        $$$isActivityBoxVisible: attr({
             default: true,
         }),
         /**
          * Determiners whether the attachment box is currently visible.
          */
-        isAttachmentBoxVisible: attr({
+        $$$isAttachmentBoxVisible: attr({
             default: false,
         }),
         /**
          * Determiners whether the attachment box is visible initially.
          */
-        isAttachmentBoxVisibleInitially: attr({
+        $$$isAttachmentBoxVisibleInitially: attr({
             default: false,
         }),
-        isComposerVisible: attr({
+        $$$isComposerVisible: attr({
             default: false,
         }),
-        isDisabled: attr({
-            compute: '_computeIsDisabled',
+        $$$isDisabled: attr({
+            /**
+             * @param {Object} param0
+             * @param {Chatter} param0.record
+             * @returns {boolean}
+             */
+            compute({ record }) {
+                return (
+                    !record.$$$thread(this) ||
+                    record.$$$thread(this).$$$isTemporary(this)
+                );
+            },
             default: false,
-            dependencies: [
-                'threadIsTemporary',
-            ],
         }),
         /**
          * Determine whether this chatter should be focused at next render.
          */
-        isDoFocus: attr({
+        $$$isDoFocus: attr({
             default: false,
         }),
-        isShowingAttachmentsLoading: attr({
+        $$$isShowingAttachmentsLoading: attr({
             default: false,
         }),
         /**
          * Not a real field, used to trigger its compute method when one of the
          * dependencies changes.
          */
-        onThreadIdOrThreadModelChanged: attr({
-            compute: '_onThreadIdOrThreadModelChanged',
+        $$$onThreadIdOrThreadModelChanged: attr({
+            /**
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @param {Chatter} param0.record
+             */
+            compute({ env, record }) {
+                if (record.$$$threadId(this)) {
+                    if (
+                        record.$$$thread(this) &&
+                        record.$$$thread(this).$$$isTemporary(this)
+                    ) {
+                        env.invoke('Record/delete', record.$$$thread(this));
+                    }
+                    env.invoke('Record/update', record, {
+                        $$$isAttachmentBoxVisible:
+                            record.$$$isAttachmentBoxVisibleInitially(this),
+                        $$$thread: insert({
+                            // If the thread was considered to have the activity
+                            // mixin once, it will have it forever.
+                            $$$hasActivities: record.$$$hasActivities(this)
+                                ? true
+                                : undefined,
+                            $$$id: record.$$$threadId(this),
+                            $$$model: record.$$$threadModel(this),
+                        }),
+                    });
+                    if (record.$$$hasActivities(this)) {
+                        env.invoke(
+                            'Thread/refreshActivities',
+                            record.$$$thread(this)
+                        );
+                    }
+                    if (record.$$$hasFollowers(this)) {
+                        env.invoke(
+                            'Thread/refreshFollowers',
+                            record.$$$thread(this)
+                        );
+                        env.invoke(
+                            'Thread/fetchAndUpdateSuggestedRecipients',
+                            record.$$$thread(this)
+                        );
+                    }
+                    if (record.$$$hasMessageList(this)) {
+                        env.invoke('Thread/refresh', record.$$$thread(this));
+                    }
+                } else if (
+                    !record.$$$thread(this) ||
+                    !record.$$$thread(this).$$$isTemporary(this)
+                ) {
+                    const currentPartner = env.messaging.$$$currentPartner(this);
+                    const message = env.invoke('Message/create', {
+                        $$$author: link(currentPartner),
+                        $$$body: env._t("Creating a new record..."),
+                        $$$id: getMessageNextTemporaryId(),
+                        $$$isTemporary: true,
+                    });
+                    const nextId = getThreadNextTemporaryId();
+                    env.invoke('Record/update', record, {
+                        $$$isAttachmentBoxVisible: false,
+                        $$$thread: insert({
+                            $$$areAttachmentsLoaded: true,
+                            $$$id: nextId,
+                            $$$isTemporary: true,
+                            $$$model: record.$$$threadModel(this),
+                        }),
+                    });
+                    for (const cache of record.$$$thread(this).$$$caches(this)) {
+                        env.invoke('Record/update', cache, {
+                            $$$messages: link(message),
+                        });
+                    }
+                }
+            },
             dependencies: [
                 'threadId',
                 'threadModel',
@@ -278,58 +348,85 @@ function factory(dependencies) {
          * Not a real field, used to trigger its compute method when one of the
          * dependencies changes.
          */
-        onThreadIsLoadingAttachmentsChanged: attr({
-            compute: '_onThreadIsLoadingAttachmentsChanged',
+        $$$onThreadIsLoadingAttachmentsChanged: attr({
+            /**
+             * @param {Object} param0
+             * @param {web.env} param0.env
+             * @param {Chatter} param0.record
+             */
+            compute({ env, record }) {
+                if (!record.$$$thread(this).$$$isLoadingAttachments(this)) {
+                    env.invoke('Chatter/_stopAttachmentsLoading', record);
+                    return;
+                }
+                if (
+                    record._isPreparingAttachmentsLoading ||
+                    record.$$$isShowingAttachmentsLoading(this)
+                ) {
+                    return;
+                }
+                env.invoke('Chatter/_prepareAttachmentsLoading', record);
+            },
             dependencies: [
                 'threadIsLoadingAttachments',
             ],
         }),
         /**
-         * Determines the `mail.thread` that should be displayed by `this`.
+         * Determines the `Thread` that should be displayed by `this`.
          */
-        thread: many2one('mail.thread'),
+        $$$thread: many2one('Thread'),
         /**
          * Determines the id of the thread that will be displayed by `this`.
          */
-        threadId: attr(),
+        $$$threadId: attr(),
         /**
          * Serves as compute dependency.
          */
-        threadIsLoadingAttachments: attr({
-            related: 'thread.isLoadingAttachments',
+        $$$threadIsLoadingAttachments: attr({
+            related: '$$$thread.$$$isLoadingAttachments',
         }),
         /**
          * Serves as compute dependency.
          */
-        threadIsTemporary: attr({
-            related: 'thread.isTemporary',
+        $$$threadIsTemporary: attr({
+            related: '$$$thread.$$$isTemporary',
         }),
         /**
          * Determines the model of the thread that will be displayed by `this`.
          */
-        threadModel: attr(),
+        $$$threadModel: attr(),
         /**
-         * States the `mail.thread_view` displaying `this.thread`.
+         * States the `ThreadView` displaying `this.thread`.
          */
-        threadView: one2one('mail.thread_view', {
-            related: 'threadViewer.threadView',
+        $$$threadView: one2one('ThreadView', {
+            related: '$$$threadViewer.$$$threadView',
         }),
         /**
-         * Determines the `mail.thread_viewer` managing the display of `this.thread`.
+         * Determines the `ThreadViewer` managing the display of `this.thread`.
          */
-        threadViewer: one2one('mail.thread_viewer', {
-            default: [['create']],
-            inverse: 'chatter',
+        $$$threadViewer: one2one('ThreadViewer', {
+            default: create(),
+            inverse: '$$$chatter',
             isCausal: true,
             readonly: true,
         }),
-    };
+    },
+    lifecycles: {
+        /**
+         * @param {Object} param0
+         * @param {Object} param0.env
+         * @param {Object} param0.record
+         */
+        onDelete({ env, record }) {
+            env.invoke('Chatter/_stopAttachmentsLoading', record);
+        }
+    },
+});
 
-    Chatter.modelName = 'mail.chatter';
-
-    return Chatter;
-}
-
-registerNewModel('mail.chatter', factory);
+return defineFeatureSlice(
+    'mail/static/src/models/chatter/chatter.js',
+    actions,
+    model
+);
 
 });

@@ -18,14 +18,14 @@ tour.register('mail/static/tests/tours/mail_full_composer_test_tour.js', {
     test: true,
 }, [{
     content: "Click on Send Message",
-    trigger: '.o_ChatterTopbar_buttonSendMessage',
+    trigger: '.o-ChatterTopbar-buttonSendMessage',
 }, {
     content: "Write something in composer",
-    trigger: '.o_ComposerTextInput_textarea',
+    trigger: '.o-ComposerTextInput-textarea',
     run: 'text blahblah',
 }, {
     content: "Add one file in composer",
-    trigger: '.o_Composer_buttonAttachment',
+    trigger: '.o-Composer-buttonAttachment',
     async run() {
         const file = await createFile({
             content: 'hello, world',
@@ -33,14 +33,14 @@ tour.register('mail/static/tests/tours/mail_full_composer_test_tour.js', {
             name: 'text.txt',
         });
         inputFiles(
-            document.querySelector('.o_FileUploader_input'),
+            document.querySelector('.o-FileUploader-input'),
             [file]
         );
     },
 }, {
     content: "Open full composer",
-    trigger: '.o_Composer_buttonFullComposer',
-    extra_trigger: '.o_Attachment:not(.o-temporary)' // waiting the attachment to be uploaded
+    trigger: '.o-Composer-buttonFullComposer',
+    extra_trigger: '.o-Attachment:not(.o-isTemporary)' // waiting the attachment to be uploaded
 }, {
     content: "Check the earlier provided attachment is listed",
     trigger: '.o_attachment[title="text.txt"]',
@@ -60,7 +60,10 @@ tour.register('mail/static/tests/tours/mail_full_composer_test_tour.js', {
     content: "Check composer content is kept",
     trigger: '.oe_form_field[name="body"]',
     run() {
-        const bodyContent = document.querySelector('.oe_form_field[name="body"] jw-shadow').shadowRoot.textContent;
+        const bodyContent = document.querySelector(`
+            .oe_form_field[name="body"]
+            jw-shadow
+        `).shadowRoot.textContent;
         if (!bodyContent.includes("blahblah")) {
             console.error(
                 `Full composer should contain text from small composer ("blahblah") in body input (actual: ${bodyContent})`
@@ -69,21 +72,31 @@ tour.register('mail/static/tests/tours/mail_full_composer_test_tour.js', {
     },
 }, {
     content: "Open templates",
-    trigger: '.o_field_widget[name="template_id"] input',
+    trigger: `
+        .o_field_widget[name="template_id"]
+        input
+    `,
 }, {
     content: "Check a template is listed",
     in_modal: false,
-    trigger: '.ui-autocomplete .ui-menu-item a:contains("Test template")',
+    trigger: `
+        .ui-autocomplete
+        .ui-menu-item
+        a:contains("Test template")
+    `,
     run() {},
 }, {
     content: "Send message",
     trigger: '.o_mail_send',
 }, {
     content: "Check message is shown",
-    trigger: '.o_Message:contains("blahblah")',
+    trigger: '.o-Message:contains("blahblah")',
 }, {
     content: "Check message contains the attachment",
-    trigger: '.o_Message .o_Attachment_filename:contains("text.txt")',
+    trigger: `
+        .o-Message
+        .o-Attachment-filename:contains("text.txt")
+    `,
 }]);
 
 });

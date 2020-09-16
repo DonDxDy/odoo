@@ -2,35 +2,58 @@ odoo.define('hr/static/src/models/messaging/messaging.js', function (require) {
 'use strict';
 
 const {
-    registerInstancePatchModel,
-} = require('mail/static/src/model/model_core.js');
+    'Feature/defineActionExtensions': defineActionExtensions,
+    'Feature/defineSlice': defineFeatureSlice,
+} = require('mail/static/src/model/utils.js');
 
-registerInstancePatchModel('mail.messaging', 'hr/static/src/models/messaging/messaging.js', {
-    //--------------------------------------------------------------------------
-    // Public
-    //--------------------------------------------------------------------------
-
+const actionExtensions = defineActionExtensions({
     /**
-     * @override
-     * @param {integer} [param0.employeeId]
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {function} param0.original
+     * @param {Object} param1
+     * @param {integer} [param1.employeeId]
      */
-    async getChat({ employeeId }) {
+    async 'Messaging/getChat'(
+        { env, original },
+        { employeeId }
+    ) {
         if (employeeId) {
-            const employee = this.env.models['hr.employee'].insert({ id: employeeId });
-            return employee.getChat();
+            const employee = env.invoke('Employee/insert', {
+                $$$id: employeeId,
+            });
+            return env.invoke('Employee/getChat', employee);
         }
-        return this._super(...arguments);
+        return original(...arguments);
     },
     /**
-     * @override
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {function} param0.original
+     * @param {Object} param1
+     * @param {integer} param1.id
+     * @param {string} param1.model
      */
-    async openProfile({ id, model }) {
-        if (model === 'hr.employee' || model === 'hr.employee.public') {
-            const employee = this.env.models['hr.employee'].insert({ id });
-            return employee.openProfile();
+    async 'Messaging/openProfile'(
+        { env, original },
+        {
+            id,
+            model,
         }
-        return this._super(...arguments);
+    ) {
+        if (model === 'hr.employee' || model === 'hr.employee.public') {
+            const employee = env.invoke('Employee/insert', {
+                $$$id: id,
+            });
+            return env.invoke('Employee/openProfile', employee);
+        }
+        return original(...arguments);
     },
 });
+
+return defineFeatureSlice(
+    'hr/static/src/models/messaging/messaging.js',
+    actionExtensions,
+);
 
 });

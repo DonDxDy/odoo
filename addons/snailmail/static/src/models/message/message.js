@@ -1,50 +1,76 @@
-odoo.define('snailmail/static/src/models/message.message.js', function (require) {
+odoo.define('snailmail/static/src/models/message/message.js', function (require) {
 'use strict';
 
-const { registerInstancePatchModel } = require('mail/static/src/model/model_core.js');
+const {
+    'Feature/defineActions': defineActions,
+    'Feature/defineSlice': defineFeatureSlice,
+} = require('mail/static/src/model/utils.js');
 
-registerInstancePatchModel('mail.message', 'snailmail/static/src/models/message.message.js', {
-
-    //----------------------------------------------------------------------
-    // Public
-    //----------------------------------------------------------------------
-
+const actions = defineActions({
     /**
      * Cancels the 'snailmail.letter' corresponding to this message.
      *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Message} message
      * @returns {Deferred}
      */
-    async cancelLetter() {
+    async 'Message/cancelLetter'(
+        { env },
+        message
+    ) {
         // the result will come from longpolling: message_notification_update
-        await this.async(() => this.env.services.rpc({
-            model: 'mail.message',
-            method: 'cancel_letter',
-            args: [[this.id]],
-        }));
+        await env.invoke(
+            'Record/doAsync',
+            message,
+            () => env.services.rpc({
+                model: 'mail.message',
+                method: 'cancel_letter',
+                args: [[message.$$$id(this)]],
+            })
+        );
     },
     /**
      * Opens the action about 'snailmail.letter' format error.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Message} message
      */
-    openFormatLetterAction() {
-        this.env.bus.trigger('do-action', {
+    'Message/openFormatLetterAction'(
+        { env },
+        message
+    ) {
+        env.bus.trigger('do-action', {
             action: 'snailmail.snailmail_letter_format_error_action',
             options: {
                 additional_context: {
-                    message_id: this.id,
+                    message_id: message.$$$id(this),
                 },
             },
         });
     },
     /**
      * Opens the action about 'snailmail.letter' missing fields.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Message} message
      */
-    async openMissingFieldsLetterAction() {
-        const letterIds = await this.async(() => this.env.services.rpc({
-            model: 'snailmail.letter',
-            method: 'search',
-            args: [[['message_id', '=', this.id]]],
-        }));
-        this.env.bus.trigger('do-action', {
+    async 'Message/openMissingFieldsLetterAction'(
+        { env },
+        message
+    ) {
+        const letterIds = await env.invoke(
+            'Record/doAsync',
+            message,
+            () => env.services.rpc({
+                model: 'snailmail.letter',
+                method: 'search',
+                args: [[['message_id', '=', message.$$$id(this)]]],
+            })
+        );
+        env.bus.trigger('do-action', {
             action: 'snailmail.snailmail_letter_missing_required_fields_action',
             options: {
                 additional_context: {
@@ -55,15 +81,31 @@ registerInstancePatchModel('mail.message', 'snailmail/static/src/models/message.
     },
     /**
      * Retries to send the 'snailmail.letter' corresponding to this message.
+     *
+     * @param {Object} param0
+     * @param {web.env} param0.env
+     * @param {Message} message
      */
-    async resendLetter() {
+    async 'Message/resendLetter'(
+        { env },
+        message
+    ) {
         // the result will come from longpolling: message_notification_update
-        await this.async(() => this.env.services.rpc({
-            model: 'mail.message',
-            method: 'send_letter',
-            args: [[this.id]],
-        }));
+        await env.invoke(
+            'Record/doAsync',
+            message,
+            () => env.services.rpc({
+                model: 'mail.message',
+                method: 'send_letter',
+                args: [[message.$$$id(this)]],
+            })
+        );
     },
 });
+
+return defineFeatureSlice(
+    'snailmail/static/src/models/message/message.js',
+    actions,
+);
 
 });

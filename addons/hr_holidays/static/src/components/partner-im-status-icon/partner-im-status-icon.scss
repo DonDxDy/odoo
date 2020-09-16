@@ -1,0 +1,14 @@
+// -----------------------------------------------------------------------------
+// Style
+// -----------------------------------------------------------------------------
+
+.o-PartnerImStatusIcon-icon {
+
+    &.o-isLeaveOnline {
+        color: $o-enterprise-primary-color;
+    }
+
+    &.o-isLeaveOffline {
+        color: theme-color('warning');
+    }
+}

@@ -7,7 +7,7 @@ const {
     beforeEach,
     nextAnimationFrame,
     start,
-} = require('mail/static/src/utils/test_utils.js');
+} = require('mail/static/src/utils/test-utils.js');
 
 QUnit.module('im_livechat', {}, function () {
 QUnit.module('components', {}, function () {
@@ -17,13 +17,14 @@ QUnit.module('discuss_tests.js', {
         beforeEach(this);
 
         this.start = async params => {
-            const { env, widget } = await start(Object.assign({}, params, {
+            const env = await start({
+                ...params,
                 autoOpenDiscuss: true,
                 data: this.data,
                 hasDiscuss: true,
-            }));
+            });
             this.env = env;
-            this.widget = widget;
+            return env;
         };
     },
     afterEach() {
@@ -34,33 +35,38 @@ QUnit.module('discuss_tests.js', {
 QUnit.test('livechat in the sidebar: basic rendering', async function (assert) {
     assert.expect(5);
 
-    this.data['mail.channel'].records.push({
-        anonymous_name: "Visitor 11",
-        channel_type: 'livechat',
-        id: 11,
-        livechat_operator_id: this.data.currentPartnerId,
-        members: [this.data.currentPartnerId, this.data.publicPartnerId],
-    });
-    await this.start();
-    assert.containsOnce(document.body, '.o_Discuss_sidebar',
+    this.data['mail.channel'].records.push(
+        {
+            anonymous_name: "Visitor 11",
+            channel_type: 'livechat',
+            id: 11,
+            livechat_operator_id: this.data.currentPartnerId,
+            members: [this.data.currentPartnerId, this.data.publicPartnerId],
+        }
+    );
+    const env = await this.start();
+    assert.containsOnce(
+        document.body,
+        '.o-Discuss-sidebar',
         "should have a sidebar section"
     );
-    const groupLivechat = document.querySelector('.o_DiscussSidebar_groupLivechat');
-    assert.ok(groupLivechat,
+    const groupLivechat = document.querySelector('.o-DiscussSidebar-groupLivechat');
+    assert.ok(
+        groupLivechat,
         "should have a channel group livechat"
     );
-    const grouptitle = groupLivechat.querySelector('.o_DiscussSidebar_groupTitle');
+    const grouptitle = groupLivechat.querySelector('.o-DiscussSidebar-groupTitle');
     assert.strictEqual(
         grouptitle.textContent.trim(),
         "Livechat",
         "should have a channel group named 'Livechat'"
     );
     const livechat = groupLivechat.querySelector(`
-        .o_DiscussSidebarItem[data-thread-local-id="${
-            this.env.models['mail.thread'].find(thread =>
-                thread.id === 11 &&
-                thread.model === 'mail.channel'
-            ).localId
+        .o-DiscussSidebarItem[data-thread-local-id="${
+            env.invoke('Thread/findFromId', {
+                $$$id: 11,
+                $$$model: 'mail.channel',
+            }).localId
         }"]
     `);
     assert.ok(
@@ -77,29 +83,38 @@ QUnit.test('livechat in the sidebar: basic rendering', async function (assert) {
 QUnit.test('livechat in the sidebar: existing user with country', async function (assert) {
     assert.expect(3);
 
-    this.data['res.country'].records.push({
-        code: 'be',
-        id: 10,
-        name: "Belgium",
-    });
-    this.data['res.partner'].records.push({
-        country_id: 10,
-        id: 10,
-        name: "Jean",
-    });
-    this.data['mail.channel'].records.push({
-        channel_type: 'livechat',
-        id: 11,
-        livechat_operator_id: this.data.currentPartnerId,
-        members: [this.data.currentPartnerId, 10],
-    });
+    this.data['mail.channel'].records.push(
+        {
+            channel_type: 'livechat',
+            id: 11,
+            livechat_operator_id: this.data.currentPartnerId,
+            members: [this.data.currentPartnerId, 10],
+        }
+    );
+    this.data['res.country'].records.push(
+        {
+            code: 'be',
+            id: 10,
+            name: "Belgium",
+        }
+    );
+    this.data['res.partner'].records.push(
+        {
+            country_id: 10,
+            id: 10,
+            name: "Jean",
+        }
+    );
     await this.start();
     assert.containsOnce(
         document.body,
-        '.o_DiscussSidebar_groupLivechat',
+        '.o-DiscussSidebar-groupLivechat',
         "should have a channel group livechat in the side bar"
     );
-    const livechat = document.querySelector('.o_DiscussSidebar_groupLivechat .o_DiscussSidebarItem');
+    const livechat = document.querySelector(`
+        .o-DiscussSidebar-groupLivechat
+        .o-DiscussSidebarItem
+    `);
     assert.ok(
         livechat,
         "should have a livechat in sidebar"
@@ -118,19 +133,21 @@ QUnit.test('do not add livechat in the sidebar on visitor opening his chat', asy
         user.id === this.data.currentUserId
     );
     currentUser.im_status = 'online';
-    this.data['im_livechat.channel'].records.push({
-        id: 10,
-        user_ids: [this.data.currentUserId],
-    });
-    await this.start();
+    this.data['im_livechat.channel'].records.push(
+        {
+            id: 10,
+            user_ids: [this.data.currentUserId],
+        }
+    );
+    const env = await this.start();
     assert.containsNone(
         document.body,
-        '.o_DiscussSidebar_groupLivechat',
+        '.o-DiscussSidebar-groupLivechat',
         "should not have any livechat in the sidebar initially"
     );
 
     // simulate livechat visitor opening his chat
-    await this.env.services.rpc({
+    await env.services.rpc({
         route: '/im_livechat/get_session',
         params: {
             context: {
@@ -142,7 +159,7 @@ QUnit.test('do not add livechat in the sidebar on visitor opening his chat', asy
     await nextAnimationFrame();
     assert.containsNone(
         document.body,
-        '.o_DiscussSidebar_groupLivechat',
+        '.o-DiscussSidebar-groupLivechat',
         "should still not have any livechat in the sidebar after visitor opened his chat"
     );
 });
@@ -154,28 +171,34 @@ QUnit.test('do not add livechat in the sidebar on visitor typing', async functio
         user.id === this.data.currentUserId
     );
     currentUser.im_status = 'online';
-    this.data['im_livechat.channel'].records.push({
-        id: 10,
-        user_ids: [this.data.currentUserId],
-    });
-    this.data['mail.channel'].records.push({
-        channel_type: 'livechat',
-        id: 10,
-        is_pinned: false,
-        livechat_channel_id: 10,
-        livechat_operator_id: this.data.currentPartnerId,
-        members: [this.data.publicPartnerId, this.data.currentPartnerId],
-    });
-    await this.start();
+    this.data['im_livechat.channel'].records.push(
+        {
+            id: 10,
+            user_ids: [this.data.currentUserId],
+        }
+    );
+    this.data['mail.channel'].records.push(
+        {
+            channel_type: 'livechat',
+            id: 10,
+            is_pinned: false,
+            livechat_channel_id: 10,
+            livechat_operator_id: this.data.currentPartnerId,
+            members: [this.data.publicPartnerId, this.data.currentPartnerId],
+        }
+    );
+    const env = await this.start();
     assert.containsNone(
         document.body,
-        '.o_DiscussSidebar_groupLivechat',
+        '.o-DiscussSidebar-groupLivechat',
         "should not have any livechat in the sidebar initially"
     );
 
     // simulate livechat visitor typing
-    const channel = this.data['mail.channel'].records.find(channel => channel.id === 10);
-    await this.env.services.rpc({
+    const channel = this.data['mail.channel'].records.find(
+        channel => channel.id === 10
+    );
+    await env.services.rpc({
         route: '/im_livechat/notify_typing',
         params: {
             context: {
@@ -188,7 +211,7 @@ QUnit.test('do not add livechat in the sidebar on visitor typing', async functio
     await nextAnimationFrame();
     assert.containsNone(
         document.body,
-        '.o_DiscussSidebar_groupLivechat',
+        '.o-DiscussSidebar-groupLivechat',
         "should still not have any livechat in the sidebar after visitor started typing"
     );
 });
@@ -200,35 +223,43 @@ QUnit.test('add livechat in the sidebar on visitor sending first message', async
         user.id === this.data.currentUserId
     );
     currentUser.im_status = 'online';
-    this.data['res.country'].records.push({
-        code: 'be',
-        id: 10,
-        name: "Belgium",
-    });
-    this.data['im_livechat.channel'].records.push({
-        id: 10,
-        user_ids: [this.data.currentUserId],
-    });
-    this.data['mail.channel'].records.push({
-        anonymous_name: "Visitor (Belgium)",
-        channel_type: 'livechat',
-        country_id: 10,
-        id: 10,
-        is_pinned: false,
-        livechat_channel_id: 10,
-        livechat_operator_id: this.data.currentPartnerId,
-        members: [this.data.publicPartnerId, this.data.currentPartnerId],
-    });
-    await this.start();
+    this.data['im_livechat.channel'].records.push(
+        {
+            id: 10,
+            user_ids: [this.data.currentUserId],
+        }
+    );
+    this.data['mail.channel'].records.push(
+        {
+            anonymous_name: "Visitor (Belgium)",
+            channel_type: 'livechat',
+            country_id: 10,
+            id: 10,
+            is_pinned: false,
+            livechat_channel_id: 10,
+            livechat_operator_id: this.data.currentPartnerId,
+            members: [this.data.publicPartnerId, this.data.currentPartnerId],
+        }
+    );
+    this.data['res.country'].records.push(
+        {
+            code: 'be',
+            id: 10,
+            name: "Belgium",
+        }
+    );
+    const env = await this.start();
     assert.containsNone(
         document.body,
-        '.o_DiscussSidebar_groupLivechat',
+        '.o-DiscussSidebar-groupLivechat',
         "should not have any livechat in the sidebar initially"
     );
 
     // simulate livechat visitor sending a message
-    const channel = this.data['mail.channel'].records.find(channel => channel.id === 10);
-    await afterNextRender(async () => this.env.services.rpc({
+    const channel = this.data['mail.channel'].records.find(
+        channel => channel.id === 10
+    );
+    await afterNextRender(async () => env.services.rpc({
         route: '/mail/chat_post',
         params: {
             context: {
@@ -240,16 +271,22 @@ QUnit.test('add livechat in the sidebar on visitor sending first message', async
     }));
     assert.containsOnce(
         document.body,
-        '.o_DiscussSidebar_groupLivechat',
+        '.o-DiscussSidebar-groupLivechat',
         "should have a channel group livechat in the side bar after receiving first message"
     );
     assert.containsOnce(
         document.body,
-        '.o_DiscussSidebar_groupLivechat .o_DiscussSidebar_item',
+        `
+            .o-DiscussSidebar-groupLivechat
+            .o-DiscussSidebar-item
+        `,
         "should have a livechat in the sidebar after receiving first message"
     );
     assert.strictEqual(
-        document.querySelector('.o_DiscussSidebar_groupLivechat .o_DiscussSidebar_item').textContent,
+        document.querySelector(`
+            .o-DiscussSidebar-groupLivechat
+            .o-DiscussSidebar-item
+        `).textContent,
         "Visitor (Belgium)",
         "should have visitor name and country as livechat name"
     );
@@ -263,10 +300,6 @@ QUnit.test('livechats are sorted by last message date in the sidebar: most recen
      */
     assert.expect(7);
 
-    this.data['mail.message'].records.push(
-        { id: 11, channel_ids: [11] }, // least recent message due to smaller id
-        { id: 12, channel_ids: [12] }, // most recent message due to higher id
-    );
     this.data['mail.channel'].records.push(
         {
             anonymous_name: "Visitor 11",
@@ -283,21 +316,28 @@ QUnit.test('livechats are sorted by last message date in the sidebar: most recen
             members: [this.data.currentPartnerId, this.data.publicPartnerId],
         },
     );
-    await this.start();
-    const livechat11 = this.env.models['mail.thread'].findFromIdentifyingData({
-        id: 11,
-        model: 'mail.channel',
+    this.data['mail.message'].records.push(
+        { id: 11, channel_ids: [11] }, // least recent message due to smaller id
+        { id: 12, channel_ids: [12] }, // most recent message due to higher id
+    );
+    const env = await this.start();
+    const livechat11 = env.invoke('Thread/findFromId', {
+        $$$id: 11,
+        $$$model: 'mail.channel',
     });
-    const livechat12 = this.env.models['mail.thread'].findFromIdentifyingData({
-        id: 12,
-        model: 'mail.channel',
+    const livechat12 = env.invoke('Thread/findFromId', {
+        $$$id: 12,
+        $$$model: 'mail.channel',
     });
     assert.containsOnce(
         document.body,
-        '.o_DiscussSidebar_groupLivechat',
+        '.o-DiscussSidebar-groupLivechat',
         "should have a channel group livechat"
     );
-    const initialLivechats = document.querySelectorAll('.o_DiscussSidebar_groupLivechat .o_DiscussSidebarItem');
+    const initialLivechats = document.querySelectorAll(`
+        .o-DiscussSidebar-groupLivechat
+        .o-DiscussSidebarItem
+    `);
     assert.strictEqual(
         initialLivechats.length,
         2,
@@ -317,8 +357,11 @@ QUnit.test('livechats are sorted by last message date in the sidebar: most recen
     // post a new message on the last channel
     await afterNextRender(() => initialLivechats[1].click());
     await afterNextRender(() => document.execCommand('insertText', false, "Blabla"));
-    await afterNextRender(() => document.querySelector('.o_Composer_buttonSend').click());
-    const livechats = document.querySelectorAll('.o_DiscussSidebar_groupLivechat .o_DiscussSidebarItem');
+    await afterNextRender(() => document.querySelector('.o-Composer-buttonSend').click());
+    const livechats = document.querySelectorAll(`
+        .o-DiscussSidebar-groupLivechat
+        .o-DiscussSidebarItem
+    `);
     assert.strictEqual(
         livechats.length,
         2,
@@ -344,9 +387,6 @@ QUnit.test('livechats with no messages are sorted by creation date in the sideba
      */
     assert.expect(5);
 
-    this.data['mail.message'].records.push(
-        { id: 13, channel_ids: [13] },
-    );
     this.data['mail.channel'].records.push(
         {
             anonymous_name: "Visitor 11",
@@ -370,25 +410,31 @@ QUnit.test('livechats with no messages are sorted by creation date in the sideba
             members: [this.data.currentPartnerId, this.data.publicPartnerId],
         },
     );
-    await this.start();
-    const livechat11 = this.env.models['mail.thread'].findFromIdentifyingData({
-        id: 11,
-        model: 'mail.channel',
+    this.data['mail.message'].records.push(
+        { id: 13, channel_ids: [13] },
+    );
+    const env = await this.start();
+    const livechat11 = env.invoke('Thread/findFromId', {
+        $$$id: 11,
+        $$$model: 'mail.channel',
     });
-    const livechat12 = this.env.models['mail.thread'].findFromIdentifyingData({
-        id: 12,
-        model: 'mail.channel',
+    const livechat12 = env.invoke('Thread/findFromId', {
+        $$$id: 12,
+        $$$model: 'mail.channel',
     });
-    const livechat13 = this.env.models['mail.thread'].findFromIdentifyingData({
-        id: 13,
-        model: 'mail.channel',
+    const livechat13 = env.invoke('Thread/findFromId', {
+        $$$id: 13,
+        $$$model: 'mail.channel',
     });
     assert.containsOnce(
         document.body,
-        '.o_DiscussSidebar_groupLivechat',
+        '.o-DiscussSidebar-groupLivechat',
         "should have a channel group livechat"
     );
-    const initialLivechats = document.querySelectorAll('.o_DiscussSidebar_groupLivechat .o_DiscussSidebarItem');
+    const initialLivechats = document.querySelectorAll(`
+        .o-DiscussSidebar-groupLivechat
+        .o-DiscussSidebarItem
+    `);
     assert.strictEqual(
         initialLivechats.length,
         3,
@@ -425,14 +471,14 @@ QUnit.test('invite button should be present on livechat', async function (assert
     );
     await this.start({
         discuss: {
-            params: {
-                default_active_id: 'mail.channel_11',
+            context: {
+                active_id: 'mail.channel_11',
             },
         },
     });
     assert.containsOnce(
         document.body,
-        '.o_widget_Discuss_controlPanelButtonInvite',
+        '.o-widget-Discuss-controlPanelButtonInvite',
         "Invite button should be visible in control panel when livechat is active thread"
     );
 });

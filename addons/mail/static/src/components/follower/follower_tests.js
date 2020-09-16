@@ -1,9 +1,11 @@
 odoo.define('mail/static/src/components/follower/follower_tests.js', function (require) {
 'use strict';
 
-const components = {
-    Follower: require('mail/static/src/components/follower/follower.js'),
-};
+const Follower = require('mail/static/src/components/follower/follower.js');
+const {
+    'Field/insert': insert,
+    'Field/link': link,
+} = require('mail/static/src/model/utils.js');
 const { makeDeferred } = require('mail/static/src/utils/deferred/deferred.js');
 const {
     afterEach,
@@ -11,7 +13,7 @@ const {
     beforeEach,
     createRootComponent,
     start,
-} = require('mail/static/src/utils/test_utils.js');
+} = require('mail/static/src/utils/test-utils.js');
 
 const Bus = require('web.Bus');
 
@@ -23,18 +25,19 @@ QUnit.module('follower_tests.js', {
         beforeEach(this);
 
         this.createFollowerComponent = async (follower) => {
-            await createRootComponent(this, components.Follower, {
-                props: { followerLocalId: follower.localId },
+            await createRootComponent(this, Follower, {
+                props: { follower },
                 target: this.widget.el,
             });
         };
 
         this.start = async params => {
-            const { env, widget } = await start(Object.assign({}, params, {
+            const env = await start({
+                ...params,
                 data: this.data,
-            }));
+            });
             this.env = env;
-            this.widget = widget;
+            return env;
         };
     },
     afterEach() {
@@ -45,43 +48,46 @@ QUnit.module('follower_tests.js', {
 QUnit.test('base rendering not editable', async function (assert) {
     assert.expect(5);
 
-    await this.start();
-
-    const thread = this.env.models['mail.thread'].create({
-        id: 100,
-        model: 'res.partner',
+    const env = await this.start();
+    const thread = env.invoke('Thread/create', {
+        $$$id: 100,
+        $$$model: 'res.partner',
     });
-    const follower = await this.env.models['mail.follower'].create({
-        channel: [['insert', { id: 1, model: 'mail.channel', name: "François Perusse" }]],
-        followedThread: [['link', thread]],
-        id: 2,
-        isActive: true,
-        isEditable: false,
+    const follower = await env.invoke('Follower/create', {
+        $$$channel: insert({
+            $$$id: 1,
+            $$$model: 'mail.channel',
+            $$$name: "François Perusse",
+        }),
+        $$$followedThread: link(thread),
+        $$$id: 2,
+        $$$isActive: true,
+        $$$isEditable: false,
     });
     await this.createFollowerComponent(follower);
     assert.containsOnce(
         document.body,
-        '.o_Follower',
+        '.o-Follower',
         "should have follower component"
     );
     assert.containsOnce(
         document.body,
-        '.o_Follower_details',
+        '.o-Follower-details',
         "should display a details part"
     );
     assert.containsOnce(
         document.body,
-        '.o_Follower_avatar',
+        '.o-Follower-avatar',
         "should display the avatar of the follower"
     );
     assert.containsOnce(
         document.body,
-        '.o_Follower_name',
+        '.o-Follower-name',
         "should display the name of the follower"
     );
     assert.containsNone(
         document.body,
-        '.o_Follower_button',
+        '.o-Follower-button',
         "should have no button as follower is not editable"
     );
 });
@@ -89,47 +95,51 @@ QUnit.test('base rendering not editable', async function (assert) {
 QUnit.test('base rendering editable', async function (assert) {
     assert.expect(6);
 
-    await this.start();
-    const thread = this.env.models['mail.thread'].create({
-        id: 100,
-        model: 'res.partner',
+    const env = await this.start();
+    const thread = env.invoke('Thread/create', {
+        $$$id: 100,
+        $$$model: 'res.partner',
     });
-    const follower = await this.env.models['mail.follower'].create({
-        channel: [['insert', { id: 1, model: 'mail.channel', name: "François Perusse" }]],
-        followedThread: [['link', thread]],
-        id: 2,
-        isActive: true,
-        isEditable: true,
+    const follower = await env.invoke('Follower/create', {
+        $$$channel: insert({
+            $$$id: 1,
+            $$$model: 'mail.channel',
+            $$$name: "François Perusse",
+        }),
+        $$$followedThread: link(thread),
+        $$$id: 2,
+        $$$isActive: true,
+        $$$isEditable: true,
     });
     await this.createFollowerComponent(follower);
     assert.containsOnce(
         document.body,
-        '.o_Follower',
+        '.o-Follower',
         "should have follower component"
     );
     assert.containsOnce(
         document.body,
-        '.o_Follower_details',
+        '.o-Follower-details',
         "should display a details part"
     );
     assert.containsOnce(
         document.body,
-        '.o_Follower_avatar',
+        '.o-Follower-avatar',
         "should display the avatar of the follower"
     );
     assert.containsOnce(
         document.body,
-        '.o_Follower_name',
+        '.o-Follower-name',
         "should display the name of the follower"
     );
     assert.containsOnce(
         document.body,
-        '.o_Follower_editButton',
+        '.o-Follower-editButton',
         "should have an edit button"
     );
     assert.containsOnce(
         document.body,
-        '.o_Follower_removeButton',
+        '.o-Follower-removeButton',
         "should have a remove button"
     );
 });
@@ -156,35 +166,43 @@ QUnit.test('click on channel follower details', async function (assert) {
             "The redirect action should be of type 'ir.actions.act_window'"
         );
     });
-    this.data['res.partner'].records.push({ id: 100 });
-    this.data['mail.channel'].records.push({ id: 10 });
-    await this.start({
+    this.data['mail.channel'].records.push(
+        { id: 10 }
+    );
+    this.data['res.partner'].records.push(
+        { id: 100 }
+    );
+    const env = await this.start({
         env: { bus },
     });
-    const thread = this.env.models['mail.thread'].create({
-        id: 100,
-        model: 'res.partner',
+    const thread = env.invoke('Thread/create', {
+        $$$id: 100,
+        $$$model: 'res.partner',
     });
-    const follower = await this.env.models['mail.follower'].create({
-        channel: [['insert', { id: 10, model: 'mail.channel', name: "channel" }]],
-        followedThread: [['link', thread]],
-        id: 2,
-        isActive: true,
-        isEditable: true,
+    const follower = await env.invoke('Follower/create', {
+        $$$channel: insert({
+            $$$id: 10,
+            $$$model: 'mail.channel',
+            $$$name: "channel",
+        }),
+        $$$followedThread: link(thread),
+        $$$id: 2,
+        $$$isActive: true,
+        $$$isEditable: true,
     });
     await this.createFollowerComponent(follower);
     assert.containsOnce(
         document.body,
-        '.o_Follower',
+        '.o-Follower',
         "should have follower component"
     );
     assert.containsOnce(
         document.body,
-        '.o_Follower_details',
+        '.o-Follower-details',
         "should display a details part"
     );
 
-    document.querySelector('.o_Follower_details').click();
+    document.querySelector('.o-Follower-details').click();
     assert.verifySteps(
         ['do_action'],
         "clicking on channel should redirect to channel form view"
@@ -215,38 +233,40 @@ QUnit.test('click on partner follower details', async function (assert) {
         );
         openFormDef.resolve();
     });
-    this.data['res.partner'].records.push({ id: 100 });
-    await this.start({
+    this.data['res.partner'].records.push(
+        { id: 100 }
+    );
+    const env = await this.start({
         env: { bus },
     });
-    const thread = this.env.models['mail.thread'].create({
-        id: 100,
-        model: 'res.partner',
+    const thread = env.invoke('Thread/create', {
+        $$$id: 100,
+        $$$model: 'res.partner',
     });
-    const follower = await this.env.models['mail.follower'].create({
-        followedThread: [['link', thread]],
-        id: 2,
-        isActive: true,
-        isEditable: true,
-        partner: [['insert', {
-            email: "bla@bla.bla",
-            id: this.env.messaging.currentPartner.id,
-            name: "François Perusse",
-        }]],
+    const follower = await env.invoke('Follower/create', {
+        $$$followedThread: link(thread),
+        $$$id: 2,
+        $$$isActive: true,
+        $$$isEditable: true,
+        $$$partner: insert({
+            $$$email: "bla@bla.bla",
+            $$$id: env.messaging.$$$currentPartner().$$$id(),
+            $$$name: "François Perusse",
+        }),
     });
     await this.createFollowerComponent(follower);
     assert.containsOnce(
         document.body,
-        '.o_Follower',
+        '.o-Follower',
         "should have follower component"
     );
     assert.containsOnce(
         document.body,
-        '.o_Follower_details',
+        '.o-Follower-details',
         "should display a details part"
     );
 
-    document.querySelector('.o_Follower_details').click();
+    document.querySelector('.o-Follower-details').click();
     await openFormDef;
     assert.verifySteps(
         ['do_action'],
@@ -257,16 +277,23 @@ QUnit.test('click on partner follower details', async function (assert) {
 QUnit.test('click on edit follower', async function (assert) {
     assert.expect(5);
 
-    this.data['res.partner'].records.push({ id: 100, message_follower_ids: [2] });
-    this.data['mail.followers'].records.push({
-        id: 2,
-        is_active: true,
-        is_editable: true,
-        partner_id: this.data.currentPartnerId,
-        res_id: 100,
-        res_model: 'res.partner',
-    });
-    await this.start({
+    this.data['mail.followers'].records.push(
+        {
+            id: 2,
+            is_active: true,
+            is_editable: true,
+            partner_id: this.data.currentPartnerId,
+            res_id: 100,
+            res_model: 'res.partner',
+        }
+    );
+    this.data['res.partner'].records.push(
+        {
+            id: 100,
+            message_follower_ids: [2],
+        }
+    );
+    const env = await this.start({
         hasDialog: true,
         async mockRPC(route, args) {
             if (route.includes('/mail/read_subscription_data')) {
@@ -275,31 +302,33 @@ QUnit.test('click on edit follower', async function (assert) {
             return this._super(...arguments);
         },
     });
-    const thread = this.env.models['mail.thread'].create({
-        id: 100,
-        model: 'res.partner',
+    const thread = env.invoke('Thread/create', {
+        $$$id: 100,
+        $$$model: 'res.partner',
     });
-    await thread.refreshFollowers();
-    await this.createFollowerComponent(thread.followers[0]);
+    await env.invoke('Thread/refreshFollowers', thread);
+    await this.createFollowerComponent(thread.$$$followers()[0]);
     assert.containsOnce(
         document.body,
-        '.o_Follower',
+        '.o-Follower',
         "should have follower component"
     );
     assert.containsOnce(
         document.body,
-        '.o_Follower_editButton',
+        '.o-Follower-editButton',
         "should display an edit button"
     );
 
-    await afterNextRender(() => document.querySelector('.o_Follower_editButton').click());
+    await afterNextRender(() =>
+        document.querySelector('.o-Follower-editButton').click()
+    );
     assert.verifySteps(
         ['fetch_subtypes'],
         "clicking on edit follower should fetch subtypes"
     );
     assert.containsOnce(
         document.body,
-        '.o_FollowerSubtypeList',
+        '.o-FollowerSubtypeList',
         "A dialog allowing to edit follower subtypes should have been created"
     );
 });
@@ -307,8 +336,10 @@ QUnit.test('click on edit follower', async function (assert) {
 QUnit.test('edit follower and close subtype dialog', async function (assert) {
     assert.expect(6);
 
-    this.data['res.partner'].records.push({ id: 100 });
-    await this.start({
+    this.data['res.partner'].records.push(
+        { id: 100 }
+    );
+    const env = await this.start({
         hasDialog: true,
         async mockRPC(route, args) {
             if (route.includes('/mail/read_subscription_data')) {
@@ -325,50 +356,52 @@ QUnit.test('edit follower and close subtype dialog', async function (assert) {
             return this._super(...arguments);
         },
     });
-    const thread = this.env.models['mail.thread'].create({
-        id: 100,
-        model: 'res.partner',
+    const thread = env.invoke('Thread/create', {
+        $$$id: 100,
+        $$$model: 'res.partner',
     });
-    const follower = await this.env.models['mail.follower'].create({
-        followedThread: [['link', thread]],
-        id: 2,
-        isActive: true,
-        isEditable: true,
-        partner: [['insert', {
-            email: "bla@bla.bla",
-            id: this.env.messaging.currentPartner.id,
-            name: "François Perusse",
-        }]],
+    const follower = await env.invoke('Follower/create', {
+        $$$followedThread: link(thread),
+        $$$id: 2,
+        $$$isActive: true,
+        $$$isEditable: true,
+        $$$partner: insert({
+            $$$email: "bla@bla.bla",
+            $$$id: env.messaging.$$$currentPartner().$$$id(),
+            $$$name: "François Perusse",
+        }),
     });
     await this.createFollowerComponent(follower);
     assert.containsOnce(
         document.body,
-        '.o_Follower',
+        '.o-Follower',
         "should have follower component"
     );
     assert.containsOnce(
         document.body,
-        '.o_Follower_editButton',
+        '.o-Follower-editButton',
         "should display an edit button"
     );
 
-    await afterNextRender(() => document.querySelector('.o_Follower_editButton').click());
+    await afterNextRender(() =>
+        document.querySelector('.o-Follower-editButton').click()
+    );
     assert.verifySteps(
         ['fetch_subtypes'],
         "clicking on edit follower should fetch subtypes"
     );
     assert.containsOnce(
         document.body,
-        '.o_FollowerSubtypeList',
+        '.o-FollowerSubtypeList',
         "dialog allowing to edit follower subtypes should have been created"
     );
 
     await afterNextRender(
-        () => document.querySelector('.o_FollowerSubtypeList_closeButton').click()
+        () => document.querySelector('.o-FollowerSubtypeList-closeButton').click()
     );
     assert.containsNone(
         document.body,
-        '.o_DialogManager_dialog',
+        '.o-DialogManager-dialog',
         "follower subtype dialog should be closed after clicking on close button"
     );
 });

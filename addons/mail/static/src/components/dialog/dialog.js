@@ -1,12 +1,12 @@
 odoo.define('mail/static/src/components/dialog/dialog.js', function (require) {
 'use strict';
 
-const useStore = require('mail/static/src/component_hooks/use_store/use_store.js');
+const usingModels = require('mail/static/src/component-mixins/using-models/using-models.js');
 
 const { Component } = owl;
 const { useRef } = owl.hooks;
 
-class Dialog extends Component {
+class Dialog extends usingModels(Component) {
 
     /**
      * @param {...any} args
@@ -19,12 +19,6 @@ class Dialog extends Component {
         this._componentRef = useRef('component');
         this._onClickGlobal = this._onClickGlobal.bind(this);
         this._onKeydownDocument = this._onKeydownDocument.bind(this);
-        useStore(props => {
-            const dialog = this.env.models['mail.dialog'].get(props.dialogLocalId);
-            return {
-                dialog: dialog ? dialog.__state : undefined,
-            };
-        });
     }
 
     mounted() {
@@ -35,17 +29,6 @@ class Dialog extends Component {
     willUnmount() {
         document.removeEventListener('click', this._onClickGlobal, true);
         document.removeEventListener('keydown', this._onKeydownDocument);
-    }
-
-    //--------------------------------------------------------------------------
-    // Public
-    //--------------------------------------------------------------------------
-
-    /**
-     * @returns {mail.dialog}
-     */
-    get dialog() {
-        return this.env.models['mail.dialog'].get(this.props.dialogLocalId);
     }
 
     //--------------------------------------------------------------------------
@@ -82,7 +65,7 @@ class Dialog extends Component {
         ) {
             return;
         }
-        this.dialog.delete();
+        this.env.invoke('Record/delete', this.dialog);
     }
 
     /**
@@ -91,7 +74,7 @@ class Dialog extends Component {
      */
     _onKeydownDocument(ev) {
         if (ev.key === 'Escape') {
-            this.dialog.delete();
+            this.env.invoke('Record/delete', this.dialog);
         }
     }
 
@@ -99,7 +82,15 @@ class Dialog extends Component {
 
 Object.assign(Dialog, {
     props: {
-        dialogLocalId: String,
+        dialog: {
+            type: Object,
+            validate(p) {
+                if (p.constructor.modelName !== 'Dialog') {
+                    return false;
+                }
+                return true;
+            },
+        },
     },
     template: 'mail.Dialog',
 });

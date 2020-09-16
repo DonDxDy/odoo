@@ -1,7 +1,11 @@
 odoo.define('mail.Many2OneAvatarUserTests', function (require) {
 "use strict";
 
-const { afterEach, beforeEach, start } = require('mail/static/src/utils/test_utils.js');
+const {
+    afterEach,
+    beforeEach,
+    start,
+} = require('mail/static/src/utils/test-utils.js');
 
 const KanbanView = require('web.KanbanView');
 const ListView = require('web.ListView');

@@ -1,7 +1,11 @@
 odoo.define('mail.chatter_tests', function (require) {
 "use strict";
 
-const { afterEach, beforeEach, start } = require('mail/static/src/utils/test_utils.js');
+const {
+    afterEach,
+    beforeEach,
+    start,
+} = require('mail/static/src/utils/test-utils.js');
 
 var FormView = require('web.FormView');
 var ListView = require('web.ListView');
@@ -267,7 +271,7 @@ QUnit.test('list activity widget: open dropdown', async function (assert) {
             assert.step(args.method || route);
             if (args.method === 'action_feedback') {
                 const currentUser = this.data['res.users'].records.find(user =>
-                    user.id === env.messaging.currentUser.id
+                    user.id === env.messaging.$$$currentUser().$$$id()
                 );
                 Object.assign(currentUser, {
                     activity_ids: [4],
