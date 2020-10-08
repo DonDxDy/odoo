@@ -139,7 +139,7 @@ snippetOptions.registry.countdown = snippetOptions.SnippetOptionWidget.extend({
      * @override
      */
     async cleanForSave() {
-        this.$('.s_countdown_anvas_wrapper canvas').remove();
+        this.$('.s_countdown_canvas_wrapper canvas').remove();
         await this.updateChangesInWysiwyg();
     },
 
