@@ -58,12 +58,12 @@
     width: $o-tip-size !important;
     height: $o-tip-size !important;
     margin: 0 !important;
-    border: $o-tip-border-width solid $o-tip-color !important;
+    border: $o-tip-border-width solid $o-tip-color;
     border-radius: 50% !important;
     padding: 0 !important; // ! Cannot be changed ! Javascript rely on this.
     z-index: $zindex-tooltip !important; // See comment on 'o_tooltip_parent' class
     background-color: $o-tip-color !important;
-    box-shadow: 0 2px 2px 1px rgba(150, 150, 150, 0.3) !important;
+    box-shadow: 0 2px 2px 1px rgba(150, 150, 150, 0.3);
 
     transition:
         width $o-tip-size-duration-out ease $o-tip-size-delay-out,
@@ -75,6 +75,32 @@
         animation: move-bottom-top 500ms ease-in 0ms infinite alternate !important;
         &.right, &.left {
             animation-name: move-left-right !important;
+        }
+        box-shadow: none;
+        border-color: transparent !important;
+        border-width: $o-tip-size / 2 !important;
+        background-color: transparent !important;
+        background-size: $o-tip-size * 2;
+        background-repeat: no-repeat;
+        background-position-x: 50%;
+        background-position-y: 50%;
+
+        &.bottom {
+            background-image: url('/web_tour/static/src/img/tip_arrow_up.svg');
+        }
+        &.top {
+            background-image: url('/web_tour/static/src/img/tip_arrow_down.svg');
+        }
+        &.right {
+            background-image: url('/web_tour/static/src/img/tip_arrow_left.svg');
+        }
+        &.left {
+            background-image: url('/web_tour/static/src/img/tip_arrow_right.svg');
+        }
+
+        &::before {
+            border-color: transparent !important;
+            transition: all 0s ease 0s;
         }
     }
 
@@ -114,11 +140,13 @@
 
     &::after {
         content: "";
-        @include o-position-absolute(-$o-tip-border-width, -$o-tip-border-width, -$o-tip-border-width, -$o-tip-border-width);
-        border-color: $o-tip-color;
-        border-radius: 50%;
-        transition: margin $o-tip-size-duration-out ease $o-tip-size-delay-out, border-radius $o-tip-duration-out linear 0s;
-        background: radial-gradient(lighten($o-tip-color, 7%), $o-tip-color);
+        :not(.o_animated) {
+            @include o-position-absolute(-$o-tip-border-width, -$o-tip-border-width, -$o-tip-border-width, -$o-tip-border-width);
+            border-color: $o-tip-color;
+            border-radius: 50%;
+            transition: margin $o-tip-size-duration-out ease $o-tip-size-delay-out, border-radius $o-tip-duration-out linear 0s;
+            background: radial-gradient(lighten($o-tip-color, 7%), $o-tip-color);
+        }
     }
 
     > .o_tooltip_overlay {

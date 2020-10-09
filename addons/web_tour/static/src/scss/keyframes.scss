@@ -1,49 +1,51 @@
+$o-tip-bubble-offset: 8px;
+
 @-webkit-keyframes move-left-right {
     0% {
-        transform: translate(-3px, 0);
+        transform: translate(-3px -$o-tip-bubble-offset, -$o-tip-bubble-offset);
     }
     100% {
-        transform: translate(3px, 0);
+        transform: translate(3px -$o-tip-bubble-offset, -$o-tip-bubble-offset);
     }
 }
 @-moz-keyframes move-left-right {
     0% {
-        transform: translate(-3px, 0);
+        transform: translate(-3px -$o-tip-bubble-offset, -$o-tip-bubble-offset);
     }
     100% {
-        transform: translate(3px, 0);
+        transform: translate(3px -$o-tip-bubble-offset, -$o-tip-bubble-offset);
     }
 }
 @keyframes move-left-right {
     0% {
-        transform: translate(-3px, 0);
+        transform: translate(-3px -$o-tip-bubble-offset, -$o-tip-bubble-offset);
     }
     100% {
-        transform: translate(3px, 0);
+        transform: translate(3px -$o-tip-bubble-offset, -$o-tip-bubble-offset);
     }
 }
 
 @-webkit-keyframes move-bottom-top {
     0% {
-        transform: translate(0, -3px);
+        transform: translate(-$o-tip-bubble-offset, -3px -$o-tip-bubble-offset);
     }
     100% {
-        transform: translate(0, 3px);
+        transform: translate(-$o-tip-bubble-offset, 3px -$o-tip-bubble-offset);
     }
 }
 @-moz-keyframes move-bottom-top {
     0% {
-        transform: translate(0px, -3px);
+        transform: translate(-$o-tip-bubble-offset, -3px -$o-tip-bubble-offset);
     }
     100% {
-        transform: translate(0, 3px);
+        transform: translate(-$o-tip-bubble-offset, 3px -$o-tip-bubble-offset);
     }
 }
 @keyframes move-bottom-top {
     0% {
-        transform: translate(0px, -3px);
+        transform: translate(-$o-tip-bubble-offset, -3px -$o-tip-bubble-offset);
     }
     100% {
-        transform: translate(0, 3px);
+        transform: translate(-$o-tip-bubble-offset, 3px -$o-tip-bubble-offset);
     }
 }
