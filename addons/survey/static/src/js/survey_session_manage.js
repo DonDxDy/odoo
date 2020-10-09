@@ -32,6 +32,7 @@ publicWidget.registry.SurveySessionManage = publicWidget.Widget.extend({
             self.surveyId = self.$el.data('surveyId');
             self.surveyAccessToken = self.$el.data('surveyAccessToken');
             self.isStartScreen = self.$el.data('isStartScreen');
+            self.isFirstQuestion = self.$el.data('isFirstQuestion');
             self.isLastQuestion = self.$el.data('isLastQuestion');
             // scoring props
             self.isScoredQuestion = self.$el.data('isScoredQuestion');
@@ -148,13 +149,11 @@ publicWidget.registry.SurveySessionManage = publicWidget.Widget.extend({
 
         if (screenToDisplay === 'userInputs') {
             this._setShowInputs(true);
-            this.$('.o_survey_session_navigation_previous').removeClass('d-none');
         } else if (screenToDisplay === 'results') {
             this._setShowAnswers(true);
             // when showing results, stop refreshing answers
             clearInterval(this.resultsRefreshInterval);
             delete this.resultsRefreshInterval;
-            this.$('.o_survey_session_navigation_previous').removeClass('d-none');
         } else if (['leaderboard', 'leaderboardFinal'].includes(screenToDisplay)
                    && !['leaderboard', 'leaderboardFinal'].includes(this.currentScreen)) {
             if (this.isLastQuestion) {
@@ -181,17 +180,22 @@ publicWidget.registry.SurveySessionManage = publicWidget.Widget.extend({
     _onBack: function (ev) {
         ev.preventDefault();
 
+        if (this.isFirstQuestion) {
+            return;
+        }
+
         var screenToDisplay = this._getPreviousScreen();
 
         if (screenToDisplay === 'question') {
             this._setShowInputs(false);
-            this.$('.o_survey_session_navigation_previous').addClass('d-none');
         } else if (screenToDisplay === 'userInputs') {
             this._setShowAnswers(false);
             // resume refreshing answers if necessary
             if (!this.resultsRefreshInterval) {
                 this.resultsRefreshInterval = setInterval(this._refreshResults.bind(this), 2000);
             }
+        } else if (this.currentScreen === 'question' || screenToDisplay === 'previousQuestion') {  // If go back to previous question
+            this._nextQuestion(true);
         } else if (screenToDisplay === 'results') {
             this.leaderBoard.hideLeaderboard();
             // when showing results, stop refreshing answers
@@ -275,11 +279,11 @@ publicWidget.registry.SurveySessionManage = publicWidget.Widget.extend({
         } else if (this.currentScreen === 'results' ||
                   (this.currentScreen === 'leaderboard' && !this.isScoredQuestion)) {
             return 'userInputs';
-        } else if (this.currentScreen === 'leaderboard' && this.isScoredQuestion) {
+        } else if (this.currentScreen === "question" || this.currentScreen === 'leaderboard' && this.isScoredQuestion) {
             return 'results';
         }
 
-        return this.currentScreen;
+        return 'previousQuestion';
     },
 
     /**
@@ -294,7 +298,7 @@ publicWidget.registry.SurveySessionManage = publicWidget.Widget.extend({
     * @param {MouseEvent} ev
     * @private
     */
-    _nextQuestion: function () {
+    _nextQuestion: function (goBack) {
         var self = this;
 
         this.isStartScreen = false;
@@ -309,7 +313,10 @@ publicWidget.registry.SurveySessionManage = publicWidget.Widget.extend({
         });
 
         var nextQuestionPromise = this._rpc({
-            route: _.str.sprintf('/survey/session/next_question/%s', self.surveyAccessToken)
+            route: _.str.sprintf('/survey/session/next_question/%s', self.surveyAccessToken),
+            params: {
+                'go_back': goBack,
+            }
         });
 
         // avoid refreshing results while transitioning
@@ -324,7 +331,15 @@ publicWidget.registry.SurveySessionManage = publicWidget.Widget.extend({
                 self.$el.replaceWith($renderedTemplate);
                 self.attachTo($renderedTemplate);
                 self.$el.fadeIn(self.fadeInOutTime, function () {
-                    self._startTimer();
+                    if (goBack) {
+                        // As we arrive on first "question" screen, simulate going to the results.
+                        self._setShowInputs(true);
+                        self._setShowAnswers(true);
+                        self.currentScreen = 'results';
+                        self._refreshResults();
+                    } else {
+                        self._startTimer();
+                    }
                 });
             } else if (self.sessionShowLeaderboard) {
                 // Display last screen if leaderboard activated
@@ -545,6 +560,8 @@ publicWidget.registry.SurveySessionManage = publicWidget.Widget.extend({
         } else {
             this.currentScreen = 'question';
         }
+
+        this.$('.o_survey_session_navigation_previous').toggleClass('d-none', !!this.isFirstQuestion);
 
         this._setShowInputs(this.currentScreen === 'userInputs');
     },
