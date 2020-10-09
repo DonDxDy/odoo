@@ -51,6 +51,7 @@ var Tip = Widget.extend({
         this.initialPosition = this.info.position;
         this.viewPortState = 'in';
         this._onAncestorScroll = _.throttle(this._onAncestorScroll, 50);
+        this.destroyed = false;
     },
     /**
      * Attaches the tip to the provided $anchor and $altAnchor.
@@ -110,6 +111,7 @@ var Tip = Widget.extend({
         return this._super.apply(this, arguments);
     },
     destroy: function () {
+        this.destroyed = true;
         this._unbind_anchor_events();
         clearTimeout(this.timerIn);
         clearTimeout(this.timerOut);
@@ -182,7 +184,7 @@ var Tip = Widget.extend({
      * @param {boolean} [forceReposition=false]
      */
     _updatePosition: function (forceReposition = false) {
-        if (this.info.hidden) {
+        if (this.info.hidden || this.destroyed) {
             return;
         }
         let halfHeight = 0;
@@ -478,6 +480,9 @@ var Tip = Widget.extend({
         }
     },
     _build_bubble_mode: function () {
+        if (this.destroyed) {
+            return;
+        }
         clearTimeout(this.timerOut);
         this.timerOut = undefined;
 
