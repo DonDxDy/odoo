@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-import base64
-import json
-import logging
-import werkzeug
-import math
-
 from ast import literal_eval
 from collections import defaultdict
 
+import base64
+import json
+import logging
+import math
+import werkzeug
+
 from odoo import http, tools, _
 from odoo.addons.http_routing.models.ir_http import slug
-from odoo.addons.website_profile.controllers.main import WebsiteProfile
 from odoo.addons.website.models.ir_http import sitemap_qs2dom
+from odoo.addons.website_profile.controllers.main import WebsiteProfile
 from odoo.exceptions import AccessError, UserError
 from odoo.http import request
 from odoo.osv import expression
