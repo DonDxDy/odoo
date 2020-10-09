@@ -212,13 +212,23 @@ class WebsiteSlides(WebsiteProfile):
 
         return channel_progress
 
-    def _extract_channel_tag_search(self, search_tags=None):
-        Tags = request.env['slide.channel.tag']
-        if search_tags:
+    def _channel_search_tags_ids(self, search_tags):
+        """ Input: %5B4%5D """
+        try:
+            tag_ids = literal_eval(search_tags)
+        except Exception:
+            return request.env['slide.channel.tag']
+        # perform a search to filter on existing / valid tags implicitely
+        return request.env['slide.channel.tag'].search([('id', 'in', tag_ids)])
+
+    def _channel_search_tags_slug(self, search_tags):
+        """ Input: hotels-1,adventure-2 """
+        try:
             tag_ids = list(filter(None, [unslug(tag)[1] for tag in search_tags.split(',')]))
-            # perform a search to filter on existing / valid tags
-            return Tags.search([('id', 'in', tag_ids)]) if tag_ids else Tags
-        return Tags
+        except Exception:
+            return request.env['slide.channel.tag']
+        # perform a search to filter on existing / valid tags
+        return request.env['slide.channel.tag'].search([('id', 'in', tag_ids)]) if tag_ids else Tags
 
     def _build_channel_domain(self, base_domain, slide_type=None, tags=None, my=False, **post):
         search_term = post.get('search')
