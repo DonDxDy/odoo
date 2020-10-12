@@ -11,4 +11,5 @@
         'data/l10n_it_ddt_template.xml',
     ],
     'auto_install': True,
+    'post_init_hook': '_create_picking_seq',
 }
