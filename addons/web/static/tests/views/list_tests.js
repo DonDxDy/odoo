@@ -3350,6 +3350,37 @@ QUnit.module('Views', {
         list.destroy();
     });
 
+    QUnit.test('deleting record which throws UserError should close confirmation dialog', async function (assert) {
+        assert.expect(3);
+
+        const list = await createView({
+            View: ListView,
+            model: 'foo',
+            data: this.data,
+            viewOptions: {hasActionMenus: true},
+            arch: '<tree><field name="foo"/></tree>',
+            mockRPC: function (route, args) {
+                if (args.method === 'unlink') {
+                    return Promise.reject({message: "Throw Error"});
+                }
+                return this._super(...arguments);
+            },
+        });
+
+        await testUtils.dom.click(list.$('tbody td.o_list_record_selector:first input'));
+
+        assert.containsOnce(list.el, 'div.o_control_panel .o_cp_action_menus');
+
+        await cpHelpers.toggleActionMenu(list);
+        await cpHelpers.toggleMenuItem(list, "Delete");
+        assert.hasClass(document.body,'modal-open', 'body should have modal-open clsss');
+
+        await testUtils.dom.click($('body .modal button span:contains(Ok)'));
+        assert.containsNone(document.body, ".modal", "should not have confirmation dialog open");
+
+        list.destroy();
+    });
+
     QUnit.test('delete all records matching the domain', async function (assert) {
         assert.expect(6);
 

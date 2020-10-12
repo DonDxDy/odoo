@@ -335,16 +335,22 @@ var BasicController = AbstractController.extend(FieldManagerMixin, {
      */
     _deleteRecords: function (ids) {
         var self = this;
+        let dialog;
         function doIt() {
             return self.model
                 .deleteRecords(ids, self.modelName)
-                .then(self._onDeletedRecords.bind(self, ids));
+                .then(self._onDeletedRecords.bind(self, ids))
+                .guardedCatch(() => {
+                    if (dialog) {
+                        dialog.destroy();
+                    }
+                });
         }
         if (this.confirmOnDelete) {
             const message = ids.length > 1 ?
                             _t("Are you sure you want to delete these records?") :
                             _t("Are you sure you want to delete this record?");
-            Dialog.confirm(this, message, { confirm_callback: doIt });
+            dialog = Dialog.confirm(this, message, { confirm_callback: doIt });
         } else {
             doIt();
         }
