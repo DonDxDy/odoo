@@ -34,6 +34,10 @@ export class DropdownRenderless extends Component {
 
     state = useState({ open: this.props.openedByDefault })
 
+    mounted() {
+        document.addEventListener('click', this.onDocumentClicked.bind(this));
+    }
+
     /**
      * Private
      */
@@ -49,6 +53,19 @@ export class DropdownRenderless extends Component {
     /**
      * Handlers
      */
+    onDocumentClicked(ev: MouseEvent) {
+        if (ev.defaultPrevented) return;
+        const target = ev.target as Element;
+        const parentDropdown = target.closest('.o_dropdown');
+        const clickedInside = parentDropdown && parentDropdown === this.el;
+        if (!clickedInside) {
+            // We clicked outside
+            ev.preventDefault();
+            console.log('We clicked outside');
+            this._toggle();
+        }
+    }
+
     onTogglerClicked() {
         if (this.props.toggleMode === DropdownToggleMode.Click) {
             this._toggle();

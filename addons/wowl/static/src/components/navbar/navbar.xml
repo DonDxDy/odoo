@@ -18,27 +18,27 @@
         </nav>
     </header>
 
-    <DropdownRenderless t-on-item-selected.stop="onMenuClicked" t-name="wowl.NavBar.AppsMenu">
-        <t t-set-slot="toggler">
-            <div style="color:white; background-color: red; padding: 2px; border: 1px white solid; opacity: 50%">
-                <i t-if="icon" t-att-class="icon" />
-                <t t-if="name" t-esc="name" />
-            </div>
-        </t>
+    <DropdownRenderless t-on-item-selected="onMenuClicked" t-name="wowl.NavBar.AppsMenu">
+        <div style="color:white; background-color: red; padding: 2px; border: 1px white solid; opacity: 50%">
+            <i t-if="icon" t-att-class="icon" />
+            <t t-if="name" t-esc="name" />
+        </div>
 
-        <t t-foreach="items" t-as="item" t-key="item.id">
-            <t t-if="!item.childrenTree.length">
-                <DropdownRenderlessItem payload="item">
-                    <div style="color:white; background-color: blue; padding: 2px;border: 1px white solid;  opacity: 50%;">
-                        <t t-esc="item.name" />
-                    </div>
-                </DropdownRenderlessItem>
-            </t>
-
-            <t t-else="" t-call="wowl.NavBar.AppsMenu">
-                <t t-set="name" t-value="item.name" />
-                <t t-set="icon" t-value="null" />
-                <t t-set="items" t-value="item.childrenTree" />
+        <t t-set-slot="dropdown">
+            <t t-foreach="items" t-as="item" t-key="item.id">
+                <t t-if="!item.childrenTree.length">
+                    <DropdownRenderlessItem payload="item">
+                        <div style="color:white; background-color: blue; padding: 2px;border: 1px white solid;  opacity: 50%;">
+                            <t t-esc="item.name" />
+                        </div>
+                    </DropdownRenderlessItem>
+                </t>
+                
+                <t t-else="" t-call="wowl.NavBar.AppsMenu">
+                    <t t-set="name" t-value="item.name" />
+                    <t t-set="icon" t-value="null" />
+                    <t t-set="items" t-value="item.childrenTree" />
+                </t>
             </t>
         </t>
     </DropdownRenderless>
