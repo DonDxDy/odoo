@@ -2,11 +2,11 @@ import { Component, useState } from "@odoo/owl";
 import { useService } from "../../core/hooks";
 import { OdooEnv } from "../../types";
 import { Dropdown } from "../dropdown/renderless/dropdown_renderless";
-import { DropdownElement } from "../dropdown/renderless/dropdown_item_renderless";
+import { DropdownItem } from "../dropdown/renderless/dropdown_item_renderless";
 
 export class NavBar extends Component<{}, OdooEnv> {
   static template = "wowl.NavBar";
-  static components = { Dropdown, DropdownElement }
+  static components = { Dropdown, DropdownItem }
 
   actionManager = useService("action_manager");
   menuRepo = useService("menus");

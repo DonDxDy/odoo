@@ -4,6 +4,7 @@
     <header t-name="wowl.NavBar" owl="1">
         <nav class="o_main_navbar">
             <t t-call="wowl.NavBar.AppsMenu">
+                <t t-set="hover" t-value="false" />
                 <t t-set="icon" t-value="'fa fa-th-large'" />
                 <t t-set="items" t-value="state.menuItems" />
             </t>
@@ -18,7 +19,7 @@
         </nav>
     </header>
 
-    <Dropdown t-on-element-selected="onMenuClicked" t-name="wowl.NavBar.AppsMenu">
+    <Dropdown t-on-dropdown-item-selected.stop="onMenuClicked" t-name="wowl.NavBar.AppsMenu" hover="hover" hoverOpenDelay="800" hoverCloseDelay="1500">
         <div style="color:white; background-color: red; padding: 2px; border: 1px white solid; opacity: 50%">
             <i t-if="icon" t-att-class="icon" />
             <t t-if="name" t-esc="name" />
@@ -27,17 +28,18 @@
         <t t-set-slot="dropdown">
             <t t-foreach="items" t-as="item" t-key="item.id">
                 <t t-if="!item.childrenTree.length">
-                    <DropdownElement value="item">
+                    <DropdownItem value="item">
                         <div style="color:white; background-color: blue; padding: 2px;border: 1px white solid;  opacity: 50%;">
                             <t t-esc="item.name" />
                         </div>
-                    </DropdownElement>
+                    </DropdownItem>
                 </t>
                 
                 <t t-else="" t-call="wowl.NavBar.AppsMenu">
                     <t t-set="name" t-value="item.name" />
                     <t t-set="icon" t-value="null" />
                     <t t-set="items" t-value="item.childrenTree" />
+                    <t t-set="hover" t-value="true" />
                 </t>
             </t>
         </t>

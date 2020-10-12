@@ -1,57 +1,83 @@
 import { Component, useState } from "@odoo/owl";
 
-export enum DropdownCollapseMode {
-    All = 'all',
-    Level = 'level',
-    None = 'none',
-}
-export enum DropdownToggleMode {
-    Click = 'click',
-    Hover = 'hover',
-}
-
 export class Dropdown extends Component {
     static template = "wowl.Dropdown";
     static props = {
-        openedByDefault: {
+        show: {
             type: Boolean,
             optional: true,
         },
-        collapseMode: {
-            type: DropdownCollapseMode,
+        hover: {
+            type: Boolean,
             optional: true,
         },
-        toggleMode: {
-            type: DropdownToggleMode,
+        hoverOpenDelay: {
+            type: Number,
             optional: true,
-        }
+        },
+        hoverCloseDelay: {
+            type: Number,
+            optional: true,
+        },
+        closeOnClickOutside: {
+            type: Boolean,
+            optional: true,
+        },
     };
     static defaultProps = {
-        openedByDefault: false,
-        collapseMode: DropdownCollapseMode.All,
-        toggleMode: DropdownToggleMode.Click,
+        show: false,
+        hover: false,
+        hoverOpenDelay: 100,
+        hoverCloseDelay: 500,
+        closeOnClickOutside: true,
     };
 
-    state = useState({ open: this.props.openedByDefault })
+    state = useState({ show: this.props.show });
+    hoverOpenDelayHandle: number = Number.NaN;
+    hoverCloseDelayHandle: number = Number.NaN;
 
     mounted() {
         window.addEventListener('click', this.onWindowClicked.bind(this));
     }
 
-    unmount() {
+    willUnmount() {
         window.removeEventListener('click', this.onWindowClicked.bind(this));
+    }
+
+    willUpdateProps(nextProps: any) {
+        this.state.show = nextProps.show;
+        return Promise.resolve();
+    }
+
+    startHoverCloseDelayTimer() {
+        this.hoverCloseDelayHandle = setTimeout(this._closeDropdown.bind(this), this.props.hoverCloseDelay);
+    }
+
+    startHoverOpenDelayTimer() {
+        this.hoverOpenDelayHandle = setTimeout(this._openDropdown.bind(this), this.props.hoverOpenDelay);
+    }
+
+    stopHoverCloseDelayTimer() {
+        clearTimeout(this.hoverCloseDelayHandle);
+        this.hoverCloseDelayHandle = Number.NaN;
+    }
+
+    stopHoverOpenDelayTimer() {
+        clearTimeout(this.hoverOpenDelayHandle);
+        this.hoverOpenDelayHandle = Number.NaN;
     }
 
     /**
      * Private
      */
-
-    /**
-     * Toggle the items of the dropdown.
-     * If it has several levels, only the current one is toggled
-     */
-    _toggle() {
-        this.state.open = !this.state.open;
+    _closeDropdown() {
+        this.state.show = false;
+    }
+    _openDropdown() {
+        this.state.show = true;
+    }
+    _toggleDropdown() {
+        this.state.show = !this.state.show;
     }
 
     /**
@@ -65,46 +91,33 @@ export class Dropdown extends Component {
         const element = target.closest('.o_dropdown');
         const gotClickedInside = element && element === this.el;
         if (!gotClickedInside) {
-            // We clicked outside
-            this.state.open = false;
+            this._closeDropdown();
         }
     }
 
-    onTogglerClicked() {
-        if (this.props.toggleMode === DropdownToggleMode.Click) {
-            this._toggle();
+    onTogglerClick() {
+        this._toggleDropdown();
+    }
+
+    onTogglerMouseOver() {
+        if (this.props.hover) {
+            this.stopHoverCloseDelayTimer();
         }
     }
 
-    onTogglerHovered() {
-        if (this.props.toggleMode === DropdownToggleMode.Hover) {
-            this._toggle();
+    onTogglerMouseEnter() {
+        if (this.props.hover) {
+            this.stopHoverCloseDelayTimer();
+            this.startHoverOpenDelayTimer();
         }
     }
 
-    /**
-     * When an item (leaf) is selected, check if the dropdown should collapse.
-     * Can collapse one level or all levels.
-     * Options are passed through props.
-     */
-    onElementSelected(ev: any) {
-        if (!ev.detail) return; // this is not a leaf.
-
-        // Trigger up
-        this.trigger('element-selected', ev.detail);
-
-        // Collapse
-        switch (this.props.collapseMode) {
-            case DropdownCollapseMode.Level:
-                this._toggle();
-                break;
-            case DropdownCollapseMode.All:
-                // this._toggle();
-                this.trigger('toggle-all');
-                break;
-            case DropdownCollapseMode.None:
-            default:
-                break;
+    onTogglerMouseLeave() {
+        if (this.props.hover) {
+            if (Number.isNaN(this.hoverCloseDelayHandle)) {
+                this.startHoverCloseDelayTimer();
+            }
+            this.stopHoverOpenDelayTimer();
         }
     }
 }
