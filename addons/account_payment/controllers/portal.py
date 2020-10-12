@@ -1,28 +1,28 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo.addons.account.controllers.portal import PortalAccount
 from odoo.http import request
 
+from odoo.addons.account.controllers.portal import PortalAccount
 
-class PortalAccount(PortalAccount):
+
+class PortalAccountPayment(PortalAccount):
 
     def _invoice_get_page_view_values(self, invoice, access_token, **kwargs):
         values = super()._invoice_get_page_view_values(invoice, access_token, **kwargs)
         logged_in = not request.env.user._is_public()
-        # If the current user is logged in we set partner_id to his partner otherwise we set it as
-        # the invoice partner. We do this to force the creation of payment tokens to the correct
-        # partner and avoid linking tokens to the public user.
-        partner_id = invoice.partner_id.id if not logged_in else request.env.user.partner_id.id
+        # We set partner_id to the partner id of the current user if logged in, otherwise we set it
+        # to the invoice partner id. We do this to ensure that payment tokens are assigned to the
+        # correct partner and to avoid linking tokens to the public user.
+        partner_id = request.env.user.partner_id.id if logged_in else invoice.partner_id.id
         acquirers_sudo = request.env['payment.acquirer'].sudo()._get_compatible_acquirers(
             invoice.company_id.id or request.env.company.id,
-            invoice.partner_id.id or request.env.user.partner_id.id,
+            partner_id,
             currency_id=invoice.currency_id.id,
         )  # In sudo mode to read the fields of the partner if the user is not logged in
-        tokens = request.env['payment.token'].search([
-            ('acquirer_id', 'in', acquirers_sudo.ids),
-            ('partner_id', '=', invoice.partner_id.id or request.env.user.partner_id.id),
-        ])
+        tokens = request.env['payment.token'].search(
+            [('acquirer_id', 'in', acquirers_sudo.ids), ('partner_id', '=', partner_id)]
+        )  # Tokens are later cleared if the user is not logged in
         fees_by_acquirer = {
             acq_sudo: acq_sudo._compute_fees(
                 invoice.amount_total, invoice.currency_id.id, invoice.company_id.country_id.id
@@ -36,10 +36,11 @@ class PortalAccount(PortalAccount):
             'currency': invoice.currency_id,
             'partner_id': partner_id,
             'access_token': access_token,
-            'init_tx_route': f'/invoice/pay/{invoice.id}/',
+            'init_tx_route': f'/invoice/transaction/{invoice.id}/',
         })
-        if not logged_in:
-            # Don't display payment tokens owned by the public user
+        if not logged_in:  # TODO ANV check with TBE if managers should have access to customers' tokens
+            # Don't display payment tokens of the invoice partner if the user is not logged but
+            # inform that logging in will make them available.
             values.update({
                 'existing_token': bool(tokens),
                 'tokens': [],
