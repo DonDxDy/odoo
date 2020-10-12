@@ -19,8 +19,8 @@
         </nav>
     </header>
 
-    <Dropdown t-on-dropdown-item-selected.stop="onMenuClicked" t-name="wowl.NavBar.AppsMenu" hover="hover" hoverOpenDelay="800" hoverCloseDelay="1500">
-        <div style="color:white; background-color: red; padding: 2px; border: 1px white solid; opacity: 50%">
+    <Dropdown t-on-dropdown-item-selected.stop="onMenuClicked" t-name="wowl.NavBar.AppsMenu" hover="hover" hoverOpenDelay="400" hoverCloseDelay="800">
+        <div style="display: inline-flex; color:white; background-color: red; padding: 2px; border: 1px white solid; opacity: 50%">
             <i t-if="icon" t-att-class="icon" />
             <t t-if="name" t-esc="name" />
         </div>
@@ -29,7 +29,7 @@
             <t t-foreach="items" t-as="item" t-key="item.id">
                 <t t-if="!item.childrenTree.length">
                     <DropdownItem value="item">
-                        <div style="color:white; background-color: blue; padding: 2px;border: 1px white solid;  opacity: 50%;">
+                        <div style="display: inline-flex; color:white; background-color: blue; padding: 2px;border: 1px white solid;  opacity: 50%;">
                             <t t-esc="item.name" />
                         </div>
                     </DropdownItem>

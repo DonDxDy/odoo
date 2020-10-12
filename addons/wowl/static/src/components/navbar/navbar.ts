@@ -15,8 +15,6 @@ export class NavBar extends Component<{}, OdooEnv> {
   systrayItems = this.env.registries.systray.getAll();
 
   onMenuClicked(ev: any) {
-    if (ev.defaultPrevented) return;
-    ev.preventDefault();
     const payload = ev.detail;
     this.actionManager.doAction(payload.actionID);
   }
