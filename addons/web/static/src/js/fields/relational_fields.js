@@ -1059,9 +1059,7 @@ var FieldX2Many = AbstractField.extend(WidgetAdapterMixin, {
      */
     init: function (parent, name, record, options) {
         this._super.apply(this, arguments);
-        this.nodeOptions = _.defaults(this.nodeOptions, {
-            create_text: _t('Add'),
-        });
+        this.createText = this.attrs.create_text || _t('Add');
         this.operations = [];
         this.isReadonly = this.mode === 'readonly';
         this.view = this.attrs.views[this.attrs.mode];
@@ -1288,7 +1286,7 @@ var FieldX2Many = AbstractField.extend(WidgetAdapterMixin, {
     _getButtonsRenderingContext() {
         return {
             btnClass: 'btn-secondary',
-            create_text: this.nodeOptions.create_text,
+            create_text: this.createText,
         };
     },
     /**
