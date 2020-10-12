@@ -1,22 +1,28 @@
 import { Component } from "@odoo/owl";
 
-export class DropdownRenderlessItem extends Component {
-    static template = "wowl.DropdownRenderlessItem";
+export class DropdownElement extends Component {
+    static template = "wowl.DropdownElement";
     static props = {
-        payload: {
+        value: {
             type: Object,
             optional: true
         },
     };
     static defaultProps = {
-        payload: null,
+        value: null,
     };
 
     /**
      * Handlers
      */
-    onClick() {
-        this.trigger('dropdown-item-clicked', this.props.payload);
+    onClick(ev: MouseEvent) {
+        ev.preventDefault();
+        this.trigger('dropdown-element-clicked', this.props.value);
+    }
+
+    onMouseOver(ev: MouseEvent) {
+        ev.preventDefault();
+        this.trigger('dropdown-element-hovered', this.props.value);
     }
 
 }

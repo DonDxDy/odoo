@@ -10,8 +10,8 @@ export enum DropdownToggleMode {
     Hover = 'hover',
 }
 
-export class DropdownRenderless extends Component {
-    static template = "wowl.DropdownRenderless";
+export class Dropdown extends Component {
+    static template = "wowl.Dropdown";
     static props = {
         openedByDefault: {
             type: Boolean,
@@ -35,7 +35,11 @@ export class DropdownRenderless extends Component {
     state = useState({ open: this.props.openedByDefault })
 
     mounted() {
-        document.addEventListener('click', this.onDocumentClicked.bind(this));
+        window.addEventListener('click', this.onWindowClicked.bind(this));
+    }
+
+    unmount() {
+        window.removeEventListener('click', this.onWindowClicked.bind(this));
     }
 
     /**
@@ -53,16 +57,16 @@ export class DropdownRenderless extends Component {
     /**
      * Handlers
      */
-    onDocumentClicked(ev: MouseEvent) {
+    onWindowClicked(ev: MouseEvent) {
         if (ev.defaultPrevented) return;
+        ev.preventDefault();
+
         const target = ev.target as Element;
-        const parentDropdown = target.closest('.o_dropdown');
-        const clickedInside = parentDropdown && parentDropdown === this.el;
-        if (!clickedInside) {
+        const element = target.closest('.o_dropdown');
+        const gotClickedInside = element && element === this.el;
+        if (!gotClickedInside) {
             // We clicked outside
-            ev.preventDefault();
-            console.log('We clicked outside');
-            this._toggle();
+            this.state.open = false;
         }
     }
 
@@ -79,15 +83,15 @@ export class DropdownRenderless extends Component {
     }
 
     /**
-     * When an item (leaf) is clicked, check if the dropdown should collapse.
+     * When an item (leaf) is selected, check if the dropdown should collapse.
      * Can collapse one level or all levels.
      * Options are passed through props.
      */
-    dropdownItemClicked(ev: any) {
+    onElementSelected(ev: any) {
         if (!ev.detail) return; // this is not a leaf.
 
         // Trigger up
-        this.trigger('item-selected', ev.detail);
+        this.trigger('element-selected', ev.detail);
 
         // Collapse
         switch (this.props.collapseMode) {

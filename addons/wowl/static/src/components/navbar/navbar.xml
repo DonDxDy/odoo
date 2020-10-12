@@ -18,7 +18,7 @@
         </nav>
     </header>
 
-    <DropdownRenderless t-on-item-selected="onMenuClicked" t-name="wowl.NavBar.AppsMenu">
+    <Dropdown t-on-element-selected="onMenuClicked" t-name="wowl.NavBar.AppsMenu">
         <div style="color:white; background-color: red; padding: 2px; border: 1px white solid; opacity: 50%">
             <i t-if="icon" t-att-class="icon" />
             <t t-if="name" t-esc="name" />
@@ -27,11 +27,11 @@
         <t t-set-slot="dropdown">
             <t t-foreach="items" t-as="item" t-key="item.id">
                 <t t-if="!item.childrenTree.length">
-                    <DropdownRenderlessItem payload="item">
+                    <DropdownElement value="item">
                         <div style="color:white; background-color: blue; padding: 2px;border: 1px white solid;  opacity: 50%;">
                             <t t-esc="item.name" />
                         </div>
-                    </DropdownRenderlessItem>
+                    </DropdownElement>
                 </t>
                 
                 <t t-else="" t-call="wowl.NavBar.AppsMenu">
@@ -41,7 +41,7 @@
                 </t>
             </t>
         </t>
-    </DropdownRenderless>
+    </Dropdown>
 
     <t t-name="wowl.NavBar.Systray" owl="1">
         <!--

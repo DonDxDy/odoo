@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-  <div class="o_dropdown"
-    t-name="wowl.DropdownRenderless"
+  <div class="o_dropdown" t-name="wowl.Dropdown"
     t-on-toggle-all="_toggle"
-    t-on-dropdown-item-clicked.stop="dropdownItemClicked"
+    t-on-dropdown-element-clicked="onElementSelected"
+    t-on-dropdown-element-hovered="onElementSelected"
     owl="1">
-    <div t-on-click.stop="onTogglerClicked" t-on-mouseover.stop="onTogglerHovered">
+    <div t-on-click.prevent="onTogglerClicked" t-on-mouseover.prevent="onTogglerHovered">
       <t t-slot="default" />
     </div>
     <t t-if="state.open" t-slot="dropdown" />
