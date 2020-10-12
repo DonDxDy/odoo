@@ -22,7 +22,7 @@
                         </div>
                         <div class="mt16"/>
                         <div class="mt16"/>
-                        <div><span>DDT number: <h1 t-esc="o.name"/></span>
+                        <div><span>DDT number: <h1 t-esc="o.l10n_it_ddt_number"/></span>
                         </div>
                         <div class="clearfix"/>
                         <div class="mb32"/>
