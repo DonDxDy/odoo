@@ -127,7 +127,7 @@ class WebsitePayment(http.Controller):
         # transaction and invoice partners are different).
         partner_is_different = False
         if logged_in:
-            partner_is_different = partner_id != user_sudo.partner_id.id
+            partner_is_different = partner_id and partner_id != user_sudo.partner_id.id
             partner_id = user_sudo.partner_id.id
             access_token_values = [partner_id] + access_token_values[1:]
             access_token = payment_utils.generate_access_token(db_secret, *access_token_values)
