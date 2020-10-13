@@ -1059,7 +1059,7 @@ var FieldX2Many = AbstractField.extend(WidgetAdapterMixin, {
      */
     init: function (parent, name, record, options) {
         this._super.apply(this, arguments);
-        this.createText = this.attrs.create_text || _t('Add');
+        this.createText = this.attrs['add-label'] || _t('Add');
         this.operations = [];
         this.isReadonly = this.mode === 'readonly';
         this.view = this.attrs.views[this.attrs.mode];
