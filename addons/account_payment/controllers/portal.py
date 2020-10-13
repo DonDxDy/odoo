@@ -4,6 +4,7 @@
 from odoo.http import request
 
 from odoo.addons.account.controllers.portal import PortalAccount
+from odoo.addons.portal.controllers.portal import _build_url_w_params
 
 
 class PortalAccountPayment(PortalAccount):
@@ -19,10 +20,10 @@ class PortalAccountPayment(PortalAccount):
             invoice.company_id.id or request.env.company.id,
             partner_id,
             currency_id=invoice.currency_id.id,
-        )  # In sudo mode to read the fields of the partner if the user is not logged in
+        )  # In sudo mode to read the fields of acquirers and partner (if not logged in)
         tokens = request.env['payment.token'].search(
             [('acquirer_id', 'in', acquirers_sudo.ids), ('partner_id', '=', partner_id)]
-        )  # Tokens are later cleared if the user is not logged in
+        )  # Tokens are cleared at the end if the user is not logged in
         fees_by_acquirer = {
             acq_sudo: acq_sudo._compute_fees(
                 invoice.amount_total, invoice.currency_id.id, invoice.company_id.country_id.id
@@ -32,11 +33,13 @@ class PortalAccountPayment(PortalAccount):
             'acquirers': acquirers_sudo,
             'tokens': tokens,
             'fees_by_acquirer': fees_by_acquirer,
-            'show_tokenize_input': True,
+            'show_tokenize_input': logged_in,  # Prevent public partner from saving payment methods
+            'amount': invoice.amount_residual,  # TODO ANV keep that ? Set None ? Use get_create_vals ?
             'currency': invoice.currency_id,
             'partner_id': partner_id,
             'access_token': access_token,
             'init_tx_route': f'/invoice/transaction/{invoice.id}/',
+            'landing_route': _build_url_w_params(invoice.access_url, {'access_token': access_token})
         })
         if not logged_in:  # TODO ANV check with TBE if managers should have access to customers' tokens
             # Don't display payment tokens of the invoice partner if the user is not logged but

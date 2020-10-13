@@ -161,7 +161,7 @@ class WebsitePayment(http.Controller):
         # Select all acquirers that match the constraints
         acquirers_sudo = request.env['payment.acquirer'].sudo()._get_compatible_acquirers(
             company_id, partner_id, currency_id=currency.id, preferred_acquirer_id=acquirer_id
-        )  # In sudo mode to read the fields of the partner if the user is not logged in
+        )  # In sudo mode to read the fields of acquirers and partner (if not logged in)
 
         # Compute the fees taken by acquirers supporting the feature
         country_id = user_sudo.partner_id.country_id.id
@@ -172,7 +172,7 @@ class WebsitePayment(http.Controller):
             'acquirers': acquirers_sudo,
             'tokens': _select_payment_tokens(acquirers_sudo, partner_id) if logged_in else [],
             'fees_by_acquirer': fees_by_acquirer,
-            'show_tokenize_input': logged_in,  # Prevent saving payment methods on different partner
+            'show_tokenize_input': logged_in,  # Prevent public partner from saving payment methods
             'reference_prefix': reference,
             'amount': amount,
             'currency': currency,
@@ -210,7 +210,7 @@ class WebsitePayment(http.Controller):
         :rtype: dict
         :raise: ValidationError if the access token is invalid
         """
-        # Check the access token if it is provided, or if the partner is not that of the logged user
+        # Check the access token if it is provided, or if the partner is not that of the logged user  # TODO ANV shouldn't we always provide an access token ?
         if access_token or request.env.user.partner_id.id != partner_id:
             db_secret = request.env['ir.config_parameter'].sudo().get_param('database.secret')
             if not payment_utils.check_access_token(
@@ -236,7 +236,7 @@ class WebsitePayment(http.Controller):
             create_tx_values['sale_order_ids'] = [(6, 0, [int(order_id)])]
 
         processing_values = {}  # The generic and acquirer-specific values to process the tx
-        if flow in ['redirect', 'direct']:  # Payment through (inline or redirect) form
+        if flow in ['redirect', 'direct']:  # Direct payment or payment with redirection
             acquirer_sudo = request.env['payment.acquirer'].sudo().browse(payment_option_id)
             reference = request.env['payment.transaction']._compute_reference(
                 acquirer_sudo.provider,
@@ -254,7 +254,7 @@ class WebsitePayment(http.Controller):
                 'reference': reference,
                 'tokenize': tokenize,
                 **create_tx_values,
-            })
+            })  # In sudo mode to allowed writing on callback fields
             processing_values = tx_sudo._get_processing_values()
         elif flow == 'token':  # Payment by token
             token_sudo = request.env['payment.token'].sudo().browse(payment_option_id).exists()
@@ -270,7 +270,7 @@ class WebsitePayment(http.Controller):
                 'reference': reference,
                 'token_id': payment_option_id,
                 **create_tx_values,
-            })  # Created in sudo to allowed writing on callback fields
+            })  # In sudo mode to allowed writing on callback fields
             tx_sudo._send_payment_request()  # Tokens process transactions immediately
             # The dict of processing values is not filled in token flow since the user is redirected
             # to the payment process page directly from the client

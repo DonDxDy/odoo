@@ -159,21 +159,3 @@ class PaymentTransaction(models.Model):
             action['view_mode'] = 'tree,form'
             action['domain'] = [('id', 'in', sale_order_ids)]
         return action
-
-    # --------------------------------------------------
-    # Tools for payment
-    # --------------------------------------------------
-
-    def render_sale_button(self, order):
-        values = {
-            'partner_id': order.partner_id.id,
-            'type': self.type,
-        }
-        # Not very elegant to do that here but no choice regarding the design.
-        self._log_payment_transaction_sent()
-        return self.acquirer_id.with_context().sudo()._render_redirect_form(
-            self.reference,
-            order.amount_total,
-            order.pricelist_id.currency_id.id,
-            **values,
-        )
