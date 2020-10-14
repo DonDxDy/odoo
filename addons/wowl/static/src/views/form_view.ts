@@ -1,10 +1,10 @@
 import { Component, tags } from "@odoo/owl";
-import { OdooEnv, View } from "../types";
+import { OdooEnv, View, ViewProps } from "../types";
 import { ControlPanel } from "../components/control_panel/control_panel";
 
 const { xml } = tags;
 
-class FormRenderer extends Component<{}, OdooEnv> {
+class FormController extends Component<ViewProps, OdooEnv> {
   static template = xml`
     <div>
         <ControlPanel breadcrumbs="props.breadcrumbs" views="props.views"/>
@@ -21,5 +21,5 @@ export const FormView: View = {
   icon: "fa-edit",
   multiRecord: false,
   type: "form",
-  Component: FormRenderer,
+  Component: FormController,
 };

@@ -1,6 +1,15 @@
 import { Component, tags } from "@odoo/owl";
+// import { nextTick } from "../../../tests/helpers";
 import { Dialog } from "../../components/dialog/dialog";
-import type { OdooEnv, Service, ComponentAction, FunctionAction, Type, View } from "./../../types";
+import type {
+  OdooEnv,
+  Service,
+  ComponentAction,
+  FunctionAction,
+  Type,
+  View,
+  ControllerProps,
+} from "./../../types";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -63,16 +72,11 @@ interface ViewController extends Controller {
 }
 type ControllerStack = Controller[];
 
-interface Breadcrumb {
+export interface Breadcrumb {
   jsId: string;
   name: string;
 }
-type Breadcrumbs = Breadcrumb[];
-interface ControllerProps {
-  action: ClientAction | ActWindowAction;
-  breadcrumbs: Breadcrumbs;
-  views?: View[];
-}
+export type Breadcrumbs = Breadcrumb[];
 
 interface SubRenderingInfo {
   id: number;
@@ -245,10 +249,10 @@ function makeActionManager(env: OdooEnv): ActionManager {
    * @param {ViewController} controller
    * @returns {View[]}
    */
-  function _getViews(controller: ViewController): View[] {
-    const multiRecord = controller.view.multiRecord;
-    return controller.views.filter((view) => view.multiRecord === multiRecord);
-  }
+  // function _getViews(controller: ViewController): View[] {
+  //   const multiRecord = controller.view.multiRecord;
+  //   return controller.views.filter((view) => view.multiRecord === multiRecord);
+  // }
 
   /**
    * Trigger a re-rendering with respect to the given controller.
@@ -288,12 +292,25 @@ function makeActionManager(env: OdooEnv): ActionManager {
       }
     }
 
-    const props: ControllerProps = {
-      action,
-      breadcrumbs: _getBreadcrumbs(nextStack),
-    };
+    const breadcrumbs = _getBreadcrumbs(nextStack);
+    let props: ControllerProps;
+    // const props: ControllerProps = {
+    //   action,
+    //   breadcrumbs: _getBreadcrumbs(nextStack),
+    // };
     if (controller.action.type === "ir.actions.act_window") {
-      props.views = _getViews(controller as ViewController);
+      props = {
+        breadcrumbs,
+        actionId: action.id!, // make it optional
+        views: (action as ActWindowAction).views,
+        model: (action as ActWindowAction).res_model,
+      };
+      // props.views = _getViews(controller as ViewController);
+    } else {
+      props = {
+        breadcrumbs,
+        actionId: action.id!, // make it optional
+      };
     }
 
     env.bus.trigger("action_manager:update", {

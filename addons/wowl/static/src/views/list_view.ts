@@ -1,11 +1,11 @@
 import { Component, tags } from "@odoo/owl";
-import { OdooEnv, View } from "../types";
+import { OdooEnv, View, ViewProps } from "../types";
 import { useService } from "../core/hooks";
 import { ControlPanel } from "../components/control_panel/control_panel";
 
 const { xml } = tags;
 
-class ListRenderer extends Component<{}, OdooEnv> {
+class ListController extends Component<ViewProps, OdooEnv> {
   static template = xml`
     <div>
         <ControlPanel breadcrumbs="props.breadcrumbs" views="props.views"/>
@@ -29,5 +29,5 @@ export const ListView: View = {
   icon: "fa-list-ul",
   multiRecord: true,
   type: "list",
-  Component: ListRenderer,
+  Component: ListController,
 };

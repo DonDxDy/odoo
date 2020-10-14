@@ -13,7 +13,7 @@ import { routerService } from "./services/router";
 import type { rpcService } from "./services/rpc";
 import type { userService } from "./services/user";
 import { viewManagerService } from "./services/view_manager";
-
+import { Breadcrumb } from "./services/action_manager/action_manager";
 // import type { ComponentAction, FunctionAction } from "./services/action_manager/helpers";
 
 interface CacheHashes {
@@ -144,12 +144,24 @@ export type ViewType =
   | "grid"
   | string;
 
+export interface ActionProps {
+  breadcrumbs: Breadcrumb[];
+  actionId: number;
+}
+
+export interface ViewProps extends ActionProps {
+  views: [number | false, string][];
+  model: string;
+}
+
+export type ControllerProps = ActionProps | ViewProps;
+
 export interface View {
   name: string;
   icon: string;
   multiRecord: boolean;
   type: ViewType;
-  Component: Type<Component<{}, OdooEnv>>;
+  Component: Type<Component<ViewProps, OdooEnv>>;
 }
 
 export interface SystrayItem {
