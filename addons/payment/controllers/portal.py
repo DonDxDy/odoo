@@ -188,7 +188,7 @@ class WebsitePayment(http.Controller):
     @http.route('/website_payment/transaction', type='json', auth='public', csrf=True)
     def transaction(
         self, payment_option_id, reference_prefix, amount, currency_id, partner_id, flow,
-        tokenization_requested, is_validation, landing_route, access_token=None, **kwargs
+        tokenization_requested, is_validation, landing_route, access_token=None, **kwargs  # TODO ANV remove =None
     ):
         """ Create a draft transaction and return its processing values.
 
@@ -210,14 +210,13 @@ class WebsitePayment(http.Controller):
         :rtype: dict
         :raise: ValidationError if the access token is invalid
         """
-        # Check the access token if it is provided, or if the partner is not that of the logged user  # TODO ANV shouldn't we always provide an access token ?
-        if access_token or request.env.user.partner_id.id != partner_id:
-            db_secret = request.env['ir.config_parameter'].sudo().get_param('database.secret')
-            amount = amount and float(amount)  # Cast as float in case the JS stripped the '.0'
-            if not payment_utils.check_access_token(
-                access_token, db_secret, partner_id, amount, currency_id
-            ):
-                raise ValidationError("The access token is missing or invalid.")
+        # Check the access token against the transaction values
+        db_secret = request.env['ir.config_parameter'].sudo().get_param('database.secret')
+        amount = amount and float(amount)  # Cast as float in case the JS stripped the '.0'
+        if not payment_utils.check_access_token(
+            access_token, db_secret, partner_id, amount, currency_id
+        ):
+            raise ValidationError("The access token is missing or invalid.")
 
         # Get the amount and currency from the acquirer if the transaction is a validation
         if is_validation:
@@ -284,7 +283,6 @@ class WebsitePayment(http.Controller):
         rounded_amount = float_repr(
             tx_sudo.amount, precision_digits=tx_sudo.currency_id.decimal_places
         )
-        db_secret = request.env['ir.config_parameter'].sudo().get_param('database.secret')
         access_token = payment_utils.generate_access_token(
             db_secret, tx_sudo.id, tx_sudo.reference, rounded_amount
         )
