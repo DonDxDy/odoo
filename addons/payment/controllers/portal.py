@@ -116,7 +116,7 @@ class WebsitePayment(http.Controller):
         if partner_id and not payment_utils.check_access_token(
             access_token, db_secret, *access_token_values
         ):
-            raise werkzeug.exceptions.NotFound  # Don't leak info about existence of an id
+            raise werkzeug.exceptions.NotFound  # Don't leak info about the existence of an id
 
         user_sudo = request.env.user.sudo()
         logged_in = not user_sudo._is_public()
@@ -213,6 +213,7 @@ class WebsitePayment(http.Controller):
         # Check the access token if it is provided, or if the partner is not that of the logged user  # TODO ANV shouldn't we always provide an access token ?
         if access_token or request.env.user.partner_id.id != partner_id:
             db_secret = request.env['ir.config_parameter'].sudo().get_param('database.secret')
+            amount = amount and float(amount)  # Cast as float in case the JS stripped the '.0'
             if not payment_utils.check_access_token(
                 access_token, db_secret, partner_id, amount, currency_id
             ):
