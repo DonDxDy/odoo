@@ -2,7 +2,7 @@
 
 from odoo.exceptions import AccessError
 from odoo import api, fields, models, _
-from odoo import SUPERUSER_ID
+from odoo import SUPERUSER_ID, tools
 from odoo.exceptions import UserError, ValidationError
 from odoo.http import request
 from odoo.addons.account.models.account_tax import TYPE_TAX_USE
@@ -184,7 +184,12 @@ class AccountChartTemplate(models.Model):
         if not company.chart_template_id and not self.existing_accounting(company):
             for template in self:
                 template.with_context(default_company_id=company.id)._load(15.0, 15.0, company)
-
+        # Install the demo data when the first localization is instanciated on the company
+        if tools.config['demo'].get('account'):
+            self.env['ir.module.module'].search([
+                ('name', '=', 'l10n_demo'),
+                ('state', '=', 'uninstalled')
+            ]).sudo().button_install()
 
     def _load(self, sale_tax_rate, purchase_tax_rate, company):
         """ Installs this chart of accounts on the current company, replacing

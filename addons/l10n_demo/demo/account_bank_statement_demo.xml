@@ -12,7 +12,7 @@
 
         <record id="demo_bank_statement_line_1" model="account.bank.statement.line">
             <field name="ref"></field>
-            <field name="statement_id" ref="l10n_generic_coa.demo_bank_statement_1"/>
+            <field name="statement_id" ref="l10n_demo.demo_bank_statement_1"/>
             <field name="sequence">1</field>
             <field name="payment_ref" eval="'INV/%s/00002 and INV/%s/00003' % (time.strftime('%Y'), time.strftime('%Y'))"/>
             <field name="journal_id" model="account.journal" search="[
@@ -25,7 +25,7 @@
 
         <record id="demo_bank_statement_line_2" model="account.bank.statement.line">
             <field name="ref"></field>
-            <field name="statement_id" ref="l10n_generic_coa.demo_bank_statement_1"/>
+            <field name="statement_id" ref="l10n_demo.demo_bank_statement_1"/>
             <field name="sequence">2</field>
             <field name="payment_ref">Bank fees</field>
             <field name="journal_id" model="account.journal" search="[
@@ -37,7 +37,7 @@
 
         <record id="demo_bank_statement_line_3" model="account.bank.statement.line">
             <field name="ref"></field>
-            <field name="statement_id" ref="l10n_generic_coa.demo_bank_statement_1"/>
+            <field name="statement_id" ref="l10n_demo.demo_bank_statement_1"/>
             <field name="sequence">3</field>
             <field name="payment_ref">Prepayment</field>
             <field name="journal_id" model="account.journal" search="[
@@ -50,7 +50,7 @@
 
         <record id="demo_bank_statement_line_4" model="account.bank.statement.line">
             <field name="ref"></field>
-            <field name="statement_id" ref="l10n_generic_coa.demo_bank_statement_1"/>
+            <field name="statement_id" ref="l10n_demo.demo_bank_statement_1"/>
             <field name="sequence">4</field>
             <field name="payment_ref" eval="'First 2000 $ of invoice %s/00001' % time.strftime('%Y')"/>
             <field name="journal_id" model="account.journal" search="[
@@ -63,7 +63,7 @@
 
         <record id="demo_bank_statement_line_5" model="account.bank.statement.line">
             <field name="ref"></field>
-            <field name="statement_id" ref="l10n_generic_coa.demo_bank_statement_1"/>
+            <field name="statement_id" ref="l10n_demo.demo_bank_statement_1"/>
             <field name="sequence">5</field>
             <field name="payment_ref">Last Year Interests</field>
             <field name="journal_id" model="account.journal" search="[
@@ -75,7 +75,7 @@
 
         <record id="demo_bank_statement_line_6" model="account.bank.statement.line">
             <field name="ref"></field>
-            <field name="statement_id" ref="l10n_generic_coa.demo_bank_statement_1"/>
+            <field name="statement_id" ref="l10n_demo.demo_bank_statement_1"/>
             <field name="sequence">1</field>
             <field name="payment_ref" eval="'INV/'+time.strftime('%Y')+'/00002'"/>
             <field name="journal_id" model="account.journal" search="[
@@ -88,7 +88,7 @@
 
         <record id="demo_bank_statement_line_7" model="account.bank.statement.line">
             <field name="ref"></field>
-            <field name="statement_id" ref="l10n_generic_coa.demo_bank_statement_1"/>
+            <field name="statement_id" ref="l10n_demo.demo_bank_statement_1"/>
             <field name="sequence">7</field>
             <field name="payment_ref">R:9772938  10/07 AX 9415116318 T:5 BRT: 100,00€ C/ croip</field>
             <field name="journal_id" model="account.journal" search="[
@@ -103,7 +103,7 @@
 
         <record id="ir_attachment_bank_statement_1" model="ir.attachment">
             <field name="type">binary</field>
-            <field name="datas" type="base64" file="l10n_generic_coa/static/src/demo/bank_statement_yourcompany_1.pdf"/>
+            <field name="datas" type="base64" file="l10n_demo/static/src/demo/bank_statement_yourcompany_1.pdf"/>
             <field name="name">bank_statement_yourcompany_demo.pdf</field>
             <field name="res_model">account.bank.statement</field>
             <field name="res_id" ref="demo_bank_statement_1"/>
@@ -115,7 +115,7 @@
 
         <record id="mail_message_bank_statement_1" model="mail.message">
             <field name="model">account.bank.statement</field>
-            <field name="res_id" ref="l10n_generic_coa.demo_bank_statement_1"/>
+            <field name="res_id" ref="l10n_demo.demo_bank_statement_1"/>
             <field name="body">Bank statement attachment</field>
             <field name="message_type">comment</field>
             <field name="author_id" ref="base.partner_demo"/>

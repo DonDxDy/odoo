@@ -10,23 +10,21 @@
         </record>
 
         <record id="reconcile_from_label_line1" model="account.reconcile.model.line">
-            <field name="model_id" ref="l10n_generic_coa.reconcile_from_label"/>
+            <field name="model_id" ref="l10n_demo.reconcile_from_label"/>
             <field name="sequence">1</field>
             <field name="label">Due amount</field>
             <field name="account_id" model="account.account"
-                search="[('user_type_id', '=', ref('account.data_account_type_revenue')),
-                         ('company_id', '=', obj().env.company.id)]"/>
+                eval="obj()._get_demo_account('income', 'account.data_account_type_revenue', obj().env.company)"/>
             <field name="amount_type">regex</field>
             <field name="amount_string">BRT: ([\d,]+)</field>
         </record>
 
         <record id="reconcile_from_label_line2" model="account.reconcile.model.line">
-            <field name="model_id" ref="l10n_generic_coa.reconcile_from_label"/>
+            <field name="model_id" ref="l10n_demo.reconcile_from_label"/>
             <field name="sequence">2</field>
             <field name="label">Bank Fees</field>
             <field name="account_id" model="account.account"
-                search="[('user_type_id', '=', ref('account.data_account_type_direct_costs')),
-                         ('company_id', '=', obj().env.company.id)]"/>
+                eval="obj()._get_demo_account('cost_of_goods_sold', 'account.data_account_type_direct_costs', obj().env.company)"/>
             <field name="amount_type">percentage</field>
             <field name="amount_string">100</field>
         </record>
