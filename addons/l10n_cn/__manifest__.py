@@ -33,7 +33,7 @@ State Data/省份数据
     修改小企业会计税率
 
     """,
-    'depends': ['base', 'account', 'l10n_multilang'],
+    'depends': ['base', 'account', 'l10n_cn_base', 'l10n_multilang'],
     'data': [
         'data/account_tax_group_data.xml',
         'data/l10n_cn_chart_data.xml',
