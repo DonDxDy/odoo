@@ -100,7 +100,7 @@ odoo.define('web.filter_menu_generator_tests', function (require) {
 
             // Default value
             expectedFilters = [{
-                description: 'Color is "black"',
+                description: 'Color is "Black"',
                 domain: '[["color","=","black"]]',
                 type: 'filter',
             }];
@@ -110,7 +110,7 @@ odoo.define('web.filter_menu_generator_tests', function (require) {
 
             // Updated value
             expectedFilters = [{
-                description: 'Color is "white"',
+                description: 'Color is "White"',
                 domain: '[["color","=","white"]]',
                 type: 'filter',
             }];
