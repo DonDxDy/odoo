@@ -909,7 +909,7 @@ class WebsiteSale(http.Controller):
 
         # Prepare the create values that are common to all online payment flows
         create_tx_values = {
-            'reference': None,  # The reference is computed based on the order at creation time
+            'reference': None,  # The reference is computed based on the order id at creation time
             'amount': amount,
             'currency_id': currency_id,
             'partner_id': partner_id,

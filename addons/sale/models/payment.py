@@ -135,10 +135,25 @@ class PaymentTransaction(models.Model):
                 trans.invoice_ids = [(6, 0, invoices.ids)]
 
     @api.model
-    def _compute_reference_prefix(self, provider, separator, data):
-        prefix = super()._compute_reference_prefix(provider, separator, data)
-        order_ids = data.get('sale_order_ids')
-        if not prefix and order_ids:  # 'order_ids' is in data, and order_ids is not empty
+    def _compute_reference_prefix(self, provider, separator, values):
+        """ Compute the reference prefix from the transaction values.
+
+        If the `values` parameter has an entry with 'sale_order_ids' as key and a list of (4, id, O)
+        or (6, 0, ids) X2M command as value, the prefix is computed based on the sales order name(s)
+        Otherwise, the computation is delegated to the super method.
+
+        :param str provider: The provider of the acquirer handling the transaction
+        :param str separator: The custom separator used to separate data references
+        :param dict values: The transaction values used to compute the reference prefix. It should
+                            have the structure {'sale_order_ids': [(X2M command), ...], ...}.
+        :return: The computed reference prefix if order ids are found, the one of super otherwise
+        :rtype: str
+        """
+        prefix = super()._compute_reference_prefix(provider, separator, values)  # TODO ANV make sure SIPS can always reformat
+        command_list = values.get('sale_order_ids')
+        if command_list:
+            # Extract sales order id(s) from the X2M commands
+            order_ids = self._fields['sale_order_ids'].convert_to_cache(command_list, self)
             orders = self.env['sale.order'].browse(order_ids).exists()
             if len(orders) == len(order_ids):  # All ids are valid
                 prefix = separator.join(orders.mapped('name'))

@@ -241,7 +241,7 @@ class WebsitePayment(http.Controller):
             reference = request.env['payment.transaction']._compute_reference(
                 acquirer_sudo.provider,
                 prefix=reference_prefix,
-                sale_order_ids=([order_id] if order_id else [])
+                sale_order_ids=([order_id] if order_id else [])  # TODO ANV 6, 0 in create values
             )
             tokenize = bool(
                 # Public users are not allowed to save tokens as their partner is unknown
@@ -251,7 +251,7 @@ class WebsitePayment(http.Controller):
             )
             tx_sudo = request.env['payment.transaction'].sudo().with_context(lang=None).create({
                 'acquirer_id': acquirer_sudo.id,
-                'reference': reference,
+                'reference': reference,  # TODO pass prefix in create vals and pop
                 'tokenize': tokenize,
                 **create_tx_values,
             })  # In sudo mode to allowed writing on callback fields
@@ -263,11 +263,11 @@ class WebsitePayment(http.Controller):
             reference = request.env['payment.transaction']._compute_reference(
                 token_sudo.acquirer_id.provider,
                 prefix=reference_prefix,
-                sale_order_ids=([order_id] if order_id else [])
+                sale_order_ids=([order_id] if order_id else [])  # TODO ANV 6, 0 in create values
             )
             tx_sudo = request.env['payment.transaction'].sudo().with_context(lang=None).create({
                 'acquirer_id': token_sudo.acquirer_id.id,
-                'reference': reference,
+                'reference': reference,  # TODO pass prefix in create vals and pop
                 'token_id': payment_option_id,
                 **create_tx_values,
             })  # In sudo mode to allowed writing on callback fields

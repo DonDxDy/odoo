@@ -1,5 +1,6 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
+from collections.abc import Iterable
 import hashlib
 import hmac
 import logging
@@ -138,12 +139,7 @@ class PaymentTransaction(models.Model):
             acquirer = self.env['payment.acquirer'].browse(values['acquirer_id'])
 
             if not values.get('reference'):
-                # If the values contain a (6, 0, ids) command for the invoices, extract their ids
-                # and use them to compute the reference
-                invoice_ids = list(values['invoice_ids'][0][2]) if 'invoice_ids' in values else []
-                values['reference'] = self._compute_reference(
-                    acquirer.provider, invoice_ids=invoice_ids
-                )
+                values['reference'] = self._compute_reference(acquirer.provider, **values)
 
             # Compute fees
             values['fees'] = acquirer._compute_fees(
@@ -222,7 +218,7 @@ class PaymentTransaction(models.Model):
         :param str prefix: The custom prefix used to compute the full reference
         :param str separator: The custom separator used to separate the prefix from the suffix, and
                               passed to `_compute_reference_prefix` if it is called
-        :param dict kwargs: Optional data passed as is to `_compute_reference_prefix` if no custom
+        :param dict kwargs: Optional values passed as is to `_compute_reference_prefix` if no custom
                             prefix is provided
         :return: The unique reference for the transaction
         :rtype: str
@@ -271,21 +267,24 @@ class PaymentTransaction(models.Model):
         return reference
 
     @api.model
-    def _compute_reference_prefix(self, provider, separator, data):
-        """ Compute the reference prefix from the transaction data. Return an empty str if no data.
+    def _compute_reference_prefix(self, provider, separator, values):
+        """ Compute the reference prefix from the transaction values.
 
-        The `data` parameter is only used in the computation if it has an entry with the key
-        'invoice_ids' and an iterable of valid `account.move` ids as value.
+        If the `values` parameter has an entry with 'invoice_ids' as key and a list of (4, id, O) or
+        (6, 0, ids) X2M command as value, the prefix is computed based on the invoice name(s).
+        Otherwise, an empty string is returned.
 
         :param str provider: The provider of the acquirer handling the transaction
         :param str separator: The custom separator used to separate data references
-        :param dict data: The transaction data used to compute the reference prefix. It should have
-                          the structure {'invoice_ids': [1, 2, ...]}.
-        :return: The computed reference prefix if data were provided, the string '' otherwise
+        :param dict values: The transaction values used to compute the reference prefix. It should
+                            have the structure {'invoice_ids': [(X2M command), ...], ...}.
+        :return: The computed reference prefix if invoice ids are found, an empty string otherwise
         :rtype: str
         """
-        invoice_ids = data.get('invoice_ids')
-        if invoice_ids:  # 'invoice_ids' is in data, and invoice_ids is not empty
+        command_list = values.get('invoice_ids')
+        if command_list:
+            # Extract invoice id(s) from the X2M commands
+            invoice_ids = self._fields['invoice_ids'].convert_to_cache(command_list, self)
             invoices = self.env['account.move'].browse(invoice_ids).exists()
             if len(invoices) == len(invoice_ids):  # All ids are valid
                 return separator.join(invoices.mapped('name'))
@@ -727,12 +726,12 @@ class PaymentTransaction(models.Model):
 
     #=== LOGGING METHODS ===#
 
-    def _log_sent_message(self):
+    def _log_sent_message(self):  # TODO ANV call this _only_ in payment's /transaction route
         """ Log in the chatter of relevant documents that the transactions have been requested.
 
         :return: None
         """
-        for tx in self.filtered('invoice_ids'):
+        for tx in self.filtered('invoice_ids'):  # TODO ANV rely on a _get_linked_documents method
             message = tx._get_sent_message()
             for invoice in tx.invoice_ids:
                 invoice.message_post(body=message)
@@ -767,7 +766,7 @@ class PaymentTransaction(models.Model):
             )  # TODO ANV check that at least one acquirer uses this, or remove
         return message
 
-    def _log_received_message(self):
+    def _log_received_message(self):  # TODO ANV same as for _log_sent_message for the method definition
         """ Log in the chatter of relevant documents that the transactions have been received.
 
         A transaction is 'received' when a response is received from the provider of the acquirer

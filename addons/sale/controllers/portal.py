@@ -307,7 +307,7 @@ class CustomerPortal(CustomerPortal):
 
         # Prepare the create values that are common to all online payment flows
         create_tx_values = {
-            'reference': None,  # The reference is computed based on the order at creation time  # TODO ANV not working -> tx
+            'reference': None,  # The reference is computed based on the order at creation time
             'amount': amount,
             'currency_id': currency_id,
             'partner_id': partner_id,
