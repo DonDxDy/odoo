@@ -901,7 +901,7 @@ class WebsiteSale(http.Controller):
         """
         # Check the order id and the access token
         # try:
-        #     self._document_check_access('sale.order', order_id, access_token)  # TODO ANV YTI inherited from CustomerPortal which is not extended here
+        #     self._document_check_access('sale.order', order_id, access_token)  # TODO ANV reimplement method from CustomerPortal
         # except MissingError as error:
         #     raise error
         # except AccessError:

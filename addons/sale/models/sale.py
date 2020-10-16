@@ -918,34 +918,6 @@ Reason(s) of this behavior could be:
 
         return groups
 
-    def _get_payment_transaction_create_values(self):  # TODO ANV remove entirely ?
-        """ Return the create values for a transaction linked to the current sales orders.
-
-        :return: The sales-related create values for a `payment.transaction` record
-        :rtype: dict
-        :raise: ValidationError if the sales orders values are inconsistent
-        """
-        # Ensure the sales orders currencies are the same
-        currency = self[0].pricelist_id.currency_id  # TODO ANV use len(self.pricelist_id) != 0
-        if any(order.pricelist_id.currency_id != currency for order in self):
-            raise ValidationError(
-                _("A transaction cannot be linked to sales orders having different currencies.")
-            )
-
-        # Ensure the partner are the same.
-        partner = self[0].partner_id
-        if any(order.partner_id != partner for order in self):
-            raise ValidationError(
-                _("A transaction cannot be linked to sales orders having different partners.")
-            )
-
-        return {
-            'amount': sum(self.mapped('amount_total')),
-            'currency_id': currency.id,
-            'partner_id': partner.id,
-            'sale_order_ids': [(6, 0, self.ids)],
-        }
-
     def preview_sale_order(self):
         self.ensure_one()
         return {

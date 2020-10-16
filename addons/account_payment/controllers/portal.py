@@ -34,7 +34,7 @@ class PortalAccountPayment(PortalAccount):
             'tokens': tokens,
             'fees_by_acquirer': fees_by_acquirer,
             'show_tokenize_input': logged_in,  # Prevent public partner from saving payment methods
-            'amount': invoice.amount_residual,  # TODO ANV keep that ? Set None ? Use get_create_vals ?
+            'amount': invoice.amount_residual,
             'currency': invoice.currency_id,
             'partner_id': partner_id,
             'access_token': access_token,

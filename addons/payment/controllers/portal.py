@@ -188,7 +188,7 @@ class WebsitePayment(http.Controller):
     @http.route('/website_payment/transaction', type='json', auth='public', csrf=True)
     def transaction(
         self, payment_option_id, reference_prefix, amount, currency_id, partner_id, flow,
-        tokenization_requested, is_validation, landing_route, access_token=None, **kwargs  # TODO ANV remove =None
+        tokenization_requested, is_validation, landing_route, access_token=None, **kwargs  # TODO ANV remove =None everywhere
     ):
         """ Create a draft transaction and return its processing values.
 
