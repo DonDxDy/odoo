@@ -394,6 +394,12 @@ var LivechatButton = Widget.extend({
         if (shouldAskFeedback) {
             this._chatWindow.toggleFold(false);
             this._askFeedback();
+            const cookie = utils.get_cookie('im_livechat_session');
+            if (cookie) {
+                const channel = JSON.parse(cookie);
+                session.rpc('/im_livechat/visitor_leave_session', {uuid: channel.uuid});
+                utils.set_cookie('im_livechat_session', "", -1); // remove cookie
+            }
         } else {
             this._closeChat();
         }

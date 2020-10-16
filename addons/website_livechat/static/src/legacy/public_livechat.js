@@ -22,22 +22,6 @@ LivechatButton.include({
         }
         return this._super();
     },
-
-    /**
-     * @override
-     * Called when the visitor closes the livechat chatter the first time (first click on X button)
-     * this will deactivate the mail_channel, clean the chat request if any
-     * and allow the operators to send the visitor a new chat request
-     */
-    _onCloseChatWindow: function (ev) {
-        this._super(ev);
-        var cookie = utils.get_cookie('im_livechat_session');
-        if (cookie) {
-            var channel = JSON.parse(cookie);
-            session.rpc('/im_livechat/visitor_leave_session', {uuid: channel.uuid});
-            utils.set_cookie('im_livechat_session', "", -1); // remove cookie
-        }
-    },
 });
 
 return {
