@@ -5,7 +5,7 @@
 
 {
     'name': 'Worldline SIPS',
-    'version': '1.1',
+    'version': '2.0',
     'author': 'Eezee-It',
     'category': 'Accounting/Payment Acquirers',
     'sequence': 385,
@@ -21,8 +21,7 @@ not guaranteed.""",
         'views/payment_sips_templates.xml',
         'data/payment_acquirer_data.xml',
     ],
-    'installable': True,
     'application': True,
-    'post_init_hook': 'create_missing_journal_for_acquirers',
+    'post_init_hook': 'post_init_hook',
     'uninstall_hook': 'uninstall_hook',
 }
