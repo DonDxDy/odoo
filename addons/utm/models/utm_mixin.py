@@ -34,14 +34,8 @@ class UtmMixin(models.AbstractModel):
                     value = request.httprequest.cookies.get(cookie_name)
                 # if we receive a string for a many2one, we search/create the id
                 if field.type == 'many2one' and isinstance(value, str) and value:
-                    Model = self.env[field.comodel_name]
-                    records = Model.search([('name', '=', value)], limit=1)
-                    if not records:
-                        if 'is_website' in records._fields:
-                            records = Model.create({'name': value, 'is_website': True})
-                        else:
-                            records = Model.create({'name': value})
-                    value = records.id
+                    record = self._find_or_create_record(field.comodel_name, value)
+                    value = record.id
                 if value:
                     values[field_name] = value
         return values
@@ -59,3 +53,37 @@ class UtmMixin(models.AbstractModel):
             ('utm_source', 'source_id', 'odoo_utm_source'),
             ('utm_medium', 'medium_id', 'odoo_utm_medium'),
         ]
+
+    def _generate_url_parameters(self):
+        """Generate the URL parameters for the UTM records.
+
+        Generate the parameters to add in the URL to be able to track the UTM records
+        (source, medium, campaign...).
+        """
+        self.ensure_one()
+        url_parameters = {}
+        for url_parameter, field_name, cookie_name in self.env['utm.mixin'].tracking_fields():
+            record = getattr(self, field_name)
+            if record:
+                url_parameters[url_parameter] = record.identifier
+        return url_parameters
+
+    def _find_or_create_record(self, model_name, identifier):
+        """Based on the URL parameter, retrieve the corresponding record or create it."""
+        Model = self.env[model_name]
+
+        record = None
+        if identifier:
+            record = Model.search([('identifier', '=', identifier)], limit=1)
+
+        if not record:
+            record = Model.search([('name', 'ilike', identifier)], limit=1)
+
+        if not record:
+            # No record found, create a new one
+            record_values = {'identifier': identifier}
+            if 'is_website' in record._fields:
+                record_values.update({'is_website': True})
+            record = Model.create(record_values)
+
+        return record

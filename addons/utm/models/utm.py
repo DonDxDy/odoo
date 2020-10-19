@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import fields, models, api, SUPERUSER_ID
+import uuid
+
+from odoo import fields, models, api, tools, SUPERUSER_ID
 
 
 class UtmMedium(models.Model):
-    # OLD crm.case.channel
     _name = 'utm.medium'
     _description = 'UTM Medium'
     _order = 'name'
+    _inherit = ['utm.object']
 
-    name = fields.Char(string='Medium Name', required=True)
     active = fields.Boolean(default=True)
 
 
@@ -18,8 +19,7 @@ class UtmCampaign(models.Model):
     # OLD crm.case.resource.type
     _name = 'utm.campaign'
     _description = 'UTM Campaign'
-
-    name = fields.Char(string='Campaign Name', required=True, translate=True)
+    _inherit = ['utm.object']
 
     user_id = fields.Many2one(
         'res.users', string='Responsible',
@@ -45,8 +45,21 @@ class UtmCampaign(models.Model):
 class UtmSource(models.Model):
     _name = 'utm.source'
     _description = 'UTM Source'
+    _inherit = ['utm.object']
 
-    name = fields.Char(string='Source Name', required=True, translate=True)
+    def _generate_name(self, record, content):
+        """Generate the UTM source name based on the content of the source."""
+        if len(content) > 25:
+            content = f'{content[:25]}...'
+
+        create_date = record.create_date or fields.date.today()
+        create_date = fields.date.strftime(create_date, tools.DEFAULT_SERVER_DATE_FORMAT)
+        return f'{content} ({record._description} created on {create_date})'
+
+    def _generate_identifier(self, record):
+        """Generate the UTM source identifier based on the record."""
+        return f'{record._table}_{str(uuid.uuid4())[:8]}'
+
 
 class UtmStage(models.Model):
 
