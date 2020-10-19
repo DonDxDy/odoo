@@ -218,7 +218,18 @@ odoo.define('web.CustomFilterItem', function (require) {
          */
         _onOperatorSelect(condition, ev) {
             condition.operator = ev.target.selectedIndex;
-            this._setDefaultValue(condition);
+            // on operator change remove value from date/datetime field
+            const fieldType = this.fields[condition.field].type;
+            const genericType = FIELD_TYPES[fieldType];
+            const operator = FIELD_OPERATORS[genericType][condition.operator];
+            if (['date', 'datetime'].includes(genericType)) {
+                if (operator.symbol !== 'between' && condition.value.length === 2) {
+                    condition.value.splice(1, 1);
+                } else if (operator.symbol === 'between') {
+                    const value = genericType === 'date' ? moment() : moment('23:59:59', 'hh:mm:ss');
+                    condition.value.push(value);
+                }
+            }
         }
 
         /**
