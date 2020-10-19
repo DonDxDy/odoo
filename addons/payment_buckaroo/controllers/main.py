@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 import logging
 import pprint
@@ -25,7 +25,8 @@ class BuckarooController(http.Controller):
     def buckaroo_return(self, **post):
         """ Buckaroo."""
         _logger.info('Buckaroo: entering form_feedback with post data %s', pprint.pformat(post))  # debug
-        request.env['payment.transaction'].sudo().form_feedback(post, 'buckaroo')
+        request.env['payment.transaction'].sudo()._handle_feedback_data(provider='buckaroo', data=post)
         post = {key.upper(): value for key, value in post.items()}
+        # TODO mba may be remove the return_url
         return_url = post.get('ADD_RETURNDATA') or '/'
-        return werkzeug.utils.redirect('/payment/process')
+        return werkzeug.utils.redirect('/payment/status')

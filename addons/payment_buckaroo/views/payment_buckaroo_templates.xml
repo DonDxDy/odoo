@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data noupdate="1">
-        <template id="buckaroo_form">
-            <div>
-                <input type="hidden" name="data_set" t-att-data-action-url="tx_url" data-remove-me=""/>
+        <template id="buckaroo_redirect_form_template">
+            <form t-att-action="tx_url" method="post">
                 <input type="hidden" name="Brq_websitekey" t-att-value="Brq_websitekey"/>
                 <input type="hidden" name="Brq_amount" t-att-value="Brq_amount"/>
                 <input type="hidden" name="Brq_currency" t-att-value="Brq_currency"/>
@@ -21,7 +20,7 @@
                 <input t-if="Brq_returnreject" type="hidden" name='Brq_returnreject'
                     t-att-value="Brq_returnreject"/>
                 <input type="hidden" name='add_returndata' t-att-value="add_returndata"/>
-            </div>
+            </form>
         </template>
     </data>
 </odoo>

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 {
     'name': 'Buckaroo Payment Acquirer',
@@ -15,6 +15,6 @@
     ],
     'installable': True,
     'application': True,
-    'post_init_hook': 'create_missing_journal_for_acquirers',
+    'post_init_hook': 'post_init_hook',
     'uninstall_hook': 'uninstall_hook',
 }
