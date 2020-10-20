@@ -25,6 +25,12 @@
                     </t>
                 </div>
                 <div class="o_Chatter_scrollPanel" t-on-scroll="_onScrollPanelScroll">
+                    <t t-if="chatter.isSearchBoxVisible">
+                        <ChatterSearchBox
+                            class="o_Chatter_searchBox"
+                            threadLocalId="chatter.thread.localId"
+                        />
+                    </t>
                     <t t-if="chatter.isAttachmentBoxVisible">
                         <AttachmentBox
                             class="o_Chatter_attachmentBox"

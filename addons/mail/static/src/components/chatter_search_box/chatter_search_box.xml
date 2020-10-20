@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mail.ChatterSearchBox" owl="1">
+        <div class="o_ChatterSearchBox">
+            <input class="o_ChatterSearchBox_textInput" placeholder="Search..."/>
+        </div>
+    </t>
+
+</templates>

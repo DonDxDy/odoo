@@ -37,6 +37,11 @@
                     </t>
                     <div class="o-autogrow"/>
                         <div class="o_ChatterTopbar_rightSection">
+                            <button class="btn btn-link o_ChatterTopbar_button o_ChatterTopbar_buttonSearch"
+                                t-att-disabled="chatter.isDisabled" t-on-click="_onClickSearch"
+                            >
+                                <i class="fa fa-search"/>
+                            </button>
                             <button class="btn btn-link o_ChatterTopbar_button o_ChatterTopbar_buttonAttachments" type="button" t-att-disabled="chatter.isDisabled" t-on-click="_onClickAttachments">
                                 <i class="fa fa-paperclip"/>
                                 <t t-if="chatter.isDisabled or !chatter.isShowingAttachmentsLoading">

@@ -110,6 +110,16 @@ class ChatterTopbar extends Component {
      * @private
      * @param {MouseEvent} ev
      */
+    _onClickSearch(ev) {
+        this.chatter.update({
+            isSearchBoxVisible: !this.chatter.isSearchBoxVisible,
+        });
+    }
+
+    /**
+     * @private
+     * @param {MouseEvent} ev
+     */
     _onClickSendMessage(ev) {
         if (!this.chatter.composer) {
             return;

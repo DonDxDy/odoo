@@ -260,6 +260,9 @@ function factory(dependencies) {
         isDoFocus: attr({
             default: false,
         }),
+        isSearchBoxVisible: attr({
+            default: false,
+        }),
         isShowingAttachmentsLoading: attr({
             default: false,
         }),
