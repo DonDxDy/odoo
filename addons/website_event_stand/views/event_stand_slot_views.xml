@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo><data>
+
+    <record id="event_stand_slot_view_form" model="ir.ui.view">
+        <field name="name">event.stand.slot.view.form</field>
+        <field name="model">event.stand.slot</field>
+        <field name="arch" type="xml">
+            <form string="Slot">
+                <header>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div name="button_box" class="oe_button_box">
+                        <button name="action_view_sale_order" type="object" class="oe_stat_button" icon="fa-usd"
+                                attrs="{'invisible': [('sale_order_id', '=', False)]}" string="Sale Order"/>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="topic"/>
+                            <field name="partner_id"/>
+                            <label for="date_from" string="Date"/>
+                            <div class="o_row">
+                                <field name="date_from" widget="daterange" options="{'related_end_date': 'date_to'}"/>
+                                <i class="fa fa-long-arrow-right mx-2" aria-label="Arrow icon" title="Arrow"/>
+                                <field name="date_to" widget="daterange" options="{'related_start_date': 'date_from'}"/>
+                            </div>
+                        </group>
+                        <group groups="base.group_no_one">
+                            <field name="sale_order_id"/>
+                            <field name="sale_order_line_id"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="event_stand_slot_view_tree" model="ir.ui.view">
+        <field name="name">event.stand.slot.view.tree</field>
+        <field name="model">event.stand.slot</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="topic"/>
+                <field name="partner_id"/>
+                <field name="date_from"/>
+                <field name="date_to"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="event_stand_slot_action" model="ir.actions.act_window">
+        <field name="name">Slots</field>
+        <field name="res_model">event.stand.slot</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('event_stand_id', '=', active_id)]</field>
+        <field name="context">{'default_event_stand_id': active_id}</field>
+    </record>
+
+</data></odoo>

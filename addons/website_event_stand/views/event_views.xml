@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo><data>
+
+    <record id="event_event_view_form_inherit_stand" model="ir.ui.view">
+        <field name="name">event.event.view.form.inherit.stand</field>
+        <field name="model">event.event</field>
+        <field name="inherit_id" ref="event.view_event_form"/>
+        <field name="arch" type="xml">
+            <div name="button_box" position="inside">
+                <button class="oe_stat_button" name="%(event_stand_action)d"
+                        type="action" icon="fa-university">
+                    <div class="o_field_widget o_stat_info">
+                        <div>
+                            <field name="event_stand_count" widget="statinfo" string="Stands"/>
+                        </div>
+                        <div>
+                            <field name="event_stand_slot_count" widget="statinfo" string="Slots"/>
+                        </div>
+                    </div>
+                </button>
+            </div>
+            <page name="event_communication" position="after">
+                <page string="Map" name="event_exhibition_map">
+                    <group>
+                        <field name="exhibition_map"/>
+                    </group>
+                </page>
+            </page>
+            <field name='website_menu' position="after">
+                <label for="website_stand" string="Stand Register"/>
+                <field name="website_stand"/>
+            </field>
+        </field>
+    </record>
+
+</data></odoo>

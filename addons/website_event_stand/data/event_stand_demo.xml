@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo><data>
+
+    <!--EVENT STAND TYPE-->
+
+    <record id="event_stand_type_standard" model="event.stand.type">
+        <field name="name">Standard</field>
+        <field name="product_id" ref="website_event_stand.product_product_event_stand"/>
+        <field name="image" type="base64" file="website_event_stand/static/src/img/standard-booth.jpeg"/>
+        <field name="sequence">1</field>
+        <field name="price">100</field>
+        <field name="extra_price">20</field>
+        <field name="description" type="html">
+            <div class="card text-center shadow-sm mx-4 mt32">
+                <div class="card-header p-4 bg-600">
+                    <h4 class="text-white m-0">Standard</h4>
+                </div>
+                <div class="card-body">
+                    <h3>100 €</h3>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item bg-600">
+                        <span class="text-white">4m²</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>1 Branded Booth</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Standard Location</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>46" display screen</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>1 desk</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Logo &amp; link on website</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Feature in agenda</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Promotional banners</span><br/>
+                        <span>(for you emails &amp; website</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Invitation brochure</span>
+                    </li>
+                </ul>
+            </div>
+        </field>
+    </record>
+
+    <record id="event_stand_type_premium" model="event.stand.type">
+        <field name="name">Premium</field>
+        <field name="product_id" ref="website_event_stand.product_product_event_stand"/>
+        <field name="image" type="base64" file="website_event_stand/static/src/img/premium-booth.jpeg"/>
+        <field name="sequence">2</field>
+        <field name="price">500</field>
+        <field name="extra_price">100</field>
+        <field name="description" type="html">
+            <div class="card text-center shadow-sm mx-4 mt32">
+                <div class="card-header p-4 bg-secondary">
+                    <h4 class="text-white m-0">Premium</h4>
+                </div>
+                <div class="card-body">
+                    <h3>500 €</h3>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item bg-secondary">
+                        <span class="text-white">4m²</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>1 Branded Booth</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Premium Location</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>46" display screen</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>1 desk</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Logo &amp; link on website</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>50 words description on website</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Feature in agenda</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Social media promotion</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>10 + 1 passes</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Promotional banners</span><br/>
+                        <span>(for you emails &amp; website</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Invitation brochure</span>
+                    </li>
+                </ul>
+            </div>
+        </field>
+    </record>
+
+    <record id="event_stand_type_vip" model="event.stand.type">
+        <field name="name">VIP</field>
+        <field name="product_id" ref="website_event_stand.product_product_event_stand"/>
+        <field name="image" type="base64" file="website_event_stand/static/src/img/vip-booth.jpeg"/>
+        <field name="sequence">3</field>
+        <field name="price">1000</field>
+        <field name="description" type="html">
+            <div class="card text-center shadow-sm mx-4 mt32">
+                <div class="card-header p-4 bg-primary">
+                    <h4 class="text-white m-0">VIP</h4>
+                </div>
+                <div class="card-body">
+                    <h3>1000 €</h3>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item bg-primary">
+                        <span class="text-white">8m²</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>2 Branded Booth</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Premium Location</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>2 x 46" display screens</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>2 desks</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Logo &amp; link on website</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>100 words description on website</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Feature in agenda</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Social media promotion</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>10 + 1 passes</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Promotional banners</span><br/>
+                        <span>(for you emails &amp; website</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span>Invitation brochure</span>
+                    </li>
+                </ul>
+            </div>
+        </field>
+    </record>
+
+    <!--EVENT STAND FOR "Design Fair Los Angeles" EVENT-->
+
+    <record id="event.event_0" model="event.event">
+        <field name="website_menu" eval="True"/>
+        <field name="website_stand" eval="True"/>
+    </record>
+
+    <record id="event_stand_0_event_0" model="event.stand">
+        <field name="name">A1</field>
+        <field name="event_id" ref="event.event_0"/>
+        <field name="stand_type_id" ref="website_event_stand.event_stand_type_standard"/>
+    </record>
+
+    <record id="event_stand_0_event_0_slot_0" model="event.stand.slot">
+        <field name="event_stand_id" ref="event_stand_0_event_0"/>
+        <field name="date_from" model="event.stand.slot"
+               eval="obj().env.ref('event.event_0').date_begin"/>
+        <field name="date_to" model="event.stand.slot"
+               eval="obj().env.ref('event.event_0').date_begin + relativedelta(hour=18)"/>
+    </record>
+
+    <record id="event_stand_0_event_0_slot_1" model="event.stand.slot">
+        <field name="event_stand_id" ref="event_stand_0_event_0"/>
+        <field name="date_from" model="event.stand.slot"
+               eval="obj().env.ref('event.event_0').date_begin + timedelta(days=1)"/>
+        <field name="date_to" model="event.stand.slot"
+               eval="obj().env.ref('event.event_0').date_begin + relativedelta(days=1, hour=18)"/>
+    </record>
+
+    <record id="event_stand_0_event_0_slot_2" model="event.stand.slot">
+        <field name="event_stand_id" ref="event_stand_0_event_0"/>
+        <field name="date_from" model="event.stand.slot"
+               eval="obj().env.ref('event.event_0').date_begin + timedelta(days=2)"/>
+        <field name="date_to" model="event.stand.slot"
+               eval="obj().env.ref('event.event_0').date_begin + relativedelta(days=2, hour=18)"/>
+    </record>
+
+    <record id="event_stand_0_event_0_slot_3" model="event.stand.slot">
+        <field name="event_stand_id" ref="event_stand_0_event_0"/>
+        <field name="date_from" model="event.stand.slot"
+               eval="obj().env.ref('event.event_0').date_begin + timedelta(days=3)"/>
+        <field name="date_to" model="event.stand.slot"
+               eval="obj().env.ref('event.event_0').date_begin + relativedelta(days=3, hour=18)"/>
+    </record>
+
+    <record id="event_stand_0_event_0_slot_4" model="event.stand.slot">
+        <field name="event_stand_id" ref="event_stand_0_event_0"/>
+        <field name="date_from" model="event.stand.slot"
+               eval="obj().env.ref('event.event_0').date_begin + timedelta(days=4)"/>
+        <field name="date_to" model="event.stand.slot"
+               eval="obj().env.ref('event.event_0').date_begin + relativedelta(days=4, hour=18)"/>
+    </record>
+
+    <record id="event_stand_1_event_0" model="event.stand">
+        <field name="name">A2</field>
+        <field name="event_id" ref="event.event_0"/>
+        <field name="stand_type_id" ref="website_event_stand.event_stand_type_standard"/>
+    </record>
+
+    <record id="event_stand_2_event_0" model="event.stand">
+        <field name="name">A3</field>
+        <field name="event_id" ref="event.event_0"/>
+        <field name="stand_type_id" ref="website_event_stand.event_stand_type_standard"/>
+    </record>
+
+    <record id="event_stand_3_event_0" model="event.stand">
+        <field name="name">A4</field>
+        <field name="event_id" ref="event.event_0"/>
+        <field name="stand_type_id" ref="website_event_stand.event_stand_type_premium"/>
+    </record>
+
+    <record id="event_stand_4_event_0" model="event.stand">
+        <field name="name">A5</field>
+        <field name="event_id" ref="event.event_0"/>
+        <field name="stand_type_id" ref="website_event_stand.event_stand_type_vip"/>
+    </record>
+
+    <!--EVENT STAND FOR "Conference for Architects" EVENT-->
+
+    <record id="event.event_2" model="event.event">
+        <field name="exhibition_map" type="base64" file="website_event_stand/static/src/img/exhibition-map.gif"/>
+        <field name="website_menu" eval="True"/>
+        <field name="website_stand" eval="True"/>
+    </record>
+
+    <record id="event_stand_0_event_2" model="event.stand">
+        <field name="name">B1</field>
+        <field name="event_id" ref="event.event_2"/>
+        <field name="stand_type_id" ref="website_event_stand.event_stand_type_standard"/>
+    </record>
+
+    <record id="event_stand_0_event_2_slot_0" model="event.stand.slot">
+        <field name="event_stand_id" ref="event_stand_0_event_2"/>
+        <field name="date_from" model="event.stand.slot"
+               eval="obj().env.ref('event.event_2').date_begin"/>
+        <field name="date_to" model="event.stand.slot"
+               eval="obj().env.ref('event.event_2').date_begin + timedelta(hours=1)"/>
+    </record>
+
+    <record id="event_stand_0_event_2_slot_1" model="event.stand.slot">
+        <field name="event_stand_id" ref="event_stand_0_event_2"/>
+        <field name="date_from" model="event.stand.slot"
+               eval="obj().env.ref('website_event_stand.event_stand_0_event_2_slot_0').date_to"/>
+        <field name="date_to" model="event.stand.slot"
+               eval="obj().env.ref('website_event_stand.event_stand_0_event_2_slot_0').date_to + timedelta(hours=1)"/>
+    </record>
+
+    <record id="event_stand_0_event_2_slot_2" model="event.stand.slot">
+        <field name="event_stand_id" ref="event_stand_0_event_2"/>
+        <field name="date_from" model="event.stand.slot"
+               eval="obj().env.ref('website_event_stand.event_stand_0_event_2_slot_1').date_to"/>
+        <field name="date_to" model="event.stand.slot"
+               eval="obj().env.ref('website_event_stand.event_stand_0_event_2_slot_1').date_to + timedelta(hours=1)"/>
+    </record>
+
+    <record id="event_stand_0_event_2_slot_3" model="event.stand.slot">
+        <field name="event_stand_id" ref="event_stand_0_event_2"/>
+        <field name="date_from" model="event.stand.slot"
+               eval="obj().env.ref('website_event_stand.event_stand_0_event_2_slot_2').date_to"/>
+        <field name="date_to" model="event.stand.slot"
+               eval="obj().env.ref('website_event_stand.event_stand_0_event_2_slot_2').date_to + timedelta(hours=1)"/>
+    </record>
+
+    <record id="event_stand_0_event_2_slot_4" model="event.stand.slot">
+        <field name="event_stand_id" ref="event_stand_0_event_2"/>
+        <field name="date_from" model="event.stand.slot"
+               eval="obj().env.ref('website_event_stand.event_stand_0_event_2_slot_3').date_to"/>
+        <field name="date_to" model="event.stand.slot"
+               eval="obj().env.ref('website_event_stand.event_stand_0_event_2_slot_3').date_to + timedelta(hours=1)"/>
+    </record>
+
+    <record id="event_stand_0_event_2_slot_5" model="event.stand.slot">
+        <field name="event_stand_id" ref="event_stand_0_event_2"/>
+        <field name="date_from" model="event.stand.slot"
+               eval="obj().env.ref('website_event_stand.event_stand_0_event_2_slot_4').date_to"/>
+        <field name="date_to" model="event.stand.slot"
+               eval="obj().env.ref('website_event_stand.event_stand_0_event_2_slot_4').date_to + timedelta(hours=1)"/>
+    </record>
+
+    <record id="event_stand_0_event_2_slot_6" model="event.stand.slot">
+        <field name="event_stand_id" ref="event_stand_0_event_2"/>
+        <field name="date_from" model="event.stand.slot"
+               eval="obj().env.ref('website_event_stand.event_stand_0_event_2_slot_5').date_to"/>
+        <field name="date_to" model="event.stand.slot"
+               eval="obj().env.ref('website_event_stand.event_stand_0_event_2_slot_5').date_to + timedelta(hours=1)"/>
+    </record>
+
+    <record id="event_stand_1_event_2" model="event.stand">
+        <field name="name">B2</field>
+        <field name="event_id" ref="event.event_2"/>
+        <field name="stand_type_id" ref="website_event_stand.event_stand_type_standard"/>
+    </record>
+
+    <record id="event_stand_2_event_2" model="event.stand">
+        <field name="name">B3</field>
+        <field name="event_id" ref="event.event_2"/>
+        <field name="stand_type_id" ref="website_event_stand.event_stand_type_standard"/>
+    </record>
+
+    <record id="event_stand_3_event_2" model="event.stand">
+        <field name="name">B4</field>
+        <field name="event_id" ref="event.event_2"/>
+        <field name="stand_type_id" ref="website_event_stand.event_stand_type_premium"/>
+    </record>
+
+    <record id="event_stand_3_event_2_slot_0" model="event.stand.slot">
+        <field name="event_stand_id" ref="event_stand_3_event_2"/>
+        <field name="date_from" model="event.stand.slot"
+               eval="obj().env.ref('event.event_2').date_begin"/>
+        <field name="date_to" model="event.stand.slot"
+               eval="obj().env.ref('event.event_2').date_begin + timedelta(hours=4)"/>
+    </record>
+
+    <record id="event_stand_3_event_2_slot_1" model="event.stand.slot">
+        <field name="event_stand_id" ref="event_stand_3_event_2"/>
+        <field name="date_from" model="event.stand.slot"
+               eval="obj().env.ref('website_event_stand.event_stand_3_event_2_slot_0').date_to"/>
+        <field name="date_to" model="event.stand.slot"
+               eval="obj().env.ref('website_event_stand.event_stand_3_event_2_slot_0').date_to + timedelta(hours=4)"/>
+    </record>
+
+    <record id="event_stand_4_event_2" model="event.stand">
+        <field name="name">B5</field>
+        <field name="event_id" ref="event.event_2"/>
+        <field name="stand_type_id" ref="website_event_stand.event_stand_type_premium"/>
+    </record>
+
+</data></odoo>

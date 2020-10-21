@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo><data>
+
+    <!--EVENT STAND TYPE-->
+
+    <record id="event_stand_type_view_form" model="ir.ui.view">
+        <field name="name">event.stand.type.view.form</field>
+        <field name="model">event.stand.type</field>
+        <field name="arch" type="xml">
+            <form string="Stand Type">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only" string="Name"/>
+                        <h1><field name="name" placeholder="e.g. Premium Stand"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="event_id"/>
+                        </group>
+                        <group>
+                            <field name="product_id" context="{'default_is_event_stand': True, 'default_type': 'service'}"/>
+                            <field name="price"/>
+                            <field name="can_be_shared"/>
+                            <field name="extra_price" attrs="{'invisible': [('can_be_shared', '=', False)]}"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Description" name="description">
+                            <field name="description"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="event_stand_type_view_tree" model="ir.ui.view">
+        <field name="name">event.stand.type.view.tree</field>
+        <field name="model">event.stand.type</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="event_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="event_stand_type_action" model="ir.actions.act_window">
+        <field name="name">Stand Types</field>
+        <field name="res_model">event.stand.type</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a Booth Type
+            </p><p>
+                Booth types are used to differentiate and configure your booths
+            </p>
+        </field>
+    </record>
+
+    <menuitem name="Event Stand Type"
+        id="event_stand_type_menu"
+        action="event_stand_type_action"
+        parent="event.menu_event_configuration"
+        groups="event.group_event_manager"/>
+
+    <!--EVENT STAND-->
+
+    <record id="event_stand_view_form" model="ir.ui.view">
+        <field name="name">event.stand.view.form</field>
+        <field name="model">event.stand</field>
+        <field name="arch" type="xml">
+            <form string="Stands">
+                <header>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" name="%(event_stand_slot_action)d"
+                                type="action" icon="fa-users" string="Reservations"/>
+                    </div>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only" string="Name"/>
+                        <h1><field name="name" placeholder="e.g. First Stand Alley 1"/></h1>
+                    </div>
+                    <group>
+                        <field name="event_id"/>
+                        <field name="stand_type_id"/>
+                        <field name="stand_slot_ids">
+                            <tree string="Slots" editable="bottom">
+                                <field name="event_stand_id" invisible="1"/>
+                                <field name="date_from" widget="daterange" options="{'related_end_date': 'date_to', 'startDate': 'date_from'}" string="Start"/>
+                                <field name="date_to" widget="daterange" options="{'related_start_date': 'date_from', 'endDate': 'date_to'}" string="End"/>
+                            </tree>
+                        </field>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="event_stand_view_tree" model="ir.ui.view">
+        <field name="name">event.stand.view.tree</field>
+        <field name="model">event.stand</field>
+        <field name="arch" type="xml">
+            <tree string="Stands">
+                <field name="name"/>
+                <field name="stand_type_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="event_stand_view_kanban" model="ir.ui.view">
+        <field name="name">event.stand.view.kanban</field>
+        <field name="model">event.stand</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" sample="1">
+                <field name="name"/>
+                <field name="stand_slot_count"/>
+                <field name="stand_slot_available"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="o_kanban_content">
+                            <div class="o_kanban_record_title">
+                                <field name="name"/>
+                            </div>
+                            <div>
+                                <field name="stand_type_id"/>
+                            </div>
+                            <div>
+                                <a name="%(event_stand_slot_action)d" type="action" domain="[('state', '=', 'available')]">
+                                    <span>
+                                        <t t-esc="record.stand_slot_available.raw_value"/> /
+                                        <t t-esc="record.stand_slot_count.raw_value"/>
+                                        Available Slots
+                                    </span>
+                                </a>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="event_stand_action" model="ir.actions.act_window">
+        <field name="name">Stands</field>
+        <field name="res_model">event.stand</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="domain">[('event_id', '=', active_id)]</field>
+        <field name="context">{'default_event_id': active_id}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a Booth
+            </p><p>
+                Booths are the physical stands that you rent during your event.
+            </p>
+        </field>
+    </record>
+
+</data></odoo>
