@@ -1282,6 +1282,16 @@ function factory(dependencies) {
 
         /**
          * @private
+         * @returns {mail.message[]}
+         */
+        _computeSearchedMessages() {
+            return [['replace', this.messages.filter(
+                message => message.body.toLowerCase().includes(this.searchedText.toLowerCase())
+            )]];
+        }
+
+        /**
+         * @private
          * @returns {mail.activity[]}
          */
         _computeTodayActivities() {
@@ -1803,6 +1813,13 @@ function factory(dependencies) {
          */
         pendingSeenMessageId: attr(),
         public: attr(),
+        searchedMessages: many2many('mail.message', {
+            compute: '_computeSearchedMessages',
+            dependencies: ['messages', 'searchedText'],
+        }),
+        searchedText: attr({
+            default: false,
+        }),
         /**
          * Determine the last fold state known by the server, which is the fold
          * state displayed after initialization or when the last pending

@@ -3,7 +3,7 @@
 
     <t t-name="mail.ChatterSearchBox" owl="1">
         <div class="o_ChatterSearchBox">
-            <input class="o_ChatterSearchBox_textInput" placeholder="Search..."/>
+            <input class="o_ChatterSearchBox_textInput" placeholder="Search..." t-on-keypress="_onKeypress"/>
         </div>
     </t>
 

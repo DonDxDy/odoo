@@ -13,7 +13,7 @@ class ChatterSearchBox extends Component {
     constructor(...args) {
         super(...args);
         useStore(props => {
-            const thread = this.env.models['mail.thread'].get(props.composerLocalId);
+            const thread = this.env.models['mail.thread'].get(props.threadLocalId);
             return {
                 thread: thread ? thread.__state : undefined,
             };
@@ -29,6 +29,21 @@ class ChatterSearchBox extends Component {
      */
     get thread() {
         return this.env.models['mail.thread'].get(this.props.threadLocalId);
+    }
+
+    //--------------------------------------------------------------------------
+    // Handlers
+    //--------------------------------------------------------------------------
+
+    /**
+     * @private
+     * @param {MouseEvent} ev
+     */
+    _onKeypress(ev) {
+        if (ev.which === 13) {
+            const thread = this.env.models['mail.thread'].get(this.props.threadLocalId);
+            thread.update({'searchedText': ev.currentTarget.value});
+        }
     }
 
 }
