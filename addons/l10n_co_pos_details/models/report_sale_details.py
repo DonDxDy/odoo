@@ -8,11 +8,12 @@ class PosOrder(models.AbstractModel):
     _description = 'Point of Sale Details'
 
     @api.model
-    def prepare_sale_details(self, orders, domain, date_start, date_stop, config_ids, session_ids, include_products):
-        result = super(PosOrder, self).prepare_sale_details(orders, domain, date_start, date_stop, config_ids, session_ids, include_products)
-        result['include_products'] = include_products
+    def _prepare_sale_details(self, orders, domain, date_start, date_stop, config_ids, session_ids):
+        result = super(PosOrder, self)._prepare_sale_details(orders, domain, date_start, date_stop, config_ids, session_ids)
+        result['include_products'] = True
         if len(config_ids) == 1 and self.env.company.country_id.code == 'CO':
             result.update({
+                'include_products': False,
                 'pos_config': self.env['pos.config'].browse(config_ids),
                 'first_ref': orders and orders[-1].name,
                 'last_ref': orders and orders[0].name,

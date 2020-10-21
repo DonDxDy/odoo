@@ -869,7 +869,7 @@ class ReportSaleDetails(models.AbstractModel):
 
 
     @api.model
-    def get_sale_details(self, date_start=False, date_stop=False, config_ids=False, session_ids=False, include_products=True):
+    def get_sale_details(self, date_start=False, date_stop=False, config_ids=False, session_ids=False):
         """ Serialise the orders of the requested time period, configs and sessions.
 
         :param date_start: The dateTime to start, default today 00:00:00.
@@ -914,9 +914,10 @@ class ReportSaleDetails(models.AbstractModel):
                 domain = AND([domain, [('config_id', 'in', config_ids)]])
 
         orders = self.env['pos.order'].search(domain)
-        return self.prepare_sale_details(orders, domain, date_start, date_stop, config_ids, session_ids, include_products)
+        return self._prepare_sale_details(orders, domain, date_start, date_stop, config_ids, session_ids)
 
-    def prepare_sale_details(self, orders, domain, date_start, date_stop, config_ids, session_ids, include_products):
+    @api.model
+    def _prepare_sale_details(self, orders, domain, date_start, date_stop, config_ids, session_ids):
 
         user_currency = self.env.company.currency_id
 
@@ -980,5 +981,5 @@ class ReportSaleDetails(models.AbstractModel):
     def _get_report_values(self, docids, data=None):
         data = dict(data or {})
         configs = self.env['pos.config'].browse(data['config_ids'])
-        data.update(self.get_sale_details(data['date_start'], data['date_stop'], configs.ids, include_products=data.get('include_products', True)))
+        data.update(self.get_sale_details(data['date_start'], data['date_stop'], configs.ids))
         return data
