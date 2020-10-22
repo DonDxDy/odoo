@@ -493,6 +493,9 @@ function factory(dependencies) {
             compute: '_computeOrderedMessages',
             dependencies: ['messages'],
         }),
+        searchedMessages: many2many('mail.message', {
+            related: 'thread.searchedMessages',
+        }),
         stringifiedDomain: attr({
             default: '[]',
         }),

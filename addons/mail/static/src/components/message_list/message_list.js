@@ -245,6 +245,11 @@ class MessageList extends Component {
         return threadCache.orderedMessages;
     }
 
+    get searchedMessages() {
+        const threadCache = this.threadView.threadCache;
+        return threadCache.searchedMessages;
+    }
+
     /**
      * @param {integer} value
      */
