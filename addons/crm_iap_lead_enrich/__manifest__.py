@@ -10,14 +10,15 @@
     'depends': [
         'iap_crm',
         'iap_mail',
+        'base_automation'
     ],
     'data': [
-        'data/ir_cron.xml',
+        'data/base_automation_data.xml',
         'data/ir_action.xml',
         'data/mail_data.xml',
         'views/crm_lead_views.xml',
         'views/res_config_settings_view.xml',
     ],
-    'post_init_hook': '_synchronize_cron',
+    'post_init_hook': '_synchronize_action',
     'auto_install': True,
 }

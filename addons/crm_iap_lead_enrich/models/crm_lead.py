@@ -24,8 +24,8 @@ class Lead(models.Model):
 
     @api.depends('email_from', 'probability', 'iap_enrich_done', 'reveal_id')
     def _compute_show_enrich_button(self):
-        config = self.env['ir.config_parameter'].sudo().get_param('crm.iap.lead.enrich.setting', 'manual')
-        if not config or config != 'manual':
+        config = self.env['ir.config_parameter'].sudo().get_param('crm.iap.lead.enrich.setting')
+        if not config:
             self.show_enrich_button = False
             return
         for lead in self:
@@ -35,18 +35,11 @@ class Lead(models.Model):
                 lead.show_enrich_button = True
 
     @api.model
-    def _iap_enrich_leads_cron(self):
-        timeDelta = fields.datetime.now() - datetime.timedelta(hours=1)
-        # Get all leads not lost nor won (lost: active = False)
-        leads = self.search([
-            ('iap_enrich_done', '=', False),
-            ('reveal_id', '=', False),
-            ('probability', '<', 100),
-            ('create_date', '>', timeDelta)
-        ])
-        leads.iap_enrich(from_cron=True)
+    def _iap_enrich_leads_action(self):
+        leads = self.browse(self.env.context.get('active_ids'))
+        leads.iap_enrich(from_action=True)
 
-    def iap_enrich(self, from_cron=False):
+    def iap_enrich(self, from_action=False):
         # Split self in a list of sub-recordsets or 50 records to prevent timeouts
         batches = [self[index:index + 50] for index in range(0, len(self), 50)]
         for leads in batches:
@@ -57,8 +50,7 @@ class Lead(models.Model):
                         "SELECT 1 FROM {} WHERE id in %(lead_ids)s FOR UPDATE NOWAIT".format(self._table),
                         {'lead_ids': tuple(leads.ids)}, log_exceptions=False)
                     for lead in leads:
-                        # If lead is lost, active == False, but is anyway removed from the search in the cron.
-                        if lead.probability == 100 or lead.iap_enrich_done:
+                        if lead.probability == 100 or lead.iap_enrich_done or not lead.active:
                             continue
 
                         normalized_email = tools.email_normalize(lead.email_from)
@@ -83,7 +75,7 @@ class Lead(models.Model):
                             iap_response = self.env['iap.enrich.api']._request_enrich(lead_emails)
                         except iap_tools.InsufficientCreditError:
                             _logger.info('Sent batch %s enrich requests: failed because of credit', len(lead_emails))
-                            if not from_cron:
+                            if not from_action:
                                 data = {
                                     'url': self.env['iap.account'].get_credits_url('reveal'),
                                 }
