@@ -4709,27 +4709,23 @@ registry.SnippetSave = SnippetOptionWidget.extend({
                     classes: 'btn-primary',
                     close: true,
                     click: async () => {
-                        const snippetName = dialog.el.querySelector('.o_we_snippet_name_input').value;
-                        const targetCopyEl = this.$target[0].cloneNode(true);
-                        delete targetCopyEl.dataset.name;
                         const snippetKey = this.$target[0].dataset.snippet;
                         let thumbnailURL;
                         this.trigger_up('snippet_thumbnail_url_request', {
                             key: snippetKey,
                             onSuccess: url => thumbnailURL = url,
                         });
-                        await this._rpc({
-                            model: 'ir.ui.view',
-                            method: 'save_snippet',
-                            kwargs: {
-                                'name': snippetName,
-                                'arch': targetCopyEl.outerHTML,
-                                'template_key': this.options.snippets,
-                                'snippet_key': snippetKey,
-                                'thumbnail_url': thumbnailURL,
-                            },
+                        // Because the snippet needs to be cleaned, which requires
+                        // the snippet mutex to be unlocked, this option cannot
+                        // wait for the saving to be done to release the mutex.
+                        this.trigger_up('save_custom_snippet', {
+                            target: this.$target[0],
+                            snippetName: dialog.el.querySelector('.o_we_snippet_name_input').value,
+                            thumbnailURL: thumbnailURL,
+                            templateKey: this.options.snippets,
+                            snippetKey: snippetKey,
                         });
-                        this.trigger_up('reload_snippet_template');
+                        resolve();
                     },
                 }, {
                     text: _t("Discard"),
