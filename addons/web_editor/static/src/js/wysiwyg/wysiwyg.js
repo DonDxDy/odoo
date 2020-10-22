@@ -460,6 +460,17 @@ var Wysiwyg = Widget.extend({
     // Public
     //--------------------------------------------------------------------------
 
+    /**
+     * Cleans the DOM to a save-able state.
+     */
+    async cleanForSave(context = this.editor) {
+        // Stops public widgets on #wrapwrap
+        this.trigger_up('edition_will_stopped');
+        if (this.snippetsMenu) {
+            await this.snippetsMenu.cleanForSave();
+        }
+        await this._saveModifiedImages(context);
+    },
     cropImage: async function (params) {
         const imageNodes = params.context.range.targetedNodes(JWEditorLib.ImageNode);
         const imageNode = imageNodes.length === 1 && imageNodes[0];
@@ -753,13 +764,11 @@ var Wysiwyg = Widget.extend({
     },
     saveToServer: async function (context = this.editor, reload = true) {
         const defs = [];
-        this.trigger_up('edition_will_stopped');
+        this.cleanForSave(context);
+
+        // Saves page options
         this.trigger_up('ready_to_save', {defs: defs});
         await Promise.all(defs);
-
-        if (this.snippetsMenu) {
-            await this.snippetsMenu.cleanForSave();
-        }
 
         return this._saveWebsiteContent(context)
             .then(() => {
@@ -1266,7 +1275,6 @@ var Wysiwyg = Widget.extend({
     async _saveWebsiteContent(context = this.editor) {
         return new Promise((resolve, reject) => {
             const wysiwygSaveContent = async (context)=> {
-                await this._saveModifiedImages(context);
                 await this._saveViewBlocks();
                 await this._saveCoverPropertiesBlocks(context);
                 await this._saveMegaMenuClasses();

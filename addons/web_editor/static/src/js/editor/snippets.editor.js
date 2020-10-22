@@ -995,7 +995,7 @@ var SnippetsMenu = Widget.extend({
         'unblock_preview_overlays': '_onUnblockPreviewOverlays',
         'user_value_widget_opening': '_onUserValueWidgetOpening',
         'user_value_widget_closing': '_onUserValueWidgetClosing',
-        'reload_snippet_template': '_onReloadSnippetTemplate',
+        'save_custom_snippet': '_onSaveCustomSnippet',
     },
     // enum of the SnippetsMenu's tabs.
     tabs: {
@@ -2683,13 +2683,6 @@ var SnippetsMenu = Widget.extend({
     /**
      * @private
      */
-    _onReloadSnippetTemplate: async function (ev) {
-        await this._enableLastEditor();
-        await this._loadSnippetsTemplates(true);
-    },
-    /**
-     * @private
-     */
     _onBlockPreviewOverlays: function (ev) {
         this._blockPreviewOverlays = true;
     },
@@ -2737,6 +2730,39 @@ var SnippetsMenu = Widget.extend({
             }
             this.trigger_up('request_save', data);
         }, true);
+    },
+    /**
+     * Cleans the editor content to a save-able state.
+     *
+     * @private
+     * @param {OdooEvent} ev
+     * @param {object} ev.data the information on the custom snippet to create
+     */
+    _onSaveCustomSnippet(ev) {
+        const {snippetName, target, templateKey, snippetKey, thumbnailURL} = ev.data;
+        this._execWithLoadingEffect(() => {
+            return new Promise(resolve => {
+                this.trigger_up('request_clean', {
+                    onSuccess: async () => {
+                        const targetCopyEl = target.cloneNode(true);
+                        delete targetCopyEl.dataset.name;
+                        await this._rpc({
+                            model: 'ir.ui.view',
+                            method: 'save_snippet',
+                            kwargs: {
+                                'name': snippetName,
+                                'arch': targetCopyEl.outerHTML,
+                                'template_key': templateKey,
+                                'snippet_key': snippetKey,
+                                'thumbnail_url': thumbnailURL,
+                            },
+                        });
+                        resolve();
+                    },
+                });
+            });
+        }, true);
+        this._loadSnippetsTemplates(true);
     },
     /**
      * @private

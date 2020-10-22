@@ -66,6 +66,7 @@ var EditPageMenu = websiteNavbarData.WebsiteNavbarActionWidget.extend({
         edition_will_stopped: '_onEditionWillStop',
         edition_was_stopped: '_onEditionWasStopped',
         request_save: '_onSnippetRequestSave',
+        request_clean: '_onSnippetRequestClean',
     }),
 
     /**
@@ -460,6 +461,18 @@ var EditPageMenu = websiteNavbarData.WebsiteNavbarActionWidget.extend({
     _onSnippetRequestSave: function (ev) {
         this.wysiwyg.saveToServer(this.wysiwyg.editor, false).then(ev.data.onSuccess, ev.data.onFailure);
     },
+    /**
+     * Snippet (menu_data) can request to save the document to leave the page
+     *
+     * @private
+     * @param {OdooEvent} ev
+     * @param {object} ev.data
+     * @param {function} ev.data.onSuccess
+     * @param {function} ev.data.onFailure
+     */
+    _onSnippetRequestClean(ev) {
+        this.wysiwyg.cleanForSave(this.wysiwyg.editor).then(ev.data.onSuccess, ev.data.onFailure);
+    }
 });
 
 websiteNavbarData.websiteNavbarRegistry.add(EditPageMenu, '#edit-page-menu,.o_menu_systray:has([data-action="translate"])');
