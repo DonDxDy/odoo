@@ -38,6 +38,10 @@
                     <div class="o-autogrow"/>
                         <div class="o_ChatterTopbar_rightSection">
                             <button class="btn btn-link o_ChatterTopbar_button o_ChatterTopbar_buttonSearch"
+                                t-att-class="{
+                                    'o-active': chatter.isSearchBoxVisible,
+                                    'o-bordered': chatter.hasExternalBorder,
+                                }"
                                 t-att-disabled="chatter.isDisabled" t-on-click="_onClickSearch"
                             >
                                 <i class="fa fa-search"/>

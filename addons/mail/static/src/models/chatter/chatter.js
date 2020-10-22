@@ -59,6 +59,11 @@ function factory(dependencies) {
             this.focus();
         }
 
+        showSearchBox() {
+            this.update({ isSearchBoxVisible: true });
+            this.focus();
+        }
+
         showSendMessage() {
             this.update({ isComposerVisible: true });
             this.thread.composer.update({ isLog: false });

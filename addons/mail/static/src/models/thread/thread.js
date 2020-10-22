@@ -1285,9 +1285,11 @@ function factory(dependencies) {
          * @returns {mail.message[]}
          */
         _computeSearchedMessages() {
-            return [['replace', this.messages.filter(
-                message => message.body.toLowerCase().includes(this.searchedText.toLowerCase())
-            )]];
+            if (this.searchedText) {
+                return [['replace', this.orderedMessages.filter(
+                    message => message.body.toLowerCase().includes(this.searchedText.toLowerCase())
+                )]];
+            }
         }
 
         /**
@@ -1815,7 +1817,7 @@ function factory(dependencies) {
         public: attr(),
         searchedMessages: many2many('mail.message', {
             compute: '_computeSearchedMessages',
-            dependencies: ['messages', 'searchedText'],
+            dependencies: ['orderedMessages', 'searchedText'],
         }),
         searchedText: attr({
             default: false,
