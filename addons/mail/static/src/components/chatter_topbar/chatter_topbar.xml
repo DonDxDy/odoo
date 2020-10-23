@@ -42,7 +42,9 @@
                                     'o-active': chatter.isSearchBoxVisible,
                                     'o-bordered': chatter.hasExternalBorder,
                                 }"
-                                t-att-disabled="chatter.isDisabled" t-on-click="_onClickSearch"
+                                t-att-disabled="chatter.isDisabled"
+                                t-if="chatter.threadView"
+                                t-on-click="_onClickSearch"
                             >
                                 <i class="fa fa-search"/>
                             </button>

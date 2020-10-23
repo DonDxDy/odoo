@@ -465,6 +465,10 @@ function factory(dependencies) {
                 }
             }
             // add anchor tags to urls
+            if (this.originThread && this.originThread.searchedText && this.isFiltered) {
+                const match = this.body.match(new RegExp(this.originThread.searchedText, 'gi'))[0];
+                prettyBody = this.body.replaceAll(match, `<mark>${match}</mark>`);
+            }
             return parseAndTransform(prettyBody, addLink);
         }
 
@@ -576,6 +580,9 @@ function factory(dependencies) {
                 'tracking_value_ids',
             ],
         }),
+        isFiltered: attr({
+            default: false,
+        }),
         isModeratedByCurrentPartner: attr({
             compute: '_computeIsModeratedByCurrentPartner',
             default: false,
@@ -665,7 +672,7 @@ function factory(dependencies) {
          */
         prettyBody: attr({
             compute: '_computePrettyBody',
-            dependencies: ['body'],
+            dependencies: ['body', 'isFiltered'],
         }),
         subject: attr(),
         subtype_description: attr(),

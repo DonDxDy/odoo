@@ -1286,9 +1286,13 @@ function factory(dependencies) {
          */
         _computeSearchedMessages() {
             if (this.searchedText) {
-                return [['replace', this.orderedMessages.filter(
+                const filteredMessages = this.orderedMessages.filter(
                     message => message.body.toLowerCase().includes(this.searchedText.toLowerCase())
-                )]];
+                );
+                filteredMessages.forEach(message => {
+                    message.update({'isFiltered': true});
+                });
+                return [['replace', filteredMessages]];
             }
         }
 
