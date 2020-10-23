@@ -47,17 +47,34 @@ class AccountEdiFormat(models.Model):
             # Format the monetary values to avoid trailing decimals (e.g. 90.85000000000001).
             return float_repr(amount, invoice.currency_id.decimal_places)
 
+        bank_account = invoice.journal_id.bank_account_id
+        supplier = invoice.company_id.partner_id.commercial_partner_id
+        if not bank_account and supplier.bank_ids:
+            bank_account = supplier.bank_ids[0]
+
         return {
             'invoice': invoice,
-            'ubl_version': 2.1,
             'type_code': 380 if invoice.move_type == 'out_invoice' else 381,
-            'payment_means_code': 42 if invoice.journal_id.bank_account_id else 31,
+            'payment_means_code': 42 if bank_account else 31,
             'format_monetary': format_monetary,
+            'bank_account': bank_account,
         }
 
     ####################################################
     # Import
     ####################################################
+
+    def _get_ubl_namespaces(self, tree):
+        ''' If the namespace is declared with xmlns='...', the namespaces map contains the 'None' key that causes an
+        TypeError: empty namespace prefix is not supported in XPath
+        Then, we need to remap arbitrarily this key.
+
+        :param tree: An instance of etree.
+        :return: The namespaces map without 'None' key.
+        '''
+        namespaces = tree.nsmap
+        namespaces['inv'] = namespaces.pop(None)
+        return namespaces
 
     def _import_ubl(self, tree, invoice):
         """ Decodes an UBL invoice into an invoice.
@@ -67,19 +84,7 @@ class AccountEdiFormat(models.Model):
         :returns:       the invoice where the UBL data was imported.
         """
 
-        def _get_ubl_namespaces():
-            ''' If the namespace is declared with xmlns='...', the namespaces map contains the 'None' key that causes an
-            TypeError: empty namespace prefix is not supported in XPath
-            Then, we need to remap arbitrarily this key.
-
-            :param tree: An instance of etree.
-            :return: The namespaces map without 'None' key.
-            '''
-            namespaces = tree.nsmap
-            namespaces['inv'] = namespaces.pop(None)
-            return namespaces
-
-        namespaces = _get_ubl_namespaces()
+        namespaces = self._get_ubl_namespaces(tree)
 
         def _find_value(xpath, element=tree):
             return self._find_value(xpath, element, namespaces)
@@ -126,12 +131,15 @@ class AccountEdiFormat(models.Model):
             if elements:
                 invoice_form.invoice_incoterm_id = self.env['account.incoterms'].search([('code', '=', elements[0].text)], limit=1)
 
+            vat = _find_value('//cac:AccountingSupplierParty/cac:Party//cac:PartyTaxScheme/cbc:CompanyID') or \
+                _find_value('//cac:AccountingSupplierParty/cac:Party/cbc:EndpointID[@schemeID="GLN"]')
+
             # Partner
             invoice_form.partner_id = self._retrieve_partner(
                 name=_find_value('//cac:AccountingSupplierParty/cac:Party//cbc:Name'),
                 phone=_find_value('//cac:AccountingSupplierParty/cac:Party//cbc:Telephone'),
                 mail=_find_value('//cac:AccountingSupplierParty/cac:Party//cbc:ElectronicMail'),
-                vat=_find_value('//cac:AccountingSupplierParty/cac:Party//cbc:ID'),
+                vat=vat,
             )
 
             # Regenerate PDF

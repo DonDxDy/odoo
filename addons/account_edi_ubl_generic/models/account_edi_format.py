@@ -30,6 +30,14 @@ class AccountEdiFormat(models.Model):
     # Export
     ####################################################
 
+    def _get_ubl_values(self, invoice):
+        values = super()._get_ubl_values(invoice)
+        if self.code != 'ubl_2_1':
+            return values
+
+        values['ubl_version'] = '2.1'
+        return values
+
     def _export_ubl(self, invoice):
         self.ensure_one()
         # Create file content.

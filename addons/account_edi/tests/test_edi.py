@@ -8,7 +8,7 @@ from unittest.mock import patch
 class TestAccountEdi(AccountEdiTestCommon):
 
     def test_export_edi(self):
-        invoice = self.init_invoice('out_invoice')
+        invoice = self.init_invoice('out_invoice', products=self.product_a)
         self.assertEqual(len(invoice.edi_document_ids), 0)
         invoice.action_post()
         self.assertEqual(len(invoice.edi_document_ids), 1)

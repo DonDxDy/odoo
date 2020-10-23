@@ -9,6 +9,7 @@
     'depends': ['account_edi'],
     'data': [
         'data/ubl_templates.xml',
+        'data/en_16931_templates.xml',
     ],
     'installable': True,
     'application': False,
