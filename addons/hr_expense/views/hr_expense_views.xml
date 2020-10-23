@@ -46,7 +46,7 @@
             <field name="arch" type="xml">
                 <tree string="Expenses" multi_edit="1" sample="1" js_class="hr_expense_tree_dashboard_upload">
                     <header>
-                        <button name="action_submit_expenses" type="object" string="Create Report"/>
+                        <button name="action_submit_expenses" type="object" string="Create Report" context="{'form_view_initial_mode': 'edit'}"/>
                     </header>
                     <field name="attachment_number" invisible="True"/>
                     <field name="date" optional="show"/>
@@ -1060,19 +1060,6 @@
                 <p class="o_view_nocontent_smiling_face">
                     No data yet!
                 </p>
-            </field>
-        </record>
-
-        <record id="hr_expense_submit_action_server" model="ir.actions.server">
-            <field name="name">Create Report</field>
-            <field name="type">ir.actions.server</field>
-            <field name="model_id" ref="model_hr_expense"/>
-            <field name="binding_model_id" ref="model_hr_expense"/>
-            <field name="binding_view_types">list</field>
-            <field name="state">code</field>
-            <field name="code">
-if records:
-    action = records.action_submit_expenses()
             </field>
         </record>
 
