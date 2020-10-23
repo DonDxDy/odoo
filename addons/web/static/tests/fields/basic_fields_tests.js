@@ -19,6 +19,10 @@ var DebouncedField = basicFields.DebouncedField;
 var JournalDashboardGraph = basicFields.JournalDashboardGraph;
 var _t = core._t;
 
+odoo.session_info = {
+    max_file_size: 128*1024*1024,
+}
+
 QUnit.module('fields', {}, function () {
 
 QUnit.module('basic_fields', {
