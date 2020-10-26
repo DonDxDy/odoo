@@ -646,7 +646,7 @@ class MassMailing(models.Model):
         mailings = self.env['mailing.mailing'].search([
             ('kpi_mail_required', '=', True),
             ('state', '=', 'done'),
-            ('sent_date', '<=', fields.Datetime.now() - relativedelta(days=1)),
+            ('sent_date', '<=', fields.Datetime.now()),# - relativedelta(days=1)),
             ('sent_date', '>=', fields.Datetime.now() - relativedelta(days=5)),
         ])
         if mailings:
