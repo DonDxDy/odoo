@@ -8,9 +8,6 @@ from odoo.addons.bus.models.bus_presence import AWAY_TIMER
 from odoo.addons.bus.models.bus_presence import DISCONNECTION_TIMER
 from odoo.osv import expression
 
-from datetime import datetime
-from odoo.tools.misc import DEFAULT_SERVER_DATETIME_FORMAT
-
 _logger = logging.getLogger(__name__)
 
 

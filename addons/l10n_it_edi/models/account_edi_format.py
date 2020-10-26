@@ -69,12 +69,6 @@ class AccountEdiFormat(models.Model):
     # Import
     # -------------------------------------------------------------------------
 
-    def _get_partner_bank_account_from_xml_tree(self, tree):
-        if self.code != 'fattura_pa':
-            return super()._get_partner_bank_account_from_xml_tree(tree)
-        elements = tree.xpath('//DettaglioPagamento/IBAN', namespaces=tree.nsmap)
-        return elements[0].text if elements else False
-
     def _check_filename_is_fattura_pa(self, filename):
         return re.search("([A-Z]{2}[A-Za-z0-9]{2,28}_[A-Za-z0-9]{0,5}.(xml.p7m|xml))", filename)
 
@@ -178,6 +172,13 @@ class AccountEdiFormat(models.Model):
                         _("Vendor not found, useful informations from XML file:"),
                         invoice._compose_info_message(
                             tree, './/CedentePrestatore')))
+
+                # Bank Account
+                acc_number = self._find_value(self, '//DettaglioPagamento/IBAN', tree, namespaces=tree.nsmap)
+                if acc_number:
+                    bank_account = self._retrieve_bank_account(acc_number, invoice_form.partner_id)
+                    if bank_account not in invoice_form.partner_id.bank_ids:
+                        invoice_form.imported_bank_id = bank_account
 
                 # Numbering attributed by the transmitter. <1.1.2>
                 elements = tree.xpath('//ProgressivoInvio')

@@ -238,16 +238,17 @@ class ResPartner(models.Model):
     _inherit = 'res.partner'
 
     def write(self, vals):
-        before_banks = {partner: {'records': partner.bank_ids, 'cache': {b: b.acc_number for b in partner.bank_ids}} for partner in self}
+        # Send an email if email address of user or bank_accounts of partner were changed.
+        before_banks = {partner: {'records': partner.bank_ids, 'before_acc_nb': {b: b.acc_number for b in partner.bank_ids}} for partner in self}
         before_emails = {partner: partner.email for partner in self}
         res = super().write(vals)
 
         for partner in self:
-            # email changed
-            if 'email' in vals and partner.user_ids:
+            # email address changed, warn the user's old address
+            if 'email' in vals and partner.user_ids and before_emails[partner] != vals['email']:
                 mail_template = self.env.ref('account.user_email_changed_template')
                 ctx = {
-                    'changed_user': partner.user_ids,
+                    'changed_user': partner,
                     'user': self.env.user,
                     'timestamp': fields.Datetime.context_timestamp(self, datetime.now()).strftime(DEFAULT_SERVER_DATETIME_FORMAT),
                     'old_email': before_emails[partner],
@@ -262,14 +263,25 @@ class ResPartner(models.Model):
                 })
                 mail.send()
 
-            # bank account changed
+            # bank account changed, warn self.env.user
+            operations = []
             before = before_banks[partner]
-            if before['records'] and before['records'] != partner.bank_ids:
+            bank_added = partner.bank_ids - before['records']
+            if bank_added:
+                operations.append(_('an account was added'))
+                partner.message_post(body=_('<ul><li>New bank account number: %s</li></ul>', ', '.join([a.acc_number for a in bank_added])))
+            bank_removed = before['records'] - partner.bank_ids
+            if bank_removed:
+                operations.append(_('an account was removed'))
+                partner.message_post(body=_('<ul><li>Bank account removed: %s</li></ul>', ', '.join([before['before_acc_nb'][a] for a in bank_removed])))
+
+            if operations:
                 mail_template = self.env.ref('account.partner_bank_account_changed_template')
                 ctx = {
                     'user_name': self.env.user.name,
                     'partner': partner,
                     'timestamp': fields.Datetime.context_timestamp(self, datetime.now()).strftime(DEFAULT_SERVER_DATETIME_FORMAT),
+                    'operations': operations,
                 }
                 mail_body = mail_template._render(ctx, engine='ir.qweb', minimal_qcontext=True)
                 mail = self.env['mail.mail'].sudo().create({
@@ -280,13 +292,6 @@ class ResPartner(models.Model):
                     'body_html': mail_body,
                 })
                 mail.send()
-
-            bank_added = partner.bank_ids - before['records']
-            if bank_added:
-                partner.message_post(body=_('<ul><li>New bank account number: %s</li></ul>', ', '.join([a.acc_number for a in bank_added])))
-            bank_removed = before['records'] - partner.bank_ids
-            if bank_removed:
-                partner.message_post(body=_('<ul><li>Bank account removed: %s</li></ul>', ', '.join([before['cache'][a] for a in bank_removed])))
 
         return res
 

@@ -16,10 +16,6 @@ _logger = logging.getLogger(__name__)
 class AccountEdiFormat(models.Model):
     _inherit = 'account.edi.format'
 
-    def _get_ubl_partner_bank_account(self, tree):
-        elements = tree.xpath('//cac:PayeeFinancialAccount/cbc:ID', namespaces=tree.nsmap)
-        return elements[0].text if elements else False
-
     def _import_ubl(self, tree, invoice):
         """ Decodes an UBL invoice into an invoice.
 
@@ -94,6 +90,13 @@ class AccountEdiFormat(models.Model):
                 mail=_find_value('//cac:AccountingSupplierParty/cac:Party//cbc:ElectronicMail'),
                 vat=_find_value('//cac:AccountingSupplierParty/cac:Party//cbc:ID'),
             )
+
+            # Bank Account
+            acc_number = _find_value('//cac:PayeeFinancialAccount/cbc:ID')
+            if acc_number:
+                bank_account = self._retrieve_bank_account(acc_number, invoice_form.partner_id)
+                if bank_account not in invoice_form.partner_id.bank_ids:
+                    invoice_form.imported_bank_id = bank_account
 
             # Regenerate PDF
             attachments = self.env['ir.attachment']

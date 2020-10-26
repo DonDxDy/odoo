@@ -270,10 +270,13 @@ class ResCompany(models.Model):
 
             # warn the user (only if at least one invoice is posted)
             # this is triggered when changing the value in res.config.settings
-            if 'external_report_layout_id' in values and \
-               'base_document_layout_warning_email_sent' not in self._context and \
-               self.external_report_layout_id and self.external_report_layout_id.id != values['external_report_layout_id'] and \
-               self.env['account.move'].search([('state', '=', 'posted'), ('move_type', '=', 'out_invoice'), ('company_id', '=', company.id)], limit=1):
+            posted_move = self.env['account.move'].search([('state', '=', 'posted'), ('move_type', '=', 'out_invoice'), ('company_id', '=', company.id)], limit=1)
+            template_changed = 'external_report_layout_id' in values and self.external_report_layout_id and self.external_report_layout_id.id != values['external_report_layout_id']
+            template_value_changed = ('logo' in values and company.logo != values['logo']) or \
+                                     ('report_header' in values and company.report_header != values['report_header']) or \
+                                     ('report_footer' in values and company.report_footer != values['report_footer'])
+            if self.external_report_layout_id and posted_move and \
+               (template_changed or template_value_changed):
                 mail_template = self.env.ref('account.document_layout_changed_template')
                 ctx = {
                     'user_name': self.env.user.name,
@@ -289,8 +292,6 @@ class ResCompany(models.Model):
                     'body_html': mail_body,
                 })
                 mail.send()
-                self = self.with_context(base_document_layout_warning_email_sent=True)
-
         return super(ResCompany, self).write(values)
 
     @api.model

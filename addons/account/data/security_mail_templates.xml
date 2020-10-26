@@ -1,6 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data noupdate="1">
+        <template id="security_scammer_generic">
+            <p>
+                If you don't remember doing such action, you may be victim of a scammer. Scammer might be:
+                <ul>
+                    <li>Someone remote who managed to get your user credentials.</li>
+                    <li>Someone who had physical access to your machine as you were still logged.</li>
+                </ul>
+            </p>
+            <p>
+                Most common scam schemes are:
+                <ul>
+                    <li>Changing the footer of your document layout to invite your customers to pay invoices on a scam bank account.</li>
+                    <li>Changing the bank account(s) of the company (same purpose).</li>
+                    <li>Changing the bank account(s) fo your vendors so you pay your bills on a scam bank account.</li>
+                </ul>
+            </p>
+            <p>You will receive warning mails like this each time one of those actions is performed to prevent scammers to perform such action under the radar.</p>
+        </template>
+
         <template id="partner_bank_account_changed_template" >
             <p>Dear <t t-esc="user_name" />,<br/><br/>
                 You receive this email because we would like to be sure that you are the person who changed the bank account 
@@ -8,27 +27,12 @@
                 <t t-if="partner.company_id">
                     in <t t-esc="partner.company_id.name" />
                 </t>
-                at <t t-esc="timestamp" />. If you don't remember doing such action, you may be victim of a scammer.
+                at <t t-esc="timestamp" /> (<t t-esc="', '.join(operations)"/>; you can check for more informations on the chatter of the partner).
             </p>
-            <p>
-                Scammer might be:
-                <ul>
-                    <li>Someone remote who managed to get your user credentials</li>
-                    <li>Someone who had physical access to your machine as you were still logged</li>
-                </ul>
-            </p>
-            <p>
-                Most common scam schemes are:
-                <ul>
-                    <li>Changing the footer of your document layout to invite your customers to pay invoices on a scam bank account</li>
-                    <li>Changing the bank account(s) of the company (same purpose)</li>
-                    <li>Changing the bank account(s) fo your vendors so you pay your bills on a scam bank account</li>
-                </ul>
-            </p>
-            <p>You will receive warning mails like this each time one of those actions is performed to prevent scammers to perform such action under the radar.</p>
+            <t t-call="account.security_scammer_generic" />
             <p>If you think you are victim of a scam:
                 <ul>
-                    <li>Take security measures (change password, lock screen when away...) to avoid this issue in the future</li>
+                    <li>Take security measures (change password, lock screen when away...) to avoid this issue in the future.</li>
                     <li>Log in
                         <t t-if="partner.company_id">
                             company <t t-esc="partner.company_id.name" />
@@ -57,27 +61,12 @@
         <template id="document_layout_changed_template">
             <p>Dear <t t-esc="user_name"/>,<br/><br/>
             You receive this email because we would like to be sure that you are the person who changed the document 
-            template of company <t t-esc="company_name" /> at <t t-esc="timestamp" />. If you don't remember doing such action, you may be victim of a scammer.
+            template of company <t t-esc="company_name" /> at <t t-esc="timestamp" />.
             </p>
-            <p>
-                Scammer might be:
-                <ul>
-                    <li>Someone remote who managed to get your user credentials</li>
-                    <li>Someone who had physical access to your machine as you were still logged</li>
-                </ul>
-            </p>
-            <p>
-                Most common scam schemes are:
-                <ul>
-                    <li>Changing the footer of your document layout to invite your customers to pay invoices on a scam bank account</li>
-                    <li>Changing the bank account(s) of the company (same purpose)</li>
-                    <li>Changing the bank account(s) fo your vendors so you pay your bills on a scam bank account</li>
-                </ul>
-            </p>
-            <p>You will receive warning mails like this each time one of those actions is performed to prevent scammers to perform such action under the radar.</p>
+            <t t-call="account.security_scammer_generic" />
             <p>If you think you are victim of a scam:
                 <ul>
-                    <li>Take security measures (change password, lock screen when away...) to avoid this issue in the future</li>
+                    <li>Take security measures (change password, lock screen when away...) to avoid this issue in the future.</li>
                     <li>Log in company <t t-esc="company_name" /> and have a look on the document layout in the general settings.
                         Check if everything is correct with a particular focus on bank account.</li>
                     <li>Verify no sales invoices were sent  between <t t-esc="timestamp" /> and now. Contact your customers if necessary.</li>

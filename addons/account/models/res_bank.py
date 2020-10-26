@@ -11,6 +11,7 @@ class ResPartnerBank(models.Model):
     _inherit = 'res.partner.bank'
 
     def write(self, vals):
+        # bank account of partner changed, warn self.env.user
         for acc in self:
             if 'acc_number' in vals:
                 mail_template = self.env.ref('account.partner_bank_account_changed_template')
@@ -18,6 +19,7 @@ class ResPartnerBank(models.Model):
                     'user_name': self.env.user.name,
                     'partner': acc.partner_id,
                     'timestamp': fields.Datetime.context_timestamp(self, datetime.now()).strftime(DEFAULT_SERVER_DATETIME_FORMAT),
+                    'operations': [_('an account was edited')]
                 }
                 mail_body = mail_template._render(ctx, engine='ir.qweb', minimal_qcontext=True)
                 mail = self.env['mail.mail'].sudo().create({

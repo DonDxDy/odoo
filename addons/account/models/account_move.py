@@ -196,6 +196,10 @@ class AccountMove(models.Model):
     statement_line_id = fields.Many2one(
         comodel_name='account.bank.statement.line',
         string="Statement Line", copy=False, check_company=True)
+    imported_bank_id = fields.Many2one('res.partner.bank', string='Imported Bank Account',
+        help='When the invoice is imported, if the bank account number detected is different that the one of the partner, you can choose to discard it or to assign it to the partner.')
+    imported_bank_acc_number = fields.Char(related='imported_bank_id.acc_number')
+    imported_bank_active = fields.Boolean(related='imported_bank_id.active')
 
     # === Amount fields ===
     amount_untaxed = fields.Monetary(string='Untaxed Amount', store=True, readonly=True, tracking=True,
@@ -2838,6 +2842,16 @@ class AccountMove(models.Model):
         self.qr_code_method = qr_code_method
 
         return rslt
+
+    def action_add_imported_bank(self):
+        self.ensure_one()
+        self.imported_bank_id.active = True
+        self.partner_bank_id = self.imported_bank_id
+
+    def action_discard_imported_bank(self):
+        self.ensure_one()
+        self.env['account.move'].search([('imported_bank_id', '=', self.imported_bank_id.id)]).imported_bank_id = None
+
 
 class AccountMoveLine(models.Model):
     _name = "account.move.line"
