@@ -334,6 +334,41 @@ QUnit.test('composer show/hide on log note/send message [REQUIRE FOCUS]', async 
     );
 });
 
+QUnit.test('should display subject in chatter via "Send message" button', async function (assert) {
+    assert.expect(3);
+
+    this.data['res.partner'].records.push({ id: 100 });
+    this.data['mail.message'].records.push({
+        body: "not empty",
+        is_discussion: true,
+        model: 'res.partner',
+        res_id: 100,
+        subject: "Salutations, voyageur",
+    });
+    await this.start();
+    const chatter = this.env.models['mail.chatter'].create({
+        threadId: 100,
+        threadModel: 'res.partner',
+    });
+    await this.createChatterComponent({ chatter });
+
+    assert.containsOnce(
+        document.body,
+        '.o_Message',
+        "should display a single message"
+    );
+    assert.containsOnce(
+        document.body,
+        '.o_Message_subject',
+        "should display subject of the message"
+    );
+    assert.strictEqual(
+        document.querySelector('.o_Message_subject').textContent,
+        "Subject: Salutations, voyageur",
+        "Subject of the message should be 'Salutations, voyageur'"
+    );
+});
+
 QUnit.test('should not display user notification messages in chatter', async function (assert) {
     assert.expect(1);
 
