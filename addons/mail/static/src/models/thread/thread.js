@@ -1285,16 +1285,21 @@ function factory(dependencies) {
          * @returns {mail.message[]}
          */
         _computeSearchedMessages() {
-            if (this.searchedText) {
-                const filteredMessages = this.orderedMessages.filter(
-                    message => message.body.toLowerCase().includes(this.searchedText.toLowerCase())
+            let filteredMessages = [];
+            if ((this.searchedText && this.searchedMessages.length) || !this.searchedText) {
+                this.searchedMessages.forEach(message => {
+                    message.update({'isFiltered': false });
+                });
+            } else {
+                filteredMessages = this.orderedMessages.filter(
+                    message => message.body.toLowerCase().includes(this.searchedText)
                 );
                 filteredMessages.forEach(message => {
                     message.update({'isFiltered': true});
                 });
-                return [['replace', filteredMessages]];
             }
-        }
+            return [['replace', filteredMessages]];
+       }
 
         /**
          * @private
@@ -1821,7 +1826,7 @@ function factory(dependencies) {
         public: attr(),
         searchedMessages: many2many('mail.message', {
             compute: '_computeSearchedMessages',
-            dependencies: ['orderedMessages', 'searchedText'],
+            dependencies: ['searchedText'],
         }),
         searchedText: attr({
             default: false,

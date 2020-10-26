@@ -370,6 +370,20 @@ function factory(dependencies) {
         }
 
         /**
+         * return body with highlighted text based on searched text
+         *
+         * @private
+         * @returns {string}
+         */
+        _computeFilteredMessageBody() {
+            if (this.originThread && this.originThread.searchedText && this.isFiltered) {
+                const match = this.body.match(new RegExp(this.originThread.searchedText, 'gi'))[0];
+                const prettyBody = this.body.replaceAll(match, `<mark>${match}</mark>`);
+                return prettyBody;
+            }
+        }
+
+        /**
          * @private
          * @returns {boolean}
          */
@@ -465,10 +479,6 @@ function factory(dependencies) {
                 }
             }
             // add anchor tags to urls
-            if (this.originThread && this.originThread.searchedText && this.isFiltered) {
-                const match = this.body.match(new RegExp(this.originThread.searchedText, 'gi'))[0];
-                prettyBody = this.body.replaceAll(match, `<mark>${match}</mark>`);
-            }
             return parseAndTransform(prettyBody, addLink);
         }
 
@@ -524,6 +534,10 @@ function factory(dependencies) {
         failureNotifications: one2many('mail.notification', {
             compute: '_computeFailureNotifications',
             dependencies: ['notificationsStatus'],
+        }),
+        filteredMessageBody: attr({
+            compute: '_computeFilteredMessageBody',
+            dependencies: ['isFiltered'],
         }),
         hasCheckbox: attr({
             compute: '_computeHasCheckbox',
@@ -672,7 +686,7 @@ function factory(dependencies) {
          */
         prettyBody: attr({
             compute: '_computePrettyBody',
-            dependencies: ['body', 'isFiltered'],
+            dependencies: ['body'],
         }),
         subject: attr(),
         subtype_description: attr(),

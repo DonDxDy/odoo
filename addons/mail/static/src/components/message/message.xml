@@ -156,7 +156,8 @@
                         </t>
                     </t>
                     <div class="o_Message_content" t-ref="content">
-                        <t t-raw="message.prettyBody"/>
+                        <t t-if="message.isFiltered" t-raw="message.filteredMessageBody"/>
+                        <t t-else="" t-raw="message.prettyBody"/>
                         <t t-if="message.subtype_description and !message.isBodyEqualSubtypeDescription">
                             <p t-esc="message.subtype_description"/>
                         </t>

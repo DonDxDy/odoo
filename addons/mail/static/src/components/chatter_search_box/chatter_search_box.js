@@ -42,7 +42,7 @@ class ChatterSearchBox extends Component {
     _onKeypress(ev) {
         if (ev.which === 13) {
             const thread = this.env.models['mail.thread'].get(this.props.threadLocalId);
-            thread.update({'searchedText': ev.currentTarget.value});
+            thread.update({ searchedText: ev.currentTarget.value.toLowerCase() });
         }
     }
 
