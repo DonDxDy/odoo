@@ -27,6 +27,7 @@ import "./webclient/navbar_tests";
 import "./webclient/user_menu_tests";
 import "./webclient/webclient_tests";
 import "./webclient/web_client_integrated_tests";
+import "./views/model/model_tests";
 
 (async () => {
   await setupTests();

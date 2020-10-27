@@ -1,7 +1,7 @@
 import { Component } from "@odoo/owl";
 import { useService } from "../core/hooks";
 import { ActionRequest } from "../action_manager/action_manager";
-import { ViewDefinition } from "../services/view_manager";
+import { ViewDescription } from "../services/view_manager";
 import { OdooEnv, ViewProps, ViewType } from "../types";
 
 export interface SubTemplates {
@@ -25,7 +25,7 @@ export class BaseView extends Component<ViewProps, OdooEnv> {
   vm = useService("view_manager");
   am = useService("action_manager");
 
-  viewDescription: ViewDefinition = {} as any;
+  viewDescription: ViewDescription = {} as any;
 
   async willStart() {
     const params = {
