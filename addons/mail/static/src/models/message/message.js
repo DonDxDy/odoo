@@ -442,6 +442,30 @@ function factory(dependencies) {
                 this.originThread.isModeratedByCurrentPartner
             );
         }
+        /**
+         * @private
+         * @returns {boolean}
+         */
+        _computeIsSubjectEqualThreadName() {
+            if (!this.subject || !this.originThreadName) {
+                return false;
+            }
+            const prefix = ['re:', 'fw:', 'fwd:'];
+            let cleanedSubject = this.subject.toLowerCase();
+            let threadName = this.originThreadName.toLowerCase();
+            for (const pref of prefix) {
+                if (threadName === cleanedSubject) {
+                    return true;
+                }
+                if (cleanedSubject.startsWith(pref)) {
+                    cleanedSubject = cleanedSubject.replace(pref, '').trim();
+                }
+                if (threadName.startsWith(pref)) {
+                    threadName = threadName.replace(pref, '').trim();
+                }
+            }
+            return threadName === cleanedSubject;
+        }
 
         /**
          * @private
@@ -612,6 +636,13 @@ function factory(dependencies) {
                 'originThreadIsModeratedByCurrentPartner',
             ],
         }),
+        isSubjectEqualThreadName: attr({
+            compute: '_computeIsSubjectEqualThreadName',
+            dependencies: [
+                'subject',
+                'originThreadName',
+            ],
+        }),
         isTemporary: attr({
             default: false,
         }),
@@ -683,6 +714,9 @@ function factory(dependencies) {
         originThreadIsModeratedByCurrentPartner: attr({
             default: false,
             related: 'originThread.isModeratedByCurrentPartner',
+        }),
+        originThreadName: attr({
+            related: 'originThread.name',
         }),
         /**
          * This value is meant to be based on field body which is

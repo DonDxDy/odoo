@@ -550,6 +550,64 @@ QUnit.test('click on (non-channel/non-partner) origin thread link should redirec
     assert.verifySteps(['do-action'], "should have made an action on click on origin thread (to open form view)");
 });
 
+QUnit.test('subject should not be shown when subject is the same as the thread name', async function (assert) {
+    assert.expect(2);
+
+    this.data['mail.message'].records.push({
+        body: "not empty",
+        channel_ids: [100],
+        model: 'mail.channel',
+        res_id: 100,
+        needaction: true,
+        subject: "Salutations, voyageur",
+    });
+    this.data['mail.channel'].records.push({
+        id: 100,
+        name: "Salutations, voyageur",
+    });
+    await this.start();
+
+    assert.containsOnce(
+        document.body,
+        '.o_Message',
+        "should display a single message"
+    );
+    assert.containsNone(
+        document.body,
+        '.o_Message_subject',
+        "subject should not be shown when subject is the same as the thread name"
+    );
+});
+
+QUnit.test('subject should not be shown when subject differs from thread name only by the "Re:" prefix', async function (assert) {
+    assert.expect(2);
+
+    this.data['mail.message'].records.push({
+        body: "not empty",
+        channel_ids: [100],
+        model: 'mail.channel',
+        res_id: 100,
+        needaction: true,
+        subject: "Re: Salutations, voyageur",
+    });
+    this.data['mail.channel'].records.push({
+        id: 100,
+        name: "Salutations, voyageur",
+    });
+    await this.start();
+
+    assert.containsOnce(
+        document.body,
+        '.o_Message',
+        "should display a single message"
+    );
+    assert.containsNone(
+        document.body,
+        '.o_Message_subject',
+        "should not display subject when subject differs from thread name only by the 'Re:' prefix"
+    );
+});
+
 });
 });
 });
