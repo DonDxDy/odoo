@@ -169,7 +169,7 @@ done in a loop::
 
 A list of records is known as a *recordset*, i.e. an ordered collection of records. It supports
 the standard Python operations on collections, like ``len()`` and ``iter()``, plus extra set
-operations like ``recs1 + recs2``.
+operations like ``recs1 | recs2``.
 
 .. exercise:: Add the Real Estate Property Tag table
 
@@ -186,7 +186,7 @@ operations like ``recs1 + recs2``.
 
     Tip: in the view, use the ``widget="many2many_tags"`` attribute as done
     `here <https://github.com/odoo/odoo/blob/5bb8b927524d062be32f92eb326ef64091301de1/addons/crm_iap_lead_website/views/crm_reveal_views.xml#L36>`__.
-    We will cover :ref:`later <howto/rdtraining/12_sprinkles>` the ``widget`` attribute in more
+    The ``widget`` attribute will be explained in :ref:`a later part <howto/rdtraining/12_sprinkles>`.
     detail. For now, you can try to add or remove it and see the result ;-)
 
 One2many
@@ -214,16 +214,16 @@ An offer applies to **one** property, but the same property can have **many** of
 the concept of **many2one** appears once again. However, in this case we want to display the list
 of offers for a given property: we will use the **one2many** concept.
 
-A one2many virtual relationship, inverse of a many2one. For example, we defined on our test model
-a link to the ``res.partner`` model thanks to the field ``partner_id``. We can define the inverse
-relation, i.e. the list of test models linked to our partner::
+A one2many is the inverse of a many2one. For example, we defined
+on our test model a link to the ``res.partner`` model thanks to the field ``partner_id``.
+We can define the inverse relation, i.e. the list of test models linked to our partner::
 
     test_ids = fields.One2many("test.model", "partner_id", string="Tests")
 
 The first parameter is called the ``comodel``, while the second parameter is the field we want to
 inverse.
 
-By convention, one2many fields have the ``_ids`` suffix. It behaves as a list of records, meaning
+By convention, one2many fields have the ``_ids`` suffix. They behave as a list of records, meaning
 that accessing the data must be done in a loop::
 
     for test in partner.test_ids:
@@ -258,7 +258,9 @@ exercise: an offer is always accessed through a property.
 
 Second, despite the fact that the ``property_id`` field is required, we did not include it in the
 views. How come Odoo knows to which property our offer is linked to? Well that's part of the
-magic of using the Odoo framework: sometimes, things are defined implicitly.
+magic of using the Odoo framework: sometimes, things are defined implicitly. When we create
+a record through a one2many field, the corresponding many2one is populated automatically
+for convenience.
 
 Still alive? This chapter is surely not the easiest one. It introduced a couple of new concepts
 while relying on everything that was introduced before. The

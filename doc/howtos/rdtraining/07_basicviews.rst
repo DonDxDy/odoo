@@ -195,16 +195,18 @@ Domains
 **Reference**: the documentation related to this topic can be found in
 :ref:`reference/orm/domains`.
 
-In Odoo, domains are values that encode conditions on
-records. A domain is a list of criteria used to select a subset of a model's
-records. Each criteria is a triple with a field name, an operator and a value.
+In Odoo, a domain encodes conditions on
+records: a domain is a list of criteria used to select a subset of a model's
+records. Each criterion is a triplet with a *field name*, an *operator* and a *value*.
+A record satisfies a criterion if the specified field matches the value using the operator.
 
 For instance, when used on the *Product* model the following domain selects
 all *services* with a unit price over *1000*::
 
     [('product_type', '=', 'service'), ('unit_price', '>', 1000)]
 
-By default criteria are combined with an implicit AND. The logical operators
+By default criteria are combined with an implicit AND, meaning *every* criterion
+needs to be satisfied for a record to match a domain. The logical operators
 ``&`` (AND), ``|`` (OR) and ``!`` (NOT) can be used to explicitly combine
 criteria. They are used in prefix position (the operator is inserted before
 its arguments rather than between). For instance, to select products 'which are

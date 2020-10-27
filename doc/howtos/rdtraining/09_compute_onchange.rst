@@ -30,7 +30,7 @@ Computed Fields
         :align: center
         :alt: Compute fields
 
-    - On the property offer model, the validity date is computed and has an inverse:
+    - On the property offer model, the validity date is computed and can be updated:
 
     .. image:: 09_compute_onchange/media/compute_inverse.gif
         :align: center
@@ -81,7 +81,7 @@ field whenever some of its dependencies have been modified::
 
     The object ``self`` is a *recordset*, i.e. an ordered collection of
     records. It supports the standard Python operations on collections, like
-    ``len(self)`` and ``iter(self)``, plus extra set operations like ``recs1 +
+    ``len(self)`` and ``iter(self)``, plus extra set operations like ``recs1 |
     recs2``.
 
     Iterating over ``self`` gives the records one by one, where each record is
@@ -99,7 +99,7 @@ is a simple one.
 
     - Add the field in the form view as depicted on the first image of the **Goal**.
 
-Relational fields can also be used as dependencies::
+For relational fields it's possible to use paths through the field as a dependency::
 
     description = fields.Char(compute="_compute_description")
     partner_id = fields.Many2one("res.partner")
@@ -157,6 +157,9 @@ In this case Odoo provides the ability to use an ``inverse`` function::
 
 An example can be found
 `here <https://github.com/odoo/odoo/blob/2ccf0bd0dcb2e232ee894f07f24fdc26c51835f7/addons/crm/models/crm_lead.py#L308-L317>`__.
+
+A compute method is written by setting the field, an inverse is written by setting its
+dependencies.
 
 Note that the ``inverse`` method is only called when saving the record, while the
 ``compute`` method is called at each change of the dependencies.

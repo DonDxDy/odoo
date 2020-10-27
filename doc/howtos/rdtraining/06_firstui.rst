@@ -38,6 +38,11 @@ regular records in database.
     When performance is important, the CSV format is preferred over the XML format. Indeed, in Odoo
     loading a CSV file is faster than loading an XML file.
 
+In Odoo, the user interface (actions, menus and views) is largely defined by creating
+and composing records defined in an XML file. A common pattern is Menu > Action > View.
+To access records, the user navigates through several menu levels; the deepest level is an
+action which triggers the opening of a list of the records.
+
 Actions
 =======
 
@@ -170,8 +175,8 @@ The third menu will get the name of the ``action``.
     Create the three levels of menus for the ``estate.property`` action created in the previous
     exercise. Refer to the **Goal** of the section for the expected result.
 
-Restart the server and **refresh the browser**. You should now see the menus, and you'll even
-be able to create your first real estate property advertisement!
+Restart the server and **refresh the browser**\ [#refresh]_. You should now see the menus,
+and you'll even be able to create your first real estate property advertisement!
 
 Fields, Attributes And View
 ===========================
@@ -225,7 +230,7 @@ Default Values
 
 Any field can be given a default value. In the field definition, add the option
 ``default=X`` where ``X`` is either a Python literal value (boolean, integer,
-float, string), or a function taking a recordset and returning a value::
+float, string), or a function taking a model and returning a value::
 
     name = fields.Char(default="Unknown")
     last_seen = fields.Datetime("Last Seen", default=lambda self: fields.Datetime.now())
@@ -250,9 +255,8 @@ Reserved Fields
 **Reference**: the documentation related to this topic can be found in
 :ref:`reference/orm/fields/reserved`.
 
-A few field names are reserved for pre-defined behaviors beyond that of
-automated fields. They should be defined on a model when the related
-behavior is desired.
+A few field names are reserved for pre-defined behaviors. They should be defined on a
+model when the related behavior is desired.
 
 .. exercise:: Active field
 
@@ -285,3 +289,6 @@ The ``state`` will be used later on for several UI enhancements.
 
 Now that we have are to interact with the UI thanks to the default views, the next step is
 obvious: we want to define :ref:`our own views <howto/rdtraining/07_basicviews>`.
+
+.. [#refresh] A refresh is needed since the web clients keeps a cache of the various menus
+              and views for performance reasons.
