@@ -183,6 +183,14 @@
             <script type="text/javascript" src="/bus/static/src/js/crosstab_bus.js"></script>
             <script type="text/javascript" src="/bus/static/src/js/services/bus_service.js"></script>
             <script type="text/javascript" src="/mail/static/src/js/utils.js"></script>
+            <script type="text/javascript" src="/mail/static/src/model/model_manager.js"></script>
+            <script type="text/javascript" src="/mail/static/src/model/model_core.js"></script>
+            <script type="text/javascript" src="/mail/static/src/model/model_field.js"></script>
+            <script type="text/javascript" src="/mail/static/src/model/model_field_command.js"></script>
+            <script type="text/javascript" src="/mail/static/src/utils/utils.js"></script>
+            <script type="text/javascript" src="/im_livechat/static/src/components/livechat_button/livechat_button.js"></script>
+            <script type="text/javascript" src="/web/static/src/js/owl_compatibility.js"></script>
+            <script type="text/javascript" src="/mail/static/src/js/main.js"></script>
             <script type="text/javascript" src="/im_livechat/static/src/legacy/public_livechat.js"></script>
             <t t-call="web._assets_helpers"/>
             <link rel="stylesheet" type="text/scss" href="/im_livechat/static/src/scss/im_livechat_bootstrap.scss"/>
@@ -202,17 +210,12 @@
                     </t>
 
                     odoo.define('im_livechat.livesupport', function (require) {
-            <t t-if="info['available']" t-translation="off">
-                        var rootWidget = require('root.widget');
-                        var im_livechat = require('im_livechat.legacy.im_livechat.im_livechat');
-                        var button = new im_livechat.LivechatButton(
-                            rootWidget,
-                            "<t t-esc="info['server_url']"/>",
-                            <t t-raw="json.dumps(info.get('options', {}))"/>
-                        );
-                        button.appendTo(document.body);
-                        window.livechat_button = button;
-            </t>
+                    <t t-if="info['available']" t-translation="off">
+                        console.log('loaded compo');
+                        const LivechatButton = require('im_livechat/static/src/components/livechat_button/livechat_button.js');
+                        const ChatContainerComponent = new LivechatButton();
+                        ChatContainerComponent.mount(document.body);
+                    </t>
                     });
                 });
             </t>

@@ -10,6 +10,7 @@
                 <script type="text/javascript" src="/mail/static/src/js/utils.js"></script>
                 <script type="text/javascript" src="/website_livechat/static/src/bugfix/public_bugfix.js"></script>
                 <script type="text/javascript" src="/im_livechat/static/src/legacy/public_livechat.js"></script>
+                <script type="text/javascript" src="/im_livechat/static/src/components/livechat_button/livechat_button.js"></script>
                 <!--Chat Request-->
                 <script type="text/javascript" src="/website_livechat/static/src/legacy/public_livechat.js"></script>
                 <!--Stylesheets-->
