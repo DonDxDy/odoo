@@ -277,7 +277,7 @@ class IrModel(models.Model):
         return True
 
     @api.ondelete(at_uninstall=False)
-    def unlink_if_manual(self):
+    def _unlink_if_manual(self):
         # Prevent manual deletion of module tables
         for model in self:
             if model.state != 'manual':
@@ -799,7 +799,7 @@ class IrModelFields(models.Model):
             self.pool.setup_models(self._cr)
 
     @api.ondelete(at_uninstall=True)
-    def unlink_if_manual(self):
+    def _unlink_if_manual(self):
         # Prevent manual deletion of module columns
         if any(field.state != 'manual' for field in self):
             raise UserError(_("This column contains module data and cannot be removed!"))
@@ -1342,7 +1342,7 @@ class IrModelSelection(models.Model):
         return result
 
     @api.ondelete(at_uninstall=False)
-    def unlink_if_manual(self):
+    def _unlink_if_manual(self):
         # Prevent manual deletion of module columns
         if (self.pool.ready and any(selection.field_id.state != 'manual' for selection in self)):
             raise UserError(_('Properties of base fields cannot be altered in this manner! '
