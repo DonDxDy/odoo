@@ -112,6 +112,19 @@ var KanbanView = BasicView.extend({
             this.loadParams.groupBy = [this.arch.attrs.default_group_by];
         }
     },
+    /**
+     * @override
+     * @private
+     * @param {Object} node
+     * @param {Object} fv the fieldsView
+     */
+    _processNode(node, fv) {
+        if (node.tag === 'img' && node.attrs['t-att-src'] && node.attrs['t-att-src'].includes('kanban_image')) {
+            var fieldsInfo = fv.fieldsInfo[fv.type];
+            fieldsInfo['__last_update'] = _.extend({}, { '__last_update': { 'type': 'datetime' }});
+        }
+        return this._super(...arguments);
+    }
 });
 
 return KanbanView;

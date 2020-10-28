@@ -18,6 +18,11 @@ var makeTestPromise = testUtils.makeTestPromise;
 var nextTick = testUtils.nextTick;
 const cpHelpers = testUtils.controlPanel;
 var createView = testUtils.createView;
+var createActionManager = testUtils.createActionManager;
+// Base64 images for testing purpose
+const MY_IMAGE = 'iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==';
+const PRODUCT_IMAGE = 'R0lGODlhDAAMAKIFAF5LAP/zxAAAANyuAP/gaP///wAAAAAAACH5BAEAAAUALAAAAAAMAAwAAAMlWLPcGjDKFYi9lxKBOaGcF35DhWHamZUW0K4mAbiwWtuf0uxFAgA7';
+
 
 QUnit.module('Views', {
     before: function () {
@@ -7377,6 +7382,69 @@ QUnit.module('Views', {
 
         kanban.destroy();
     });
-});
 
+    QUnit.test('image show in kanban view without refresh the page', async function (assert) {
+        assert.expect(2);
+        this.data1 = {
+            partner: {
+                fields: {
+                    image: {string: "image", type: "binary"},
+                },
+                records: [
+                    {id: 1, display_name: "First record", image: MY_IMAGE},
+                ],
+            },
+        };
+        this.actions = [{
+            id: 1,
+            name: 'Partners Action 4',
+            res_model: 'partner',
+            type: 'ir.actions.act_window',
+            views: [[1, 'kanban'], [false, 'form']],
+        }];
+
+        this.archs = {
+            // kanban views
+            'partner,1,kanban': '<kanban><templates><t t-name="kanban-box">' +
+                    '<div class="oe_kanban_global_click">'+
+                    '<field name="display_name"/>' +
+                    "<img t-att-src='kanban_image(\"partner\", \"image\", 1)'/>" +
+                    '</div>'+
+                '</t></templates></kanban>',
+            // form views
+            'partner,false,form': '<form>' +
+                    '<group>' +
+                        '<field name="display_name"/>' +
+                        '<field name="image" widget="image"/>' +
+                    '</group>' +
+                '</form>',
+            // list views
+            'partner,false,list': '<tree></tree>',
+             // search views
+            'partner,false,search': '<search></search>',
+        };
+        var actionManager = await createActionManager({
+            actions: this.actions,
+            archs: this.archs,
+            data: this.data1,
+            async mockRPC(route, args) {
+                if (route === '/web/dataset/call_kw/partner/read') {
+                    assert.deepEqual(args.args[1], ['display_name', 'image', '__last_update'],
+                        "The fields image, display_name and __last_update should be present when reading an image");
+                }
+                if (route === `data:image/png;base64,${MY_IMAGE}`) {
+                    assert.ok(true, "should called the correct route");
+                    return 'wow';
+                }
+                return this._super.apply(this, arguments);
+            },
+        });
+        await actionManager.doAction(1);
+        await testUtils.dom.click(actionManager.$('.oe_kanban_global_click'));
+        this.data1.partner.records[0].image = PRODUCT_IMAGE;
+        await testUtils.dom.click(actionManager.$('.o_back_button'));
+        await testUtils.nextTick();
+        actionManager.destroy();
+    });
+});
 });
