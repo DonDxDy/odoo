@@ -3064,45 +3064,41 @@ class TestUnlinkConstraints(common.TransactionCase):
 
     def setUp(self):
         super().setUp()
-        MODEL1 = self.env['test_new_api.model_constrained_unlinks']
-        MODEL2 = self.env['test_new_api.model_constrained_unlinks_two']
+        MODEL = self.env['test_new_api.model_constrained_unlinks']
 
-        self.deletable_record_model1 = MODEL1.create({
-            'foo': 'ravioli',
-            'bar': 5,
-        })
-
-        self.undeletable_record_model1 = MODEL1.create({
-            'foo': 'spaghetti',
-            'bar': 6,
-        })
+        self.deletable_record_bar = MODEL.create({'bar': 5})
+        self.undeletable_record_bar = MODEL.create({'bar': 6})
+        self.deletable_record_foo = MODEL.create({'foo': 'formaggio'})
+        self.undeletable_record_foo = MODEL.create({'foo': 'prosciutto'})
 
         from odoo.addons.base.models.ir_model import MODULE_UNINSTALL_FLAG
-        self.undeletable_record_model1_uninstall = self.undeletable_record_model1.with_context(
-            {**self.undeletable_record_model1._context, MODULE_UNINSTALL_FLAG: True}
+        # should succeed since it's at_uninstall=False
+        self.undeletable_record_bar_uninstall = self.undeletable_record_bar.with_context(
+            {**self.undeletable_record_bar._context, MODULE_UNINSTALL_FLAG: True}
         )
+        # should fail since it's at_uninstall=True
+        self.undeletable_record_foo_prosciutto_uninstall = self.undeletable_record_foo.\
+            with_context({
+                **self.undeletable_record_foo._context,
+                MODULE_UNINSTALL_FLAG: True,
+            })
 
-        self.deletable_record_model2 = MODEL2.create({
-            'foo': 'formaggio',
-            'bar': 6,
-        })
+    def test_unlink_constraint_manual_bar(self):
+        self.assertTrue(self.deletable_record_bar.unlink())
+        with self.assertRaises(ValueError, msg="Nooooooooo bar can't be greater than five!!"):
+            self.undeletable_record_bar.unlink()
 
-        self.undeletable_record_model2 = MODEL2.create({
-            'foo': 'prosciutto',
-            'bar': 4,
-        })
+    def test_unlink_constraint_uninstall_bar(self):
+        self.assertTrue(self.deletable_record_bar.unlink())
+        self.assertTrue(self.undeletable_record_bar_uninstall.unlink())
 
-    def test_unlink_constraint_manual(self):
-        self.assertTrue(self.deletable_record_model1.unlink())
-        with self.assertRaises(ValueError):
-            self.undeletable_record_model1.unlink()
+    def test_unlink_constraint_manual_foo(self):
+        self.assertTrue(self.deletable_record_foo.unlink())
+        with self.assertRaises(ValueError, msg="You didn't say if you wanted it crudo or cotto..."):
+            self.undeletable_record_foo.unlink()
 
-    def test_unlink_constraint_uninstall(self):
-        self.assertTrue(self.deletable_record_model1.unlink())
-        self.assertTrue(self.undeletable_record_model1_uninstall.unlink())
-
-    def test_unlink_constraint_no_crosstalk(self):
-        self.assertTrue(self.deletable_record_model2.unlink())
-        with self.assertRaises(ValueError):
-            self.undeletable_record_model2.unlink()
+    def test_unlink_constraint_uninstall_foo(self):
+        self.assertTrue(self.deletable_record_foo)
+        with self.assertRaises(ValueError, msg="You didn't say if you wanted it crudo or cotto..."):
+            self.undeletable_record_foo_uninstall.unlink()
 
