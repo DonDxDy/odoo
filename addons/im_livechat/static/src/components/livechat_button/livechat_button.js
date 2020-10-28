@@ -11,9 +11,12 @@ class LivechatButton extends Component {
 
     static template = xml`
 <div>
-        <div class="o_LivechatButton" t-on-click="init">
+        <div class="o_LivechatButton">
             BIG BUTTON HERE
         </div>
+<div class="window">
+
+</div>
 <input type="text" name="composer"/>
 <button t-on-click="submit">Send</button>
 </div>
@@ -26,6 +29,7 @@ class LivechatButton extends Component {
             button_text: env._t("Chat with one of our collaborators"),
             default_message: env._t("How may I help you?"),
         }, props.options);
+        this.init();
     }
 
     async init() {
@@ -42,6 +46,10 @@ class LivechatButton extends Component {
                 previous_operator_id: null,
             }
         });
+
+        const chatWindowModel = this.env['mail.chat_window'].create();
+        const ChatWindow = require('mail/static/src/components/chat_window/chat_window.js');
+
 
         env.services.bus_service.addChannel(this.livechatSession.uuid);
         env.services.bus_service.onNotification(null, notifs => this._handleNotifications(notifs));

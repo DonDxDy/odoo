@@ -191,6 +191,52 @@
             <script type="text/javascript" src="/im_livechat/static/src/components/livechat_button/livechat_button.js"></script>
             <script type="text/javascript" src="/web/static/src/js/owl_compatibility.js"></script>
             <script type="text/javascript" src="/mail/static/src/js/main.js"></script>
+
+            <script type="text/javascript" src="/mail/static/src/models/chat_window/chat_window.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/chat_window/chat_window.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/autocomplete_input/autocomplete_input.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/chat_window_header/chat_window_header.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/thread_view/thread_view.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/thread_icon/thread_icon.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/composer/composer.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/message_list/message_list.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/thread_typing_icon/thread_typing_icon.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/attachment_list/attachment_list.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/composer_suggested_recipient_list/composer_suggested_recipient_list.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/drop_zone/drop_zone.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/emojis_popover/emojis_popover.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/file_uploader/file_uploader.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/composer_text_input/composer_text_input.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/thread_textual_typing_status/thread_textual_typing_status.js"></script>
+            <script type="text/javascript" src="/mail/static/src/component_hooks/use_drag_visible_dropzone/use_drag_visible_dropzone.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/message/message.js"></script>
+            <script type="text/javascript" src="/mail/static/src/component_hooks/use_refs/use_refs.js"></script>
+            <script type="text/javascript" src="/mail/static/src/component_hooks/use_store/use_store.js"></script>
+            <script type="text/javascript" src="/mail/static/src/utils/utils.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/attachment/attachment.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/composer_suggested_recipient/composer_suggested_recipient.js"></script>
+            <script type="text/javascript" src="/mail/static/src/js/emojis.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/composer_suggestion_list/composer_suggestion_list.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/message_seen_indicator/message_seen_indicator.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/moderation_ban_dialog/moderation_ban_dialog.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/moderation_discard_dialog/moderation_discard_dialog.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/moderation_reject_dialog/moderation_reject_dialog.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/notification_popover/notification_popover.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/partner_im_status_icon/partner_im_status_icon.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/attachment_delete_confirm_dialog/attachment_delete_confirm_dialog.js"></script>
+            <script type="text/javascript" src="/web/static/src/js/views/view_dialogs.js"></script>
+            <script type="text/javascript" src="/mail/static/src/components/composer_suggestion/composer_suggestion.js"></script>
+            <script type="text/javascript" src="/web/static/src/js/core/owl_dialogs.js"></script>
+            <script type="text/javascript" src="/web/static/src/js/core/dialog.js"></script>
+            <script type="text/javascript" src="/web/static/src/js/views/view_registry.js"></script>
+            <script type="text/javascript" src="/web/static/src/js/views/select_create_controllers_registry.js"></script>
+            <script type="text/javascript" src="/web/static/src/js/views/form/form_view.js"></script>
+            <script type="text/javascript" src="/web/static/src/js/views/graph/graph_view.js"></script>
+            <script type="text/javascript" src="/web/static/src/js/views/kanban/kanban_view.js"></script>
+            <script type="text/javascript" src="/web/static/src/js/views/list/list_view.js"></script>
+            <script type="text/javascript" src="/web/static/src/js/views/pivot/pivot_view.js"></script>
+            <script type="text/javascript" src="/web/static/src/js/views/calendar/calendar_view.js"></script>
+
             <script type="text/javascript" src="/im_livechat/static/src/legacy/public_livechat.js"></script>
             <t t-call="web._assets_helpers"/>
             <link rel="stylesheet" type="text/scss" href="/im_livechat/static/src/scss/im_livechat_bootstrap.scss"/>
