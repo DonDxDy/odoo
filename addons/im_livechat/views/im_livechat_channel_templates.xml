@@ -211,9 +211,10 @@
 
                     odoo.define('im_livechat.livesupport', function (require) {
                     <t t-if="info['available']" t-translation="off">
-                        console.log('loaded compo');
+                        const server_url = "<t t-esc="info['server_url']"/>";
+                        const options = <t t-raw="json.dumps(info.get('options', {}))"/>;
                         const LivechatButton = require('im_livechat/static/src/components/livechat_button/livechat_button.js');
-                        const ChatContainerComponent = new LivechatButton();
+                        const ChatContainerComponent = new LivechatButton(null, { server_url: server_url, options: options });
                         ChatContainerComponent.mount(document.body);
                     </t>
                     });
