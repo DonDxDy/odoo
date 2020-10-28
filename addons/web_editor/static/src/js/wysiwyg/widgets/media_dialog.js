@@ -39,6 +39,7 @@ var MediaDialog = Dialog.extend({
     init: function (parent, options, media) {
         var $media = $(media);
         media = $media[0];
+        this.media = media;
 
         options = _.extend({}, options);
         var onlyImages = options.onlyImages || this.multiImages || (media && ($media.parent().data('oeField') === 'image' || $media.parent().data('oeType') === 'image'));
@@ -160,6 +161,13 @@ var MediaDialog = Dialog.extend({
         var args = arguments;
         return this.activeWidget.save().then(function (data) {
             self._clearWidgets();
+            // Restore classes if the media was replaced (when changing type)
+            if (self.media !== data) {
+                var oldClasses = self.media && _.toArray(self.media.classList);
+                if (oldClasses) {
+                    data.className = _.union(_.toArray(data.classList), oldClasses).join(' ');
+                }
+            }
             self.final_data = data;
             _super.apply(self, args);
             $(data).trigger('content_changed');
