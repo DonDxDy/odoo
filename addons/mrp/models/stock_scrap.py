@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
 
 
 class StockScrap(models.Model):
@@ -34,3 +34,30 @@ class StockScrap(models.Model):
             else:
                 vals.update({'raw_material_production_id': self.production_id.id})
         return vals
+
+    @api.onchange('lot_id')
+    def _onchange_serial_number(self):
+        if self.product_id.tracking == 'serial' and self.lot_id and self.production_id:
+            quants = self.env['stock.quant'].search([('product_id', '=', self.product_id.id),
+                                                     ('lot_id', '=', self.lot_id.id),
+                                                     ('quantity', '!=', 0),
+                                                     ('company_id', '=', self.company_id.id),
+                                                     ('location_id.usage', 'in', ('internal', 'transit'))])
+            sn_locations = quants.mapped('location_id')
+            if sn_locations and self.location_id not in sn_locations:
+                recommended_location = self.env['stock.location']
+                for location in sn_locations:
+                    if location == self.production_id.location_dest_id or location in self.production_id.location_dest_id.child_ids:
+                        recommended_location = location
+                        break
+                if not recommended_location:
+                    return {'warning': {'title': _('Warning'),
+                                        'message': _('Serial number (%s) is not located in %s, but is located in location(s): %s. Please correct this to prevent inconsistent data.',
+                                                        self.lot_id.name, self.location_id.display_name, ', '.join(sn_locations.mapped('display_name')))}}
+                else:
+                    self.location_id = recommended_location
+                    return {'warning': {'title': _('Warning'),
+                                        'message': _('Serial number (%s) is not located in %s, but is located in location(s): %s. Source location for this move will be changed to %s',
+                                                        self.lot_id.name, self.location_id.display_name, ', '.join(sn_locations.mapped('display_name')), recommended_location.display_name)}}
+        else:
+            return super()._onchange_serial_number()

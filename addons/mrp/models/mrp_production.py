@@ -662,16 +662,18 @@ class MrpProduction(models.Model):
     @api.onchange('lot_producing_id')
     def _onchange_lot_producing(self):
         if self.product_id.tracking == 'serial':
-            if self.env['stock.move.line'].search_count([
-                ('company_id', '=', self.company_id.id),
-                ('product_id', '=', self.product_id.id),
-                ('lot_id', '=', self.lot_producing_id.id),
-                ('state', '!=', 'cancel')
-            ]):
+            quants = self.env['stock.quant'].search([('product_id', '=', self.product_id.id),
+                                                     ('lot_id', '=', self.lot_producing_id.id),
+                                                     ('quantity', '!=', 0),
+                                                     '|', ('location_id.usage', '=', 'customer'),
+                                                          '&', ('company_id', '=', self.company_id.id),
+                                                               ('location_id.usage', 'in', ('internal', 'transit'))])
+            if quants:
                 return {
                     'warning': {
                         'title': _('Warning'),
-                        'message': _('Existing Serial number (%s). Please correct the serial numbers encoded.') % self.lot_producing_id.name
+                        'message': _('Serial number (%s) already exists in location(s): %s. Please correct the serial number encoded.',
+                                     self.lot_producing_id.name, ', '.join(quants.location_id.mapped('display_name')))
                     }
                 }
 

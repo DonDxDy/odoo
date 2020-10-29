@@ -96,6 +96,37 @@ class StockScrap(models.Model):
             self.location_id = False
             self.scrap_location_id = False
 
+    @api.onchange('lot_id')
+    def _onchange_serial_number(self):
+        message = None
+        if self.product_id.tracking == 'serial' and self.lot_id:
+            quants = self.env['stock.quant'].search([('product_id', '=', self.product_id.id),
+                                                     ('lot_id', '=', self.lot_id.id),
+                                                     ('quantity', '!=', 0),
+                                                     ('company_id', '=', self.company_id.id),
+                                                     ('location_id.usage', 'in', ('internal', 'transit'))])
+            sn_locations = quants.mapped('location_id')
+            if sn_locations and self.location_id not in sn_locations:
+                recommended_location = self.env['stock.location']
+                # only update location if it's within the picking's location
+                if self.picking_id:
+                    for location in sn_locations:
+                        if location == self.picking_id.location_dest_id or location in self.picking_id.location_dest_id.child_ids:
+                            recommended_location = location
+                            break
+                    if not recommended_location:
+                        message = _('Serial number (%s) is not located in %s, but is located in location(s): %s. Please correct this to prevent inconsistent data.',
+                            self.lot_id.name, self.location_id.display_name, ', '.join(sn_locations.mapped('display_name')))
+                # if no picking, then we can update to any location within company
+                if not recommended_location:
+                    recommended_location = sn_locations[0]
+                if not message:
+                    message = _('Serial number (%s) is not located in %s, but is located in location(s): %s. Source location for this move will be changed to %s',
+                        self.lot_id.name, self.location_id.display_name, ', '.join(sn_locations.mapped('display_name')), recommended_location.display_name)
+                    self.location_id = recommended_location
+        if message:
+            return {'warning': {'title': _('Warning'), 'message': message}}
+
     def unlink(self):
         if 'done' in self.mapped('state'):
             raise UserError(_('You cannot delete a scrap which is done.'))

@@ -131,6 +131,7 @@ class StockMoveLine(models.Model):
         help him. This includes:
             - automatically switch `qty_done` to 1.0
             - warn if he has already encoded `lot_name` in another move line
+            - warn (and update if appropriate) if the SN is in a different source location than selected
         """
         res = {}
         if self.product_id.tracking == 'serial':
@@ -140,22 +141,41 @@ class StockMoveLine(models.Model):
             message = None
             if self.lot_name or self.lot_id:
                 move_lines_to_check = self._get_similar_move_lines() - self
+                domain = [('product_id', '=', self.product_id.id),
+                          ('quantity', '!=', 0),
+                          '|', ('location_id.usage', '=', 'customer'),
+                               '&', ('company_id', '=', self.company_id.id),
+                                    ('location_id.usage', 'in', ('internal', 'transit'))]
                 if self.lot_name:
                     counter = Counter([line.lot_name for line in move_lines_to_check])
                     if counter.get(self.lot_name) and counter[self.lot_name] > 1:
                         message = _('You cannot use the same serial number twice. Please correct the serial numbers encoded.')
                     elif not self.lot_id:
-                        counter = self.env['stock.production.lot'].search_count([
-                            ('company_id', '=', self.company_id.id),
-                            ('product_id', '=', self.product_id.id),
-                            ('name', '=', self.lot_name),
-                        ])
-                        if counter > 0:
-                            message = _('Existing Serial number (%s). Please correct the serial number encoded.') % self.lot_name
+                        quants = self.env['stock.quant'].search([('lot_id.name', '=', self.lot_name)] + domain)
+                        if quants:
+                            message = _('Serial number (%s) already exists in location(s): %s. Please correct the serial number encoded.', self.lot_name, ', '.join(quants.location_id.mapped('display_name')))
                 elif self.lot_id:
                     counter = Counter([line.lot_id.id for line in move_lines_to_check])
                     if counter.get(self.lot_id.id) and counter[self.lot_id.id] > 1:
                         message = _('You cannot use the same serial number twice. Please correct the serial numbers encoded.')
+                    else:
+                        # check if in correct source location
+                        quants = self.env['stock.quant'].search([('lot_id', '=', self.lot_id.id)] + domain)
+                        sn_locations = quants.mapped('location_id')
+                        if sn_locations and self.location_id not in sn_locations:
+                            location_within_picking_location = self.env['stock.location']
+                            if self.picking_id:
+                                for location in sn_locations:
+                                    if location == self.picking_id.location_id or location in self.picking_id.location_id.child_ids:
+                                        location_within_picking_location = location
+                                        break
+                            if location_within_picking_location:
+                                message = _('Serial number (%s) is not located in %s, but is located in location(s): %s. Source location for this move will be changed to %s',
+                                    self.lot_id.name, self.location_id.display_name, ', '.join(sn_locations.mapped('display_name')), location.display_name)
+                                self.location_id = location_within_picking_location
+                            else:
+                                message = _('Serial number (%s) is not located in %s, but is located in %s. Please correct this to prevent inconsistent data.',
+                                    self.lot_id.name, self.location_id.display_name, ', '.join(sn_locations.mapped('display_name')))
             if message:
                 res['warning'] = {'title': _('Warning'), 'message': message}
         return res
