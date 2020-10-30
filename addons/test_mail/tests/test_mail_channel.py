@@ -336,7 +336,7 @@ class TestChannelModeration(TestMailCommon):
         self.channel_1.write({'moderator_ids': [(4, self.user_admin.id)]})
 
         # member -> moderator ko if no email
-        self.channel_1.write({'moderator_ids': [(3, self.partner_admin.id)]})
+        self.channel_1.write({'moderator_ids': [(3, self.user_admin.id)]})
         self.user_admin.write({'email': False})
         with self.assertRaises(ValidationError):
             self.channel_1.write({'moderator_ids': [(4, self.user_admin.id)]})
