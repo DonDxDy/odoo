@@ -43,7 +43,7 @@ class TestCreateRecurrentEvents(TestRecurrentEvents):
         """ Every week, on Tuesdays, for 3 occurences """
         detached_events = self.event._apply_recurrence_values({
             'rrule_type': 'weekly',
-            'tu': True,
+            'tue': True,
             'interval': 1,
             'count': 3,
             'event_tz': 'UTC',
@@ -63,7 +63,7 @@ class TestCreateRecurrentEvents(TestRecurrentEvents):
         self.event._apply_recurrence_values({
             'interval': 2,
             'rrule_type': 'weekly',
-            'tu': True,
+            'tue': True,
             'count': 2,
             'event_tz': 'UTC',
         })
@@ -77,7 +77,7 @@ class TestCreateRecurrentEvents(TestRecurrentEvents):
     def test_weekly_until(self):
         self.event._apply_recurrence_values({
             'rrule_type': 'weekly',
-            'tu': True,
+            'tue': True,
             'interval': 2,
             'end_type': 'end_date',
             'until': datetime(2019, 11, 15),
@@ -137,7 +137,7 @@ class TestCreateRecurrentEvents(TestRecurrentEvents):
             'interval': 2,
             'month_by': 'day',
             'byday': '3',
-            'weekday': 'TU',
+            'weekday': 'TUE',
             'end_type': 'end_date',
             'until': date(2020, 3, 15),
             'event_tz': 'UTC',
@@ -157,7 +157,7 @@ class TestCreateRecurrentEvents(TestRecurrentEvents):
             'interval': 2,
             'rrule_type': 'monthly',
             'month_by': 'day',
-            'weekday': 'WE',
+            'weekday': 'WED',
             'byday': '-1',
             'end_type': 'end_date',
             'until': date(2020, 1, 15),
@@ -192,7 +192,7 @@ class TestCreateRecurrentEvents(TestRecurrentEvents):
         self.event._apply_recurrence_values({
             'interval': 2,
             'rrule_type': 'weekly',
-            'mo': True,
+            'mon': True,
             'count': '2',
             'event_tz': 'US/Eastern',  # DST change on 2002/10/27
         })
@@ -213,7 +213,7 @@ class TestCreateRecurrentEvents(TestRecurrentEvents):
         self.event._apply_recurrence_values({
             'interval': 1,
             'rrule_type': 'weekly',
-            'su': True,
+            'sun': True,
             'count': '2',
             'event_tz': 'US/Eastern'  # DST change on 2002/4/7
         })
@@ -235,7 +235,7 @@ class TestCreateRecurrentEvents(TestRecurrentEvents):
         self.event._apply_recurrence_values({
             'interval': 1,
             'rrule_type': 'weekly',
-            'su': True,
+            'sun': True,
             'count': '2',
             'event_tz': 'US/Eastern'  # DST change on 2002/4/7
         })
@@ -257,7 +257,7 @@ class TestCreateRecurrentEvents(TestRecurrentEvents):
         self.event._apply_recurrence_values({
             'interval': 1,
             'rrule_type': 'weekly',
-            'mo': True,
+            'mon': True,
             'count': 2,
             'event_tz': 'Europe/Brussels'  # DST change on 2020/3/23
         })
@@ -279,7 +279,7 @@ class TestUpdateRecurrentEvents(TestRecurrentEvents):
             'stop': datetime(2019, 10, 24, 18, 0),
             'recurrency': True,
             'rrule_type': 'weekly',
-            'tu': True,
+            'tue': True,
             'interval': 1,
             'count': 3,
             'event_tz': 'Etc/GMT-4',
@@ -303,8 +303,8 @@ class TestUpdateRecurrentEvents(TestRecurrentEvents):
         self.assertNotEqual(self.recurrence, new_recurrence)
         self.assertEqual(new_recurrence.count, 2)
         self.assertEqual(new_recurrence.dtstart, datetime(2019, 11, 2, 1, 0))
-        self.assertFalse(new_recurrence.tu)
-        self.assertTrue(new_recurrence.sa)
+        self.assertFalse(new_recurrence.tue)
+        self.assertTrue(new_recurrence.sat)
         self.assertEventDates(new_recurrence.calendar_event_ids, [
             (datetime(2019, 11, 2, 1, 0), datetime(2019, 11, 5, 18, 0)),
             (datetime(2019, 11, 9, 1, 0), datetime(2019, 11, 12, 18, 0)),
@@ -321,8 +321,8 @@ class TestUpdateRecurrentEvents(TestRecurrentEvents):
         self.assertFalse(self.recurrence.exists())
         self.assertEqual(new_recurrence.count, 3)
         self.assertEqual(new_recurrence.dtstart, datetime(2019, 10, 26, 1, 0))
-        self.assertFalse(new_recurrence.tu)
-        self.assertTrue(new_recurrence.sa)
+        self.assertFalse(new_recurrence.tue)
+        self.assertTrue(new_recurrence.sat)
         self.assertEventDates(new_recurrence.calendar_event_ids, [
             (datetime(2019, 10, 26, 1, 0), datetime(2019, 10, 29, 18, 0)),
             (datetime(2019, 11, 2, 1, 0), datetime(2019, 11, 5, 18, 0)),
@@ -355,8 +355,8 @@ class TestUpdateRecurrentEvents(TestRecurrentEvents):
     def test_change_week_day_rrule(self):
         recurrence = self.events.recurrence_id
         recurrence.rrule = 'FREQ=WEEKLY;COUNT=3;BYDAY=WE' # from TU to WE
-        self.assertFalse(self.recurrence.tu)
-        self.assertTrue(self.recurrence.we)
+        self.assertFalse(self.recurrence.tue)
+        self.assertTrue(self.recurrence.wed)
 
     def test_shift_all_base_inactive(self):
         self.recurrence.base_event_id.active = False
@@ -387,7 +387,7 @@ class TestUpdateRecurrentEvents(TestRecurrentEvents):
         event = self.events[1]
         event.write({
             'recurrence_update': 'future_events',
-            'fr': True,  # recurrence is now Tuesday AND Friday
+            'fri': True,  # recurrence is now Tuesday AND Friday
             'count': 4,
         })
         self.assertEventDates(self.recurrence.calendar_event_ids, [
@@ -406,14 +406,14 @@ class TestUpdateRecurrentEvents(TestRecurrentEvents):
         self.assertEqual(events[2], self.events[2], "Events on Tuesdays should not have changed")
         self.assertNotEqual(events.recurrence_id, self.recurrence, "Events should no longer be linked to the original recurrence")
         self.assertEqual(events.recurrence_id.count, 4, "The new recurrence should have 4")
-        self.assertTrue(event.recurrence_id.tu)
-        self.assertTrue(event.recurrence_id.fr)
+        self.assertTrue(event.recurrence_id.tue)
+        self.assertTrue(event.recurrence_id.fri)
 
     def test_update_recurrence_all(self):
         with self.assertRaises(UserError):
             self.events[1].write({
                 'recurrence_update': 'all_events',
-                'mo': True,  # recurrence is now Tuesday AND Monday
+                'mon': True,  # recurrence is now Tuesday AND Monday
             })
 
     def test_shift_single(self):
@@ -465,7 +465,7 @@ class TestUpdateRecurrentEvents(TestRecurrentEvents):
             'stop_date': datetime(2019, 10, 24),
             'recurrency': True,
             'rrule_type': 'weekly',
-            'tu': True,
+            'tue': True,
             'interval': 1,
             'count': 3,
             'event_tz': 'Etc/GMT-4',
@@ -487,8 +487,8 @@ class TestUpdateRecurrentEvents(TestRecurrentEvents):
         self.assertNotEqual(recurrence, new_recurrence)
         self.assertEqual(new_recurrence.count, 2)
         self.assertEqual(new_recurrence.dtstart, datetime(2019, 11, 2, 8, 0))
-        self.assertFalse(new_recurrence.tu)
-        self.assertTrue(new_recurrence.sa)
+        self.assertFalse(new_recurrence.tue)
+        self.assertTrue(new_recurrence.sat)
         self.assertEventDates(new_recurrence.calendar_event_ids, [
             (datetime(2019, 11, 2, 8, 0), datetime(2019, 11, 5, 18, 0)),
             (datetime(2019, 11, 9, 8, 0), datetime(2019, 11, 12, 18, 0)),
@@ -508,8 +508,8 @@ class TestUpdateMultiDayWeeklyRecurrentEvents(TestRecurrentEvents):
             'stop': datetime(2019, 10, 24, 18, 0),
             'recurrency': True,
             'rrule_type': 'weekly',
-            'tu': True,
-            'fr': True,
+            'tue': True,
+            'fri': True,
             'interval': 1,
             'count': 3,
             'event_tz': 'Etc/GMT-4',
@@ -545,11 +545,11 @@ class TestUpdateMultiDayWeeklyRecurrentEvents(TestRecurrentEvents):
             'start': event.start + relativedelta(days=3),
             'stop': event.stop + relativedelta(days=3),
         })
-        self.assertTrue(self.recurrence.fr)
-        self.assertTrue(self.recurrence.tu)
-        self.assertTrue(event.recurrence_id.tu)
-        self.assertTrue(event.recurrence_id.mo)
-        self.assertFalse(event.recurrence_id.fr)
+        self.assertTrue(self.recurrence.fri)
+        self.assertTrue(self.recurrence.tue)
+        self.assertTrue(event.recurrence_id.tue)
+        self.assertTrue(event.recurrence_id.mon)
+        self.assertFalse(event.recurrence_id.fri)
         self.assertEqual(event.recurrence_id.count, 2)
 
 
@@ -567,7 +567,7 @@ class TestUpdateMonthlyByDay(TestRecurrentEvents):
             'interval': 1,
             'count': 3,
             'month_by': 'day',
-            'weekday': 'TU',
+            'weekday': 'TUE',
             'byday': '3',
             'event_tz': 'Etc/GMT-4',
         })
