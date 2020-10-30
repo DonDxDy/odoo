@@ -443,7 +443,7 @@ odoo.define('web.OwlCompatibility', function () {
             Object.assign(this.props, props);
 
             let prom;
-            if (this.__owl__.isMounted) {
+            if (this.__owl__.isMounted || this._isMounting) {
                 prom = this.render();
             } else {
                 // we may not be in the DOM, but actually want to be redrawn
@@ -512,8 +512,14 @@ odoo.define('web.OwlCompatibility', function () {
                     'Contact the JS Framework team or open an issue if your use case is relevant.'
                 );
             }
+            this._isMounting = true;
             this._mountArgs = arguments;
             return super.mount(...arguments);
+        }
+
+        async mounted() {
+            this._isMounting = false;
+            return super.mounted(...arguments);
         }
     }
     ComponentWrapper.template = xml`<t t-component="Component" t-props="props" t-ref="component"/>`;
