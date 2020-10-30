@@ -251,6 +251,10 @@ odoo.define('web.SampleServer', function (require) {
                     if (field.relation === 'res.currency') {
                         return session.company_currency_id;
                     }
+                    // Do not display cover images, cover image will have relation with ir.attachment usually
+                    if (field.relation === 'ir.attachment') {
+                        return false;
+                    }
                     return this._getRandomSubRecordId();
                 case "one2many":
                 case "many2many": {
