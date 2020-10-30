@@ -271,6 +271,7 @@ class Meeting(models.Model):
         help="Repeat every (Days/Week/Month/Year)")
     count = fields.Integer(
         string='Repeat', help="Repeat x times", compute='_compute_recurrence', readonly=False)
+    weekly = fields.Boolean('Weekly', store=False)
     mon = fields.Boolean('Mon', compute='_compute_recurrence', readonly=False)
     tue = fields.Boolean('Tue', compute='_compute_recurrence', readonly=False)
     wed = fields.Boolean('Wed', compute='_compute_recurrence', readonly=False)

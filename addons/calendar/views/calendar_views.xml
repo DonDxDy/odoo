@@ -162,14 +162,15 @@
                                             </div>
                                         </group>
                                         <group attrs="{'invisible': [('rrule_type', '!=', 'weekly')]}" name="weekdays">
-                                            <field name="mon"/>
-                                            <field name="tue"/>
-                                            <field name="wed"/>
-                                            <field name="thu"/>
-                                            <field name="fri"/>
-                                            <field name="sat"/>
-                                            <field name="sun"/>
+                                            <field name="weekly" widget="web_weekly_recurrent_task"/>
                                         </group>
+                                        <field name="mon" invisible="1"/>
+                                        <field name="tue" invisible="1"/>
+                                        <field name="wed" invisible="1"/>
+                                        <field name="thu" invisible="1"/>
+                                        <field name="fri" invisible="1"/>
+                                        <field name="sat" invisible="1"/>
+                                        <field name="sun" invisible="1"/>
                                         <group attrs="{'invisible': [('rrule_type', '!=', 'monthly')]}">
                                             <label string="Day of Month" for="month_by"/>
                                             <div class="o_row">

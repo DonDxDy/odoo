@@ -683,6 +683,7 @@ class Task(models.Model):
         ('day', 'Day of the Year'),
     ], default='date', compute='_compute_repeat', readonly=False)
 
+    weekly = fields.Boolean('Weekly', store=False)
     mon = fields.Boolean(string="Mon", compute='_compute_repeat', readonly=False)
     tue = fields.Boolean(string="Tue", compute='_compute_repeat', readonly=False)
     wed = fields.Boolean(string="Wed", compute='_compute_repeat', readonly=False)

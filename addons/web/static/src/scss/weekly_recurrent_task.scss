@@ -1,0 +1,22 @@
+.recurrent-checkbox {
+    padding-left: 0.9rem !important;
+}
+
+.recurrent-table {
+	margin-bottom: 0 !important;
+	border-collapse: separate;
+	th, td {
+		padding: 0.4rem !important;
+	}
+
+	input {
+		z-index:1 !important;
+		position: relative !important;
+	}
+}
+
+.recurrent-table-div{
+	border: 1px solid #dee2e6;
+	padding: 0.6rem;
+	margin-top: 0.4rem;
+}

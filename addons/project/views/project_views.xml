@@ -713,14 +713,14 @@
                                         <field name="repeat_month" attrs="{'invisible': [('repeat_show_month', '=', False)], 'required': [('repeat_show_month', '=', True)]}" />
                                     </div>
 
-
-                                    <field name="mon" attrs="{'invisible': [('repeat_show_dow', '=', False)]}" />
-                                    <field name="tue" attrs="{'invisible': [('repeat_show_dow', '=', False)]}" />
-                                    <field name="wed" attrs="{'invisible': [('repeat_show_dow', '=', False)]}" />
-                                    <field name="thu" attrs="{'invisible': [('repeat_show_dow', '=', False)]}" />
-                                    <field name="fri" attrs="{'invisible': [('repeat_show_dow', '=', False)]}" />
-                                    <field name="sat" attrs="{'invisible': [('repeat_show_dow', '=', False)]}" />
-                                    <field name="sun" attrs="{'invisible': [('repeat_show_dow', '=', False)]}" />
+                                    <field name="weekly" widget="web_weekly_recurrent_task" attrs="{'invisible': [('repeat_show_dow', '=', False)]}"/>
+                                    <field name="mon" invisible="1"/>
+                                    <field name="tue" invisible="1"/>
+                                    <field name="wed" invisible="1"/>
+                                    <field name="thu" invisible="1"/>
+                                    <field name="fri" invisible="1"/>
+                                    <field name="sat" invisible="1"/>
+                                    <field name="sun" invisible="1"/>
 
                                     <label for="repeat_type" />
                                     <div class="o_row">
