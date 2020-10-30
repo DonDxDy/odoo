@@ -39,7 +39,7 @@ class Partner(models.Model):
     def _compute_opportunity_count(self):
         if self.ids:
             lead_group_data = self.env['crm.lead'].read_group(
-                [('partner_id.commercial_partner_id', 'in', self.ids)],
+                ['|', ('partner_id.commercial_partner_id', 'in', self.ids), ('partner_id', 'in', self.ids)],
                 ['partner_id'], ['partner_id']
             )
         else:
