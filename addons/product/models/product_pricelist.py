@@ -119,7 +119,7 @@ class Pricelist(models.Model):
         item_ids = [x[0] for x in self.env.cr.fetchall()]
         return self.env['product.pricelist.item'].browse(item_ids)
 
-    def _compute_price_rule(self, products_qty_partner, date=False, uom_id=False):
+    def _compute_price_rule(self, products_qty_partner, date=False, uom_id=False, base=False):
         """ Low-level method - Mono pricelist, multi products
         Returns: dict{product_id: (price, suitable_rule) for the given pricelist}
 
@@ -214,6 +214,8 @@ class Pricelist(models.Model):
                 if rule.base == 'pricelist' and rule.base_pricelist_id:
                     price_tmp = rule.base_pricelist_id._compute_price_rule([(product, qty, partner)], date, uom_id)[product.id][0]  # TDE: 0 = price, 1 = rule
                     price = rule.base_pricelist_id.currency_id._convert(price_tmp, self.currency_id, self.env.company, date, round=False)
+                elif base == 'cost':
+                    price = product.price_compute('standard_price')[product.id]
                 else:
                     # if base option is public price take sale price else cost price of product
                     # price_compute returns the price in the context UoM, i.e. qty_uom_id
@@ -240,7 +242,7 @@ class Pricelist(models.Model):
         return results
 
     # New methods: product based
-    def get_products_price(self, products, quantities, partners, date=False, uom_id=False):
+    def get_products_price(self, products, quantities, partners, date=False, uom_id=False, base=False):
         """ For a given pricelist, return price for products
         Returns: dict{product_id: product price}, in the given pricelist """
         self.ensure_one()
@@ -249,7 +251,8 @@ class Pricelist(models.Model):
             for product_id, res_tuple in self._compute_price_rule(
                 list(zip(products, quantities, partners)),
                 date=date,
-                uom_id=uom_id
+                uom_id=uom_id,
+                base=base
             ).items()
         }
 

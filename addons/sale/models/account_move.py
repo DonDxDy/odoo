@@ -198,7 +198,7 @@ class AccountMoveLine(models.Model):
         unit_amount = self.quantity
         amount = (self.credit or 0.0) - (self.debit or 0.0)
 
-        if self.product_id.expense_policy == 'sales_price':
+        if self.product_id.expense_policy == 'sales_price' or 'cost':
             return self.product_id.with_context(
                 partner=order.partner_id.id,
                 date_order=order.date_order,

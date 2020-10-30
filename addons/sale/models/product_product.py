@@ -56,6 +56,9 @@ class ProductProduct(models.Model):
         self.ensure_one()
         return self.product_tmpl_id._get_combination_info(self.product_template_attribute_value_ids, self.id, add_qty, pricelist, parent_combination)
 
+    def _compute_product_price(self):
+        for product in self:
+            super(ProductProduct, product.with_context(expense_policy=product.expense_policy))._compute_product_price()
 
 class ProductAttributeCustomValue(models.Model):
     _inherit = "product.attribute.custom.value"

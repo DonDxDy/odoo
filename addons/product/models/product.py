@@ -222,7 +222,7 @@ class ProductProduct(models.Model):
     def _compute_is_product_variant(self):
         self.is_product_variant = True
 
-    @api.depends_context('pricelist', 'partner', 'quantity', 'uom', 'date', 'no_variant_attributes_price_extra')
+    @api.depends_context('pricelist', 'partner', 'quantity', 'uom', 'date', 'no_variant_attributes_price_extra', 'expense_policy')
     def _compute_product_price(self):
         prices = {}
         pricelist_id_or_name = self._context.get('pricelist')
@@ -244,7 +244,8 @@ class ProductProduct(models.Model):
             if pricelist:
                 quantities = [quantity] * len(self)
                 partners = [partner] * len(self)
-                prices = pricelist.get_products_price(self, quantities, partners)
+                base = self.env.context.get('expense_policy', False)
+                prices = pricelist.get_products_price(self, quantities, partners, base=base)
 
         for product in self:
             product.price = prices.get(product.id, 0.0)
