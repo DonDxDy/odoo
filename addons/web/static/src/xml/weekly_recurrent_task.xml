@@ -1,34 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <template>
     <t t-name="web.recurrent_task" owl="1">
-        <div class="recurrent-table-div">
-            <table class="table table-bordered recurrent-table">
-                <thead>
-                    <tr>
-                        <t t-foreach="weekdays" t-as="day">
-                            <th><t t-esc="week_days[day]"/></th>
-                        </t>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <t t-foreach="weekdays" t-as="day">
-                            <td>
-                                <div class="custom-control custom-checkbox recurrent-checkbox">
-                                    <input
-                                        type="checkbox"
-                                        class="custom-control-input"
-                                        t-att-id="week_days[day]"
-                                        t-att-value="week_days[day]"
-                                        t-on-click="_onCheckboxClick"
-                                    />
-                                    <label class="custom-control-label"></label>
-                                </div>
-                            </td>
-                        </t>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="o_container-div border px-2">
+            <div class="o_row">
+                <t t-foreach="weekdays" t-as="day">
+                    <div class="text-center mt-2 border font-weight-bold">
+                        <t t-esc="day"/>
+                    </div>
+                </t>
+            </div>
+            <div class="o_row">
+                <t t-foreach="weekdays" t-as="day">
+                    <div class="custom-checkbox check_box-div text-center mt-2 mb-2 border pl-3">
+                        <input
+                            type="checkbox"
+                            class="custom-control-input position-relative"
+                            t-att-id="day"
+                            t-att-value="day"
+                            t-on-click="_onCheckboxClick"
+                            t-att-checked="recordData[day]"
+                        />
+                        <label class="custom-control-label"></label>
+                    </div>
+                </t>
+            </div>
         </div>
     </t>
 </template>
