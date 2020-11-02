@@ -50,6 +50,9 @@ class WebsiteForm(main.WebsiteForm):
     def insert_record(self, request, model, values, custom, meta=None):
         is_lead_model = model.model == 'crm.lead'
         if is_lead_model:
+            logged_partner = request.env['website.visitor']._get_visitor_from_request().partner_id
+            if logged_partner:
+                values['partner_id'] = logged_partner.id
             if 'company_id' not in values:
                 values['company_id'] = request.website.company_id.id
             lang = request.context.get('lang', False)
