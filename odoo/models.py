@@ -3065,11 +3065,12 @@ Fields:
 
         # if a read() follows a write(), we must flush updates that have an
         # impact on checking ir.rules
-        self._flush_search([], order='id')
+        fields_to_flush = []
+        if self._log_access and not {'write_uid', 'write_date'}.isdisjoint(fields):
+            fields_to_flush.extend(self._fields)
 
         field_names = []
         inherited_field_names = []
-        flush = self._log_access and not {'write_uid', 'write_date'}.isdisjoint(fields)
         for name in fields:
             field = self._fields.get(name)
             if field:
@@ -3079,12 +3080,11 @@ Fields:
                     inherited_field_names.append(name)
                 if field.translate is True and not self.env.lang:
                     # if the translation source is in towrite, flush it
-                    flush = True
+                    fields_to_flush.append(name)
             else:
                 _logger.warning("%s.read() with unknown field '%s'", self._name, name)
 
-        if flush:
-            self.flush(self._fields, records=self)
+        self._flush_search([], fields=fields_to_flush, order='id')
 
         # determine the fields that are stored as columns in tables; ignore 'id'
         fields_pre = [
