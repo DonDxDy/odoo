@@ -198,33 +198,6 @@
                     </div>
                 </div>
             </section>
-            <!-- Photos -->
-            <section class="pt24 pb16">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-md-12 col-lg-6 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469355"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469360"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469369"/>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469367"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469356"/>
-                        </div>
-                        <div class="col-md-12 col-lg-6 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469456"/>
-                        </div>
-                    </div>
-                </div>
-            </section>
         </field>
     </record>
 
@@ -421,33 +394,6 @@
                             <i class="fa fa-2x fa-coffee rounded-circle bg-primary m-3"></i>
                             <h3>Eat &amp; Drink</h3>
                             <p>Fruit, coffee and <br/>snacks provided.</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            <!-- Photos -->
-            <section class="pt24 pb16">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-md-12 col-lg-6 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469355"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469360"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469369"/>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469367"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469356"/>
-                        </div>
-                        <div class="col-md-12 col-lg-6 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469456"/>
                         </div>
                     </div>
                 </div>
@@ -652,33 +598,6 @@
                     </div>
                 </div>
             </section>
-            <!-- Photos -->
-            <section class="pt24 pb16">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-md-12 col-lg-6 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469355"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469360"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469369"/>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469367"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469356"/>
-                        </div>
-                        <div class="col-md-12 col-lg-6 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469456"/>
-                        </div>
-                    </div>
-                </div>
-            </section>
         </field>
     </record>
 
@@ -874,33 +793,6 @@
                             <i class="fa fa-2x fa-coffee rounded-circle bg-primary m-3"></i>
                             <h3>Eat &amp; Drink</h3>
                             <p>Fruit, coffee and <br/>snacks provided.</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            <!-- Photos -->
-            <section class="pt24 pb16">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-md-12 col-lg-6 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469355"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469360"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469369"/>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469367"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469356"/>
-                        </div>
-                        <div class="col-md-12 col-lg-6 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469456"/>
                         </div>
                     </div>
                 </div>
@@ -1104,33 +996,6 @@
                     </div>
                 </div>
             </section>
-            <!-- Photos -->
-            <section class="pt24 pb16">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-md-12 col-lg-6 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469355"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469360"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469369"/>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469367"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469356"/>
-                        </div>
-                        <div class="col-md-12 col-lg-6 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469456"/>
-                        </div>
-                    </div>
-                </div>
-            </section>
         </field>
     </record>
 
@@ -1330,33 +1195,6 @@
                     </div>
                 </div>
             </section>
-            <!-- Photos -->
-            <section class="pt24 pb16">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-md-12 col-lg-6 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469355"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469360"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469369"/>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469367"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469356"/>
-                        </div>
-                        <div class="col-md-12 col-lg-6 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469456"/>
-                        </div>
-                    </div>
-                </div>
-            </section>
         </field>
     </record>
 
@@ -1552,33 +1390,6 @@
                             <i class="fa fa-2x fa-coffee rounded-circle bg-primary m-3"></i>
                             <h3>Eat &amp; Drink</h3>
                             <p>Fruit, coffee and <br/>snacks provided.</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            <!-- Photos -->
-            <section class="pt24 pb16">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-md-12 col-lg-6 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469355"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469360"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469369"/>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469367"/>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469356"/>
-                        </div>
-                        <div class="col-md-12 col-lg-6 mt16 mb16">
-                            <img alt="" class="img img-fluid" src="//odoocdn.com/web/image/6469456"/>
                         </div>
                     </div>
                 </div>
