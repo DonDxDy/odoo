@@ -452,9 +452,9 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
             add('create_date', fields.Datetime(
                 string='Created on', automatic=True, readonly=True))
             add('write_uid', fields.Many2one(
-                'res.users', string='Last Updated by', automatic=True, readonly=True))
+                'res.users', string='Last Updated by', automatic=True, readonly=True, prefetch=False))
             add('write_date', fields.Datetime(
-                string='Last Updated on', automatic=True, readonly=True))
+                string='Last Updated on', automatic=True, readonly=True, prefetch=False))
             last_modified_name = 'compute_concurrency_field_with_access'
         else:
             last_modified_name = 'compute_concurrency_field'
@@ -3066,7 +3066,7 @@ Fields:
         # if a read() follows a write(), we must flush updates that have an
         # impact on checking ir.rules
         self._flush_search([], order='id')
-        if self._log_access and any(name in LOG_ACCESS_COLUMNS for name in fields):
+        if self._log_access and not {'write_uid', 'write_date'}.isdisjoint(fields):
             self.flush(self._fields, records=self)
 
         field_names = []
