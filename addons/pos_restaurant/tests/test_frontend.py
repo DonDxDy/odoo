@@ -47,11 +47,34 @@ class TestFrontend(odoo.tests.HttpCase):
             })],
         })
 
-        coke = self.env.ref('pos_restaurant.coke')
+        pos_categ_drinks = env.ref('pos_restaurant.drinks')
+
+        coke = env['product.product'].create({
+            'name': 'Coca-Cola',
+            'available_in_pos': True,
+            'list_price': 2.20,
+            'taxes_id': False,
+            'pos_categ_id': pos_categ_drinks.id,
+        })
+
+        water = env['product.product'].create({
+            'name': 'Water',
+            'available_in_pos': True,
+            'list_price': 2.20,
+            'taxes_id': False,
+            'pos_categ_id': pos_categ_drinks.id,
+        })
+
+        minute_maid = env['product.product'].create({
+            'name': 'Minute Maid',
+            'available_in_pos': True,
+            'list_price': 2.20,
+            'taxes_id': False,
+            'pos_categ_id': pos_categ_drinks.id,
+        })
+
         coke.write({'taxes_id': [(6, 0, [])]})
-        water = self.env.ref('pos_restaurant.water')
         water.write({'taxes_id': [(6, 0, [])]})
-        minute_maid = self.env.ref('pos_restaurant.minute_maid')
         minute_maid.write({'taxes_id': [(6, 0, [])]})
 
         pos_config.open_session_cb()
