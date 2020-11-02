@@ -79,7 +79,7 @@
                             </field>
                         </page>
                         <page string="Members" name="assignment"
-                            attrs="{'invisible': [('is_membership_multi', '=', False)]}">
+                            attrs="{'invisible': ['|', ('is_membership_multi', '=', True), ('is_membership_multi', '=', False)]}">
                             <field name="crm_team_member_ids" mode="kanban"
                                 class="w-100"
                                 context="{

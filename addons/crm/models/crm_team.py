@@ -29,6 +29,7 @@ class Team(models.Model):
     # assignment
     assignment_enabled = fields.Boolean('Lead Assign', compute='_compute_assignment_enabled')
     assignment_auto_enabled = fields.Boolean('Auto Assignment', compute='_compute_assignment_enabled')
+    assignment_optout = fields.Boolean('Skip auto assignment')
     assignment_max = fields.Integer(
         'Lead Capacity', compute='_compute_assignment_max',
         help='Monthly leads for all salesmen belonging to the team')
