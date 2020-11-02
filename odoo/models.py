@@ -3066,6 +3066,8 @@ Fields:
         # if a read() follows a write(), we must flush updates that have an
         # impact on checking ir.rules
         self._flush_search([], order='id')
+        if self._log_access and any(name in LOG_ACCESS_COLUMNS for name in fields):
+            self.flush(self._fields, records=self)
 
         field_names = []
         inherited_field_names = []
