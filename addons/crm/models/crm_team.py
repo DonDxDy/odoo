@@ -27,6 +27,8 @@ class Team(models.Model):
         'mail.alias', string='Alias', ondelete="restrict", required=True,
         help="The email address associated with this channel. New emails received will automatically create new leads assigned to the channel.")
     # assignment
+    assignment_enabled = fields.Boolean('Lead Assign', compute='_compute_assignment_enabled')
+    assignment_auto_enabled = fields.Boolean('Auto Assignment', compute='_compute_assignment_enabled')
     assignment_max = fields.Integer(
         'Lead Capacity', compute='_compute_assignment_max',
         help='Monthly leads for all salesmen belonging to the team')
@@ -54,6 +56,16 @@ class Team(models.Model):
     def _compute_assignment_max(self):
         for rec in self:
             rec.assignment_max = sum(s.assignment_max for s in rec.crm_team_member_ids)
+
+    def _compute_assignment_enabled(self):
+        assign_enabled = self.env['ir.config_parameter'].sudo().get_param('crm.lead.auto.assignment', False)
+        if assign_enabled:
+            assign_cron = self.sudo().env.ref('crm.ir_cron_crm_lead_assign', raise_if_not_found=False)
+            auto_assign_enabled = assign_cron.active if assign_cron else False
+        else:
+            auto_assign_enabled = False
+        self.assignment_enabled = assign_enabled
+        self.assignment_auto_enabled = auto_assign_enabled
 
     def _compute_lead_unassigned_count(self):
         leads_data = self.env['crm.lead'].read_group([
@@ -145,38 +157,86 @@ class Team(models.Model):
     # ------------------------------------------------------------
 
     @api.model
-    def cron_assign_leads(self):
-        return self.env['crm.team'].search([])._action_assign_leads()
+    def _cron_assign_leads(self):
+        assign_cron = self.sudo().env.ref('crm.ir_cron_crm_lead_assign', raise_if_not_found=False)
+        base, multiplier = 1, 1
+        if assign_cron and assign_cron.active:
+            if assign_cron.interval_type == 'months':
+                base, multiplier = 2 * assign_cron.interval_number, 30
+            elif assign_cron.interval_type == 'weeks':
+                base, multiplier = 2 * assign_cron.interval_number, 7
+            elif assign_cron.interval_type == 'days':
+                base, multiplier = 2 * assign_cron.interval_number, 1
+        work_days = base * multiplier
+        self.env['crm.team'].search([('assignment_optout', '=', False)])._action_assign_leads(work_days=work_days)
+        return True
 
-    def action_assign_leads(self):
-        lead_done_ids = self._action_assign_leads()
+    def action_assign_leads(self, work_days=None):
+        """ Manual (direct) leads assign.
+
+        :param int work_days: equivalent of work days to assign, based on their
+          monthly capacity;
+        """
+        teams_data, members_data = self._action_assign_leads(work_days=work_days or 1)
+
+        # extract some statistics
+        assigned = sum(len(teams_data[team]['assign']) + len(teams_data[team]['merged']) for team in self)
+        duplicates = sum(len(teams_data[team]['duplicates']) for team in self)
+        members = len(members_data.keys())
+        members_assigned = sum(len(member_data["assigned"]) for member_data in members_data.values())
+
+        # format user notification
+        # 1- team allocation
+        if not assigned:
+            message = _("No new lead allocated to the teams.")
+        elif len(self) == 1:
+            message = _("%(assigned)s leads allocated to the team.",
+                        assigned=assigned)
+        else:
+            message = _("%(assigned)s leads allocated among %(team_count)s teams.",
+                        assigned=assigned, team_count=len(self))
+        # 2- salespersons assignment
+        if not members_assigned:
+            message += " " + _("No lead has been assigned to team members. Check your Sales Teams and Members configuration.")
+        else:
+            message += " " + _("%(members_assigned)s leads assigned to %(members)s salesmen.",
+                               members_assigned=members_assigned, members=members)
+        # 3- duplicates removal
+        if duplicates:
+            message += " " + _("%(duplicates)s duplicates leads were merged.",
+                               duplicates=duplicates)
+
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'type': 'warning',
-                'message': _("Assigned %s leads", len(lead_done_ids)),
-                'next': {'type': 'ir.actions.act_window_close'},
+                'type': 'success',
+                'title': _("Leads Assigned"),
+                'message': message,
+                'next': {
+                    'type': 'ir.actions.act_window_close'
+                },
             }
         }
-    def _action_assign_leads(self):
+
+    def _action_assign_leads(self, work_days=2):
         if not self.env.user.has_group('sales_team.group_sale_manager') and not self.env.user.has_group('base.group_system'):
             raise exceptions.UserError(_('Lead/Opportunities automatic assignment is limited to managers or administrators'))
         team_members = self.mapped('crm_team_member_ids')
 
-        _logger.info('### START Lead Assignment (%d teams, %d sales persons)' % (len(self), len(team_members)))
+        _logger.info('### START Lead Assignment (%d teams, %d sales persons, %d work_days)' % (len(self), len(team_members), work_days))
         teams_data = self._assign_leads()
         _logger.info('### Team repartition done. Starting salesmen assignment.')
-        members_data = team_members._assign_and_convert_leads()
+        members_data = team_members._assign_and_convert_leads(work_days=work_days)
         for member_id, member_info in members_data.items():
             _logger.info('-> member %s: assigned %s' % (member_id, member_info["assigned"]))
         _logger.info('### END Lead Assignment')
         return teams_data, members_data
 
-    def _assign_leads(self):
-        """ Assign leads to teams given by self.
+    def _assign_leads(self, work_days=2):
+        """ Assign leads to teams given by self. Heuristic of this method is
+        the following. For each team in self
 
-        Heuristic of this method is for each team in self
           * find unassigned leads (no team, no user; not in a won stage, and not
             having False/0 (lost) or 100 (won) as probability) created at least
             BUNDLE_HOURS_DELAY hours ago;

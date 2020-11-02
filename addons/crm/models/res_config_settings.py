@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import api, fields, models
+from dateutil.relativedelta import relativedelta
+
+from odoo import api, exceptions, fields, models, _
 
 
 class ResConfigSettings(models.TransientModel):
@@ -15,7 +17,27 @@ class ResConfigSettings(models.TransientModel):
         compute="_compute_generate_lead_from_alias", readonly=False, store=True)
     group_use_lead = fields.Boolean(string="Leads", implied_group='crm.group_use_lead')
     group_use_recurring_revenues = fields.Boolean(string="Recurring Revenues", implied_group='crm.group_use_recurring_revenues')
+    # Membership
     is_membership_multi = fields.Boolean(string='Multi Teams', config_parameter='sales_team.membership_multi')
+    # Lead assignment
+    crm_use_auto_assignment = fields.Boolean(
+        string='Rule-Based Assignment', config_parameter='crm.lead.auto.assignment')
+    crm_auto_assignment_action = fields.Selection([
+        ('manual', 'Manually'), ('auto', 'Repeatedly')],
+        string='Auto Assignment Action', compute='_compute_crm_auto_assignment_data',
+        readonly=False, store=True)
+    crm_auto_assignment_interval_type = fields.Selection([
+        ('minutes', 'Minutes'), ('hours', 'Hours'),
+        ('days', 'Days'), ('weeks', 'Weeks')],
+        string='Auto Assignment Interval Unit', compute='_compute_crm_auto_assignment_data',
+        readonly=False, store=True)
+    crm_auto_assignment_interval_number = fields.Integer(
+        string="Repeat every", compute='_compute_crm_auto_assignment_data',
+        readonly=False, store=True)
+    crm_auto_assignment_run_datetime = fields.Datetime(
+        string="Auto Assignment Next Execution Date", compute='_compute_crm_auto_assignment_data',
+        readonly=False, store=True)
+    # IAP
     module_crm_iap_lead = fields.Boolean("Generate new leads based on their country, industries, size, etc.")
     module_crm_iap_lead_website = fields.Boolean("Create Leads/Opportunities from your website's traffic")
     module_crm_iap_lead_enrich = fields.Boolean("Enrich your leads automatically with company data based on their email address.")
@@ -41,6 +63,32 @@ class ResConfigSettings(models.TransientModel):
                 ('alias_defaults', '=', '{}')
             ], limit=1)
         return alias
+
+    @api.depends('crm_use_auto_assignment')
+    def _compute_crm_auto_assignment_data(self):
+        assign_cron = self.sudo().env.ref('crm.ir_cron_crm_lead_assign', raise_if_not_found=False)
+        for setting in self:
+            if setting.crm_use_auto_assignment and assign_cron:
+                setting.crm_auto_assignment_action = 'auto' if assign_cron.active else 'manual'
+                setting.crm_auto_assignment_interval_type = assign_cron.interval_type or 'days'
+                setting.crm_auto_assignment_interval_number = assign_cron.interval_number or 1
+                setting.crm_auto_assignment_run_datetime = assign_cron.nextcall
+            else:
+                setting.crm_auto_assignment_action = 'manual'
+                setting.crm_auto_assignment_interval_type = setting.crm_auto_assignment_run_datetime = False
+                setting.crm_auto_assignment_interval_number = 1
+
+    @api.onchange('crm_auto_assignment_interval_type', 'crm_auto_assignment_interval_number')
+    def _onchange_crm_auto_assignment_run_datetime(self):
+        if self.crm_auto_assignment_interval_number <= 0:
+            raise exceptions.UserError(_('Repeat frequency should be positive.'))
+        elif self.crm_auto_assignment_interval_number >= 100:
+            raise exceptions.UserError(_('Invalid repeat frequency. Consider changing frequency type instead of using large numbers.'))
+        self.crm_auto_assignment_run_datetime = self._get_crm_auto_assignmment_run_datetime(
+            self.crm_auto_assignment_run_datetime,
+            self.crm_auto_assignment_interval_type,
+            self.crm_auto_assignment_interval_number
+        )
 
     @api.depends('predictive_lead_scoring_fields_str')
     def _compute_pls_fields(self):
@@ -110,8 +158,35 @@ class ResConfigSettings(models.TransientModel):
             })
         for team in self.env['crm.team'].search([]):
             team.alias_id.write(team._alias_get_creation_values())
+        # synchronize cron with settings
+        assign_cron = self.sudo().env.ref('crm.ir_cron_crm_lead_assign')
+        if assign_cron:
+            assign_cron.active = self.crm_use_auto_assignment and self.crm_auto_assignment_action == 'auto'
+            assign_cron.interval_type = self.crm_auto_assignment_interval_type
+            assign_cron.interval_number = self.crm_auto_assignment_interval_number
+            # keep nextcall on cron as it is required whatever the setting
+            assign_cron.nextcall = self.crm_auto_assignment_run_datetime if self.crm_auto_assignment_run_datetime else assign_cron.nextcall
+
+    def _get_crm_auto_assignmment_run_datetime(self, run_datetime, run_interval, run_interval_number):
+        if not run_interval:
+            return False
+        if run_interval == 'manual':
+            return run_datetime if run_datetime else False
+        if run_interval == 'minutes':
+            td = relativedelta(minutes=run_interval_number)
+        elif run_interval == 'hours':
+            td = relativedelta(hours=run_interval_number)
+        elif run_interval == 'weeks':
+            td = relativedelta(weeks=run_interval_number)
+        else:
+            td = relativedelta(days=run_interval_number)
+        return fields.Datetime.now() + td
 
     # ACTIONS
     def action_reset_lead_probabilities(self):
         if self.env.user._is_admin():
             self.env['crm.lead'].sudo()._cron_update_automated_probabilities()
+
+    def action_crm_assign_leads(self):
+        self.ensure_one()
+        return self.env['crm.team'].search([('assignment_optout', '=', False)]).action_assign_leads()

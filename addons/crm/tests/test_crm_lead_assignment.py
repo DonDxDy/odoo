@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from unittest.mock import patch
+
+from odoo import fields
 from odoo.addons.crm.tests.common import TestLeadConvertCommon
 from odoo.tests.common import tagged, users
 
@@ -13,6 +18,7 @@ class TestLeadAssign(TestLeadConvertCommon):
     def setUpClass(cls):
         super(TestLeadAssign, cls).setUpClass()
         cls._switch_to_multi_membership()
+        cls._switch_to_auto_assign()
 
         # don't mess with existing teams, deactivate them to make tests repeatable
         cls.sales_teams = cls.sales_team_1 + cls.sales_team_convert
@@ -41,6 +47,52 @@ class TestLeadAssign(TestLeadConvertCommon):
         self.assertEqual(self.sales_team_convert_m1.lead_month_count, 0)
         self.assertEqual(self.sales_team_convert_m2.lead_month_count, 0)
 
+    def test_assign_configuration(self):
+        now_patch = datetime(2020, 11, 2, 10, 0, 0)
+
+        with patch.object(fields.Datetime, 'now', return_value=now_patch):
+            config = self.env['res.config.settings'].create({
+                'crm_use_auto_assignment': True,
+                'crm_auto_assignment_action': 'auto',
+                'crm_auto_assignment_interval_number': 19,
+                'crm_auto_assignment_interval_type': 'hours'
+            })
+            config._onchange_crm_auto_assignment_run_datetime()
+            config.execute()
+            self.assertTrue(self.assign_cron.active)
+            self.assertEqual(self.assign_cron.nextcall, datetime(2020, 11, 2, 10, 0, 0) + relativedelta(hours=19))
+
+            config.write({
+                'crm_auto_assignment_interval_number': 2,
+                'crm_auto_assignment_interval_type': 'days'
+            })
+            config._onchange_crm_auto_assignment_run_datetime()
+            config.execute()
+            self.assertTrue(self.assign_cron.active)
+            self.assertEqual(self.assign_cron.nextcall, datetime(2020, 11, 2, 10, 0, 0) + relativedelta(days=2))
+
+            config.write({
+                'crm_auto_assignment_run_datetime': fields.Datetime.to_string(datetime(2020, 11, 1, 10, 0, 0)),
+            })
+            config.execute()
+            self.assertTrue(self.assign_cron.active)
+            self.assertEqual(self.assign_cron.nextcall, datetime(2020, 11, 1, 10, 0, 0))
+
+            config.write({
+                'crm_auto_assignment_action': 'manual',
+            })
+            config.execute()
+            self.assertFalse(self.assign_cron.active)
+            self.assertEqual(self.assign_cron.nextcall, datetime(2020, 11, 1, 10, 0, 0))
+
+            config.write({
+                'crm_use_auto_assignment': False,
+                'crm_auto_assignment_action': 'auto',
+            })
+            config.execute()
+            self.assertFalse(self.assign_cron.active)
+            self.assertEqual(self.assign_cron.nextcall, datetime(2020, 11, 1, 10, 0, 0))
+
     def test_crm_team_assign_duplicates(self):
         leads = self._create_leads_batch(lead_type='lead', user_ids=[False], partner_ids=[self.contact_1.id, self.contact_2.id, False], count=45)
         self.assertInitialData()
@@ -54,7 +106,7 @@ class TestLeadAssign(TestLeadConvertCommon):
 
         with self.with_user('user_sales_manager'):
             with self.assertQueryCount(user_sales_manager=999):  # 333
-                self.env['crm.team'].cron_assign_leads()
+                self.env['crm.team']._cron_assign_leads()
 
         self.members.invalidate_cache(fnames=['lead_month_count'])
         self.assertEqual(self.sales_team_1_m1.lead_month_count, 3)  # 45 max on 2 days
@@ -83,7 +135,7 @@ class TestLeadAssign(TestLeadConvertCommon):
 
         with self.with_user('user_sales_manager'):
             with self.assertQueryCount(user_sales_manager=999):  # 333
-                self.env['crm.team'].cron_assign_leads()
+                self.env['crm.team']._cron_assign_leads()
 
         self.members.invalidate_cache(fnames=['lead_month_count'])
         self.assertEqual(self.sales_team_1_m1.lead_month_count, 3)  # 45 max on 2 days
