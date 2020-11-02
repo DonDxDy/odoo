@@ -9,7 +9,6 @@ import threading
 from ast import literal_eval
 
 from odoo import api, exceptions, fields, models, _
-from odoo.addons.crm.models.crm_lead import LEAD_ASSIGN_EVAL_CONTEXT
 from odoo.osv import expression
 from odoo.tools.safe_eval import safe_eval
 
@@ -117,10 +116,10 @@ class Team(models.Model):
     def _constrains_assignment_domain(self):
         for team in self:
             try:
-                domain = safe_eval(team.assignment_domain or '[]', LEAD_ASSIGN_EVAL_CONTEXT)
-                self.env['crm.lead'].search_count(domain)
+                domain = literal_eval(team.assignment_domain or '[]')
+                self.env['crm.lead'].search(domain, limit=1)
             except Exception:
-                raise Warning('Domain for %s is incorrectly formatted' % team.name)
+                raise Warning(_('Assignment domain for team %(team)s is incorrectly formatted', team=team.name))
 
     # ------------------------------------------------------------
     # ORM
@@ -257,7 +256,7 @@ class Team(models.Model):
         # compute assign domain for each team before looping on them by bundle size
         teams_domain = dict.fromkeys(remaining_teams, False)
         for team in remaining_teams:
-            teams_domain[team] = safe_eval(team.assignment_domain or '[]', LEAD_ASSIGN_EVAL_CONTEXT)
+            teams_domain[team] = literal_eval(team.assignment_domain or '[]')
 
         teams_data = dict.fromkeys(remaining_teams, dict(assign=set(), merged=set(), duplicates=set()))
         while remaining_teams:
@@ -266,7 +265,7 @@ class Team(models.Model):
                     teams_domain[team],
                     [('create_date', '<', max_create_dt)],
                     ['&', ('team_id', '=', False), ('user_id', '=', False)],
-                    ['|', ('stage_id.is_won', '=', False), ('probability', 'not in', [False, 0, 100])]
+                    ['|', ('stage_id.is_won', '=', False), ('probability', 'not in', [False, 0])]
                 ])
                 leads = self.env["crm.lead"].search(lead_domain, limit=BUNDLE_SIZE)
 

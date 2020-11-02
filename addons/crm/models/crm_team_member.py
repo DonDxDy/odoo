@@ -7,10 +7,10 @@ import math
 import threading
 import random
 
+from ast import literal_eval
+
 from odoo import api, exceptions, fields, models, _
-from odoo.addons.crm.models.crm_lead import LEAD_ASSIGN_EVAL_CONTEXT
 from odoo.osv import expression
-from odoo.tools import safe_eval
 
 _logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class Team(models.Model):
     # assignment
     assignment_enabled = fields.Boolean(related="crm_team_id.assignment_enabled")
     assignment_domain = fields.Char('Assignment Domain', tracking=True)
-    assignment_max = fields.Integer('Max Leads (last 30 days)')
+    assignment_max = fields.Integer('Max Leads (last 30 days)', default=30)
     lead_month_count = fields.Integer(
         'Leads (30 days)', compute='_compute_lead_month_count',
         help='Lead assigned to this member those last 30 days')
@@ -33,7 +33,9 @@ class Team(models.Model):
                 limit_date = fields.Datetime.now() - datetime.timedelta(days=30)
                 domain = [('user_id', '=', member.user_id.id),
                           ('team_id', '=', member.crm_team_id.id),
-                          ('date_open', '>=', limit_date)]
+                          ('date_open', '>=', limit_date),
+                          ('probability', '<', 100)
+                         ]
                 member.lead_month_count = self.env['crm.lead'].search_count(domain)
             else:
                 member.lead_month_count = 0
@@ -42,10 +44,13 @@ class Team(models.Model):
     def _constrains_assignment_domain(self):
         for member in self:
             try:
-                domain = safe_eval.safe_eval(member.assignment_domain or '[]', LEAD_ASSIGN_EVAL_CONTEXT)
+                domain = literal_eval(member.assignment_domain or '[]')
                 self.env['crm.lead'].search(domain, limit=1)
             except Exception:
-                raise exceptions.UserError(_('Team membership assign domain is incorrectly formatted'))
+                raise exceptions.UserError(_(
+                    'Member assignment domain for user %(user)s and team %(team)s is incorrectly formatted',
+                    user=member.user_id.name, team=member.crm_team_id.name
+                ))
 
     # ------------------------------------------------------------
     # LEAD ASSIGNMENT
@@ -94,7 +99,7 @@ class Team(models.Model):
         # could probably be optimized
         for member in members:
             lead_domain = expression.AND([
-                safe_eval.safe_eval(member.assignment_domain or '[]', LEAD_ASSIGN_EVAL_CONTEXT),
+                literal_eval(member.assignment_domain or '[]'),
                 ['&', '&', ('user_id', '=', False), ('date_open', '=', False), ('team_id', '=', member.crm_team_id.id)]
             ])
 
