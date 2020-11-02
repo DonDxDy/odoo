@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
+from unittest.mock import patch
+
 from odoo.tools import mute_logger
 from odoo.tools.translate import quote, unquote, xml_translate, html_translate
-from odoo.tests.common import TransactionCase, BaseCase
+from odoo.tests.common import BaseCase, TransactionCase, SavepointCase
 from psycopg2 import IntegrityError
 
 
@@ -243,19 +245,20 @@ class TranslationToolsTestCase(BaseCase):
         self.assertEqual(result, source)
 
 
-class TestTranslation(TransactionCase):
+class TestTranslation(SavepointCase):
 
-    def setUp(self):
-        super(TestTranslation, self).setUp()
-        lang = self.env['res.lang']._activate_lang('fr_FR')
-        self.env.ref('base.module_base')._update_translations(['fr_FR'])
-        self.customers = self.env['res.partner.category'].create({'name': 'Customers'})
-        self.env['ir.translation'].create({
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.env['res.lang']._activate_lang('fr_FR')
+        cls.env.ref('base.module_base')._update_translations(['fr_FR'])
+        cls.customers = cls.env['res.partner.category'].create({'name': 'Customers'})
+        cls.env['ir.translation'].create({
             'type': 'model',
             'name': 'res.partner.category,name',
             'module':'base',
             'lang': 'fr_FR',
-            'res_id': self.customers.id,
+            'res_id': cls.customers.id,
             'value': 'Clients',
             'state': 'translated',
         })
@@ -595,12 +598,13 @@ class TestTranslationWrite(TransactionCase):
                          [('manual', 'Custo'), ('base', 'Pas touche!')])
 
 
-class TestXMLTranslation(TransactionCase):
-    def setUp(self):
-        super(TestXMLTranslation, self).setUp()
-        self.env['res.lang']._activate_lang('fr_FR')
-        self.env['res.lang']._activate_lang('nl_NL')
-        self.env.ref('base.module_base')._update_translations(['fr_FR', 'nl_NL'])
+class TestXMLTranslation(SavepointCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.env['res.lang']._activate_lang('fr_FR')
+        cls.env['res.lang']._activate_lang('nl_NL')
+        cls.env.ref('base.module_base')._update_translations(['fr_FR', 'nl_NL'])
 
     def create_view(self, archf, terms, **kwargs):
         view = self.env['ir.ui.view'].create({
@@ -652,10 +656,10 @@ class TestXMLTranslation(TransactionCase):
         self.assertEqual(view2.with_env(env_fr).arch_db, archf % terms_fr)
 
         # copy with lang='fr_FR' and translate=html_translate
-        self.patch(type(self.env['ir.ui.view']).arch_db, 'translate', html_translate)
-        view3 = view0.with_env(env_fr).copy({})
-        self.assertEqual(view3.with_env(env_en).arch_db, archf % terms_en)
-        self.assertEqual(view3.with_env(env_fr).arch_db, archf % terms_fr)
+        with patch.object(self.registry['ir.ui.view'].arch_db, 'translate', html_translate):
+            view3 = view0.with_env(env_fr).copy({})
+            self.assertEqual(view3.with_env(env_en).arch_db, archf % terms_en)
+            self.assertEqual(view3.with_env(env_fr).arch_db, archf % terms_fr)
 
     def test_spaces(self):
         """ Create translations where value has surrounding spaces. """
