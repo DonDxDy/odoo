@@ -3063,9 +3063,9 @@ Fields:
             return
         self.check_access_rights('read')
 
-        # if a read() follows a write(), we must flush updates, as read() will
-        # fetch from database and overwrites the cache (`test_update_with_id`)
-        self.flush(fields, self)
+        # if a read() follows a write(), we must flush updates that have an
+        # impact on checking ir.rules
+        self._flush_search([], order='id')
 
         field_names = []
         inherited_field_names = []
@@ -3135,7 +3135,7 @@ Fields:
                         values[index] = translate(ids[index], values[index])
 
                 # store values in cache
-                self.env.cache.update(fetched, field, values)
+                self.env.cache.update_keep(fetched, field, values)
 
             # determine the fields that must be processed now;
             # for the sake of simplicity, we ignore inherited fields
