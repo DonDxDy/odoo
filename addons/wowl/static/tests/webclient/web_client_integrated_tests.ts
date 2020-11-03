@@ -10,7 +10,6 @@ import { ActionManager, actionManagerService } from "../../src/action_manager/ac
 import { Component, tags } from "@odoo/owl";
 import { makeFakeRouterService, fakeTitleService } from "../helpers/mocks";
 import { useService } from "../../src/core/hooks";
-
 import { viewManagerService } from "../../src/services/view_manager";
 import { modelService } from "../../src/services/model";
 import { ServerData } from "../helpers/mock_server";
