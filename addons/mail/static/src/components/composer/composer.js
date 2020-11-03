@@ -3,7 +3,6 @@ odoo.define('mail/static/src/components/composer/composer.js', function (require
 
 const components = {
     AttachmentList: require('mail/static/src/components/attachment_list/attachment_list.js'),
-    ComposerSuggestedRecipientList: require('mail/static/src/components/composer_suggested_recipient_list/composer_suggested_recipient_list.js'),
     DropZone: require('mail/static/src/components/drop_zone/drop_zone.js'),
     EmojisPopover: require('mail/static/src/components/emojis_popover/emojis_popover.js'),
     FileUploader: require('mail/static/src/components/file_uploader/file_uploader.js'),
