@@ -1196,6 +1196,14 @@ var FieldX2Many = AbstractField.extend(WidgetAdapterMixin, {
             }
         } else if (ev && ev.target === this && ev.data.changes && this.view.arch.tag === 'tree') {
             var command = ev.data.changes[this.name];
+            const state = record.data[this.name];
+            // call all other x2m records' _updateAllModifiers
+            (state.data || []).forEach(x2mData => {
+                if (x2mData.id !== command.id) {
+                    this.renderer._updateAllModifiers(x2mData);
+                }
+            });
+
             // Here, we only consider 'UPDATE' commands with data, which occur
             // with editable list view. In order to keep the current line in
             // edition, we call confirmUpdate which will try to reset the widgets
@@ -1204,7 +1212,7 @@ var FieldX2Many = AbstractField.extend(WidgetAdapterMixin, {
             // one2manys when the record is updated from a dialog and in this
             // case, we can re-render the whole subview.
             if (command && command.operation === 'UPDATE' && command.data) {
-                var state = record.data[this.name];
+                // var state = record.data[this.name];
                 var fieldNames = state.getFieldNames({ viewType: 'list' });
                 this._reset(record, ev);
                 return this.renderer.confirmUpdate(state, command.id, fieldNames, ev.initialEvent);
