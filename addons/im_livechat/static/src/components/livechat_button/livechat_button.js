@@ -3,21 +3,27 @@ odoo.define('im_livechat/static/src/components/livechat_button/livechat_button.j
 
 const { Component } = owl;
 const { xml } = owl.tags;
+const { useState } = owl.hooks;
 
 class LivechatButton extends Component {
+    static components = {
+        ChatWindow: require('mail/static/src/components/chat_window/chat_window.js'),
+    };
+
     static props = ['server_url', 'options'];
     livechatSession = {};
+    state = useState({
+        ChatWindowModel: {}
+    });
 
     static template = xml`
 <div>
-        <div class="o_LivechatButton">
-            BIG BUTTON HERE
-        </div>
-<div class="window">
-
-</div>
-<input type="text" name="composer"/>
-<button t-on-click="submit">Send</button>
+     <div class="o_LivechatButton">
+        BIG BUTTON HERE
+     </div>
+    <ChatWindow chatWindowLocalId="state.ChatWindowModel.localId" />
+    <input type="text" name="composer"/>
+    <button t-on-click="submit">Send</button>
 </div>
 `;
     constructor(parent, props) {
@@ -32,6 +38,45 @@ class LivechatButton extends Component {
     }
 
     async init() {
+
+        // load_qweb: function (mods) {
+        //     var self = this;
+        //     var lock = this.qweb_mutex.exec(function () {
+        //         var cacheId = self.cache_hashes && self.cache_hashes.qweb;
+        //         var route  = '/web/webclient/qweb/' + (cacheId ? cacheId : Date.now()) + '?mods=' + mods;
+        //         return $.get(route).then(function (doc) {
+        //             if (!doc) { return; }
+        //             const owlTemplates = [];
+        //             for (let child of doc.querySelectorAll("templates > [owl]")) {
+        //                 child.removeAttribute('owl');
+        //                 owlTemplates.push(child.outerHTML);
+        //                 child.remove();
+        //             }
+        //             qweb.add_template(doc);
+        //             self.owlTemplates = `<templates> ${owlTemplates.join('\n')} </templates>`;
+        //         });
+        //     });
+        //     return lock;
+        // }
+
+        const templates = await this.env.services.rpc({
+            route: '/im_livechat/load_templates'
+        });
+        console.log(templates);
+        const owlTemplates = [];
+        for (let template of templates) {
+            console.log(template);
+            template = template.querySelectorAll("templates > [owl]");
+            this.env.qweb.add_template(template);
+            owlTemplates.push(template.outerHTML);
+        }
+        this.env.session.owlTemplates = `<templates> ${owlTemplates.join('\n')} </templates>`;
+
+        await new Promise(resolve => setTimeout(resolve));
+
+        console.log(this.env);
+        this.state.ChatWindowModel = this.env.models['mail.chat_window'].create();
+
         const init = await this.env.services.rpc({
             route: '/im_livechat/init',
             params: { channel_id: this.props.options.channel_id },
@@ -45,9 +90,6 @@ class LivechatButton extends Component {
                 previous_operator_id: null,
             }
         });
-
-        const chatWindowModel = this.env.models['mail.chat_window'].create();
-        const ChatWindow = require('mail/static/src/components/chat_window/chat_window.js');
 
         this.env.services.bus_service.addChannel(this.livechatSession.uuid);
         this.env.services.bus_service.onNotification(null, notifs => this._handleNotifications(notifs));

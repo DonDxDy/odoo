@@ -34,6 +34,7 @@ class LivechatController(http.Controller):
         base_url = request.httprequest.base_url
         templates = [
             'im_livechat/static/src/legacy/public_livechat.xml',
+            'mail/static/src/components/chat_window/chat_window.xml',
         ]
         return [tools.file_open(tmpl, 'rb').read() for tmpl in templates]
 
