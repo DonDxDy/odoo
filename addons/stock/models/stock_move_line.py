@@ -5,7 +5,7 @@ from collections import Counter
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
-from odoo.tools.float_utils import float_compare, float_is_zero, float_round
+from odoo.tools.float_utils import float_compare, float_is_zero, float_repr, float_round
 
 
 class StockMoveLine(models.Model):
@@ -649,6 +649,7 @@ class StockMoveLine(models.Model):
         returns: dictionary {product_id+name+description+uom: {product, name, description, qty_done, product_uom}, ...}
         """
         aggregated_move_lines = {}
+        decimal_precision = self.env['decimal.precision'].precision_get('Product Unit of Measure')
         for move_line in self:
             name = move_line.product_id.display_name
             description = move_line.move_id.description_picking
@@ -665,4 +666,10 @@ class StockMoveLine(models.Model):
                                                    'product': move_line.product_id}
             else:
                 aggregated_move_lines[line_key]['qty_done'] += move_line.qty_done
+
+        for aggregated_move_line_name, aggregated_move_line in aggregated_move_lines.items():
+            aggregated_move_line['qty_done'] = float_repr(
+                aggregated_move_line['qty_done'],
+                precision_digits=aggregated_move_line['decimal_place'],
+            )
         return aggregated_move_lines
