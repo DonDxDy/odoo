@@ -70,6 +70,15 @@ class IrFieldsConverter(models.AbstractModel):
                     converted[field] = False
                     continue
                 try:
+                    # rebuild field path for import error attribution to the right field
+                    field_path_value = value
+                    field_path = field
+                    while isinstance(field_path_value, list):
+                        key = list(field_path_value[0].keys())[0]
+                        if key:
+                            field_path += '/%s' % key
+                        field_path_value = field_path_value[0][key]
+
                     converted[field], ws = converters[field](value)
                     for w in ws:
                         if isinstance(w, str):
@@ -78,6 +87,7 @@ class IrFieldsConverter(models.AbstractModel):
                             w = ImportWarning(w)
                         log(field, w)
                 except ValueError as e:
+                    e.args[1] = {**e.args[1], **{'field_path': field_path}}
                     log(field, e)
             return converted
 
@@ -364,7 +374,8 @@ class IrFieldsConverter(models.AbstractModel):
                 subfield
             )
 
-        if id is None:
+        skip_unknown_relational_fields = self.env.context.get('skip_unknown_relational_fields') or {}
+        if id is None and not skip_unknown_relational_fields.get(field.name):
             if error_msg:
                 message = _("No matching record found for %(field_type)s '%(value)s' in field '%%(field)s' and the following error was encountered when we attempted to create one: %(error_message)s")
             else:
@@ -373,7 +384,7 @@ class IrFieldsConverter(models.AbstractModel):
                 ValueError,
                 message,
                 {'field_type': field_type, 'value': value, 'error_message': error_msg},
-                {'moreinfo': action})
+                {'moreinfo': action, 'value': value, 'field_type': field_type})
         return id, field_type, warnings
 
     def _referencing_subfield(self, record):
@@ -457,6 +468,12 @@ class IrFieldsConverter(models.AbstractModel):
                 current_field_name = self.env[field.comodel_name]._fields[f].string
                 arg0 = exception.args[0] % {'field': '%(field)s/' + current_field_name}
                 exception.args = (arg0, *exception.args[1:])
+
+                # add missing parent field name to field path
+                field_path = exception.args[1].get('field_path')
+                if field_path:
+                    exception.args[1]['field_path'] = "%s/%s" % (field.name, field_path)
+
                 raise exception
             warnings.append(exception)
 

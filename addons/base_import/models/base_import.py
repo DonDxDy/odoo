@@ -11,6 +11,7 @@ import chardet
 import datetime
 import io
 import itertools
+import Levenshtein
 import logging
 import psycopg2
 import operator
@@ -496,26 +497,39 @@ class Import(models.TransientModel):
                       all the fields to traverse
             :rtype: list(Field)
         """
-        string_match = None
-        IrTranslation = self.env['ir.translation']
-        for field in fields:
-            # FIXME: should match all translations & original
-            # TODO: use string distance (levenshtein? hamming?)
-            if header.lower() == field['name'].lower():
-                return [field]
-            if header.lower() == field['string'].lower():
-                # matching string are not reliable way because
-                # strings have no unique constraint
-                string_match = field
-            translated_header = IrTranslation._get_source('ir.model.fields,field_description', 'model', self.env.lang, header).lower()
-            if translated_header == field['string'].lower():
-                string_match = field
-        if string_match:
-            # this behavior is only applied if there is no matching field['name']
-            return [string_match]
-
         if '/' not in header:
-            return []
+            IrTranslation = self.env['ir.translation']
+            fields_matching_distance = {}
+            for field in fields:
+                # FIXME: should match all translations & original
+                string_match = None
+                if header.lower() == field['name'].lower():
+                    return [field]
+                if header.lower() == field['string'].lower():
+                    # matching string are not reliable way because
+                    # strings have no unique constraint
+                    string_match = field
+                translated_header = IrTranslation._get_source('ir.model.fields,field_description', 'model', self.env.lang, header).lower()
+                if translated_header == field['string'].lower():
+                    string_match = field
+                if string_match:
+                    # this behavior is only applied if there is no matching field['name']
+                    return [string_match]
+                else:
+                    # use string distance for smart comparaison
+                    name_field_dist = Levenshtein.distance(header.lower(), field['name'].lower()) / max(len(field['name'].lower()), len(header.lower()))
+                    string_field_dist = Levenshtein.distance(header.lower(), field['string'].lower()) / max(len(field['string'].lower()), len(header.lower()))
+                    fields_matching_distance[field['id']] = min([name_field_dist, string_field_dist])
+
+
+        # TODO: Only keep unique match. (keep the header that has the smallest distance)
+            # First, take the closest match, store the distance of the corresponding mapping
+            # Second, clear mapping for multi column usage (keep only the header-field with the minimal distance)
+            min_dist_field = min(fields_matching_distance, key=fields_matching_distance.get)
+            if fields_matching_distance[min_dist_field] < 0.5:
+                return [next(field for field in fields if field['id'] == min_dist_field)]
+            else:
+                return []
 
         # relational field path
         traversal = []
@@ -594,6 +608,16 @@ class Import(models.TransientModel):
             # the ``count`` next rows for preview
             preview = list(itertools.islice(rows, count))
             assert preview, "file seems to have no content"
+
+            # Take the first non null value for each column to display example to user
+            column_example = []
+            record_length = len(preview[0])
+            for idx in range(0, record_length):
+                for record in preview:
+                    if record[idx]:
+                        column_example.append(record[idx])
+                        break
+
             header_types = self._find_type_from_preview(options, preview)
             if options.get('keep_matches') and len(options.get('fields', [])):
                 matches = {}
@@ -626,7 +650,7 @@ class Import(models.TransientModel):
                 'matches': matches or False,
                 'headers': headers or False,
                 'headers_type': header_types or False,
-                'preview': preview,
+                'preview': column_example,
                 'options': options,
                 'advanced_mode': advanced_mode,
                 'debug': self.user_has_groups('base.group_no_one'),
@@ -922,10 +946,53 @@ class Import(models.TransientModel):
 
         _logger.info('importing %d rows...', len(data))
 
+        # check for relational skip values + boolean and selection fallback values
+        bool_fallback_values = options.get('boolean_fallback_values', {})
+        selection_fallback_values = options.get('selection_fallback_values', {})
+        for values in data:
+            for idx, field in enumerate(import_fields):
+                if field in bool_fallback_values and values[idx].lower() not in ('0', '1', 'true', 'false'):
+                    values[idx] = bool_fallback_values[field]
+                elif field in selection_fallback_values and values[idx].lower() not in selection_fallback_values[field]["selection_values"]:
+                    fallback_value = selection_fallback_values[field]["fallback_value"]
+                    values[idx] = fallback_value if fallback_value != 'skip' else False
+
+        # Handle multi mapping: if two columns mapped on the same field, concatenate them.
+        # Get duplicates and their indexes
+        duplicates = collections.defaultdict(list)
+        for idx, field in enumerate(field for field in fields if field):
+            duplicates[field].append(idx)
+        import_fields = list(duplicates.keys())
+
+        # recreate data and merge duplicates (applies only on text or char fields)
+        # Also handles multi-mapping on field of relation fields.
+        new_data = []
+        for record in data:
+            new_record = []
+            for fields, indexes in duplicates.items():
+                model = self.res_model
+                split_fields = fields.split('/')
+                for field in split_fields:
+                    if field != split_fields[-1]:
+                        model = self.env[model][field]._name
+                    else:
+                        field_type = self.env[model].fields_get()[field]['type'] if field else ''
+                        if field_type == 'char':
+                            new_record.append(' '.join(record[idx] for idx in indexes if record[idx]))
+                        elif field_type == 'text':
+                            new_record.append('\n'.join(record[idx] for idx in indexes if record[idx]))
+                        else:
+                            new_record.append(record[indexes[0]])
+            new_data.append(new_record)
+
         name_create_enabled_fields = options.pop('name_create_enabled_fields', {})
         import_limit = options.pop('limit', None)
-        model = self.env[self.res_model].with_context(import_file=True, name_create_enabled_fields=name_create_enabled_fields, _import_limit=import_limit)
-        import_result = model.load(import_fields, data)
+        model = self.env[self.res_model].with_context(
+            import_file=True,
+            name_create_enabled_fields=name_create_enabled_fields,
+            skip_unknown_relational_fields=options['skip_unknown_relational_fields'],
+            _import_limit=import_limit)
+        import_result = model.load(import_fields, new_data)
         _logger.info('done')
 
         # If transaction aborted, RELEASE SAVEPOINT is going to raise

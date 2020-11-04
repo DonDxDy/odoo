@@ -29,5 +29,8 @@ Re-implement Odoo's file import system:
         'security/ir.model.access.csv',
         'views/base_import_templates.xml',
     ],
-    'qweb': ['static/src/xml/base_import.xml'],
+    'qweb': [
+        'static/src/xml/base_import.xml',
+        'static/src/xml/base_import_options.xml',
+     ],
 }

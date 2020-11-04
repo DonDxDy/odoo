@@ -1,6 +1,6 @@
 .oe_import {
-    @include o-webclient-padding($top: 8px);
-    overflow: auto;
+    padding: 0px;
+    overflow: hidden;
     position: absolute; // Needed for chrome
     top: 0;
     right: 0;
@@ -22,38 +22,31 @@
     }
 
     .oe_import_box {
+        flex: 0 0 250px;
         padding: 8px;
-        background: #F0EEEE;
+        background: white;
         border-radius: $border-radius;
-        border: solid 1px #dddddd;
+        border-right: solid 1px #dddddd;
+        overflow: auto;
         label {
             font-weight: normal;
         }
         .oe_import_file {
             display: inline-block;
         }
+        .oe_import_option_title {
+            position: relative;
+            cursor: pointer;
+            i {
+               position: absolute;
+               right: 4px;
+               pointer-events: none;
+            }
+        }
     }
 
-    a.oe_import_toggle {
-        display: block;
-        &:before {
-            content: '+'
-        }
-    }
-    .oe_import_options {
-        margin-top: 8px;
-        p {
-            margin: 0;
-        }
-        label {
-            width: 48%;
-            line-height: 32px;
-            text-align: right;
-        }
-    }
     /* ----------- INITIAL SETUP ------------ */
     dd,
-    .oe_import_toggled,
     .oe_import_grid,
     .oe_import_error_report,
     .oe_import_noheaders,
@@ -61,8 +54,23 @@
         display: none;
     }
 
-    .oe_import_with_file label {
-        font-weight: normal;
+    .oe_import_with_file {
+        flex: 1 1 100%;
+        background-color: white;
+        overflow: auto;
+        label {
+            font-weight: normal;
+            &.custom-control-label {
+                left: 20px;
+            }
+        }
+        h4 {
+            padding-top: 8px;
+        }
+        input:checked + label:after {
+            background-image: url('/web_studio/static/src/img/ui/checkbox_active.svg');
+            background-size: cover;
+        }
     }
     .oe_import_debug_options {
         max-width: 800px;
@@ -119,14 +127,25 @@
     $cell-max-width: 350px;
     $cell-padding: 4px;
     .oe_import_grid {
+        width: 100%;
+        overflow: hidden;
         tr {
+            &.oe_import_grid-header {
+                border-bottom: 1px solid lightgrey;
+                .oe_import_grid-cell {
+                    border: 0px;
+                    font-weight: bold;
+                }
+            }
             &.oe_import_grid-header:first-child {
                 line-height: 24px;
                 font-weight: normal;
             }
             .oe_import_grid-cell {
+                border-left: 0px;
+                border-right: 0px;
                 max-width: $cell-max-width;
-                padding: $cell-padding;
+                padding: $cell-padding 8px $cell-padding 8px;
                 vertical-align: top;
                 .o_multi_line_text {
                     word-break: break-word;

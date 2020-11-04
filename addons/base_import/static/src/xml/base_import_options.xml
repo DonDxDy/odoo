@@ -1,0 +1,72 @@
+<templates>
+    <t t-name="base_import.OptionEncoding">
+        <div class="mb-1 oe_import_option_csv_only oe_import_dropdown">
+            <t t-set="options" t-value="'ascii utf-8 utf-16 windows-1252 latin1 latin2 big5 gb18030 shift_jis windows-1251 koir8_r'.split(' ')"/>
+            <label t-attf-for="encoding_#{_id}">Encoding:</label>
+            <select t-attf-id="encoding_#{_id}" class="oe_import_formatting oe_import_encoding w-100 mb-3" value="" type="encoding">
+                <t t-foreach="options" t-as="option">
+                    <option t-att-value="option"><t t-esc="option"/></option>
+                </t>
+            </select>
+        </div>
+    </t>
+
+    <t t-name="base_import.OptionSeparator">
+        <div class="mb-1 oe_import_option_csv_only oe_import_dropdown">
+            <label t-attf-for="separator_#{_id}">Column Separator:</label>
+            <select t-attf-id="separator_#{_id}" class="oe_import_formatting oe_import_separator w-100 mb-3" type="separator">
+                <option value=",">Comma</option>
+                <option value=";">Semicolon</option>
+                <option value="\t">Tab</option>
+                <option value=" ">Space</option>
+            </select>
+        </div>
+    </t>
+
+    <t t-name="base_import.OptionQuoting">
+        <div class="mb-1 oe_import_option_csv_only oe_import_dropdown">
+            <label t-attf-for="quoting_#{_id}">Text Delimiter:</label>
+            <input t-attf-id="quoting_#{_id}" class="oe_import_formatting oe_import_quoting w-100 mb-3" type="quoting" value='"'/>
+        </div>
+    </t>
+
+    <t t-name="base_import.OptionDateFormat">
+        <div class="mb-1 oe_import_dropdown">
+            <t t-set="options" t-value="'YYYY-MM-DD DD/MM/YY DD/MM/YYYY DD-MM-YYYY DD-MMM-YY DD-MMM-YYYY MM/DD/YY MM/DD/YYYY MM-DD-YY MM-DD-YYYY DDMMYY DDMMYYYY YYMMDD YYYYMMDD YY/MM/DD YYYY/MM/DD MMDDYY MMDDYYYY'.split(' ')"/>
+            <label t-attf-for="date_format_#{_id}">Date Format:</label>
+            <select t-attf-id="date_format_#{_id}" class="oe_import_formatting oe_import_date_format w-100 mb-3" type="date_format">
+                <t t-foreach="options" t-as="option">
+                    <option t-att-value="option"><t t-esc="option"/></option>
+                </t>
+            </select>
+        </div>
+    </t>
+
+    <t t-name="base_import.OptionDatetimeFormat">
+        <div class="mb-1 oe_import_option_csv_only oe_import_dropdown">
+            <label t-attf-for="datetime_format_#{_id}">Datetime Format:</label>
+            <input t-attf-id="datetime_format_#{_id}" class="oe_import_formatting oe_import_datetime_format w-100 mb-3" type="datetime_format" value=""/>
+        </div>
+    </t>
+
+    <t t-name="base_import.OptionThousandsSeparator">
+        <div class="mb-1 oe_import_option_csv_only oe_import_dropdown">
+            <label t-attf-for="float_thousand_separator_#{_id}">Thousands Separator:</label>
+            <select t-attf-id="float_thousand_separator_#{_id}" class="oe_import_formatting oe_import_float_thousand_separator w-100 mb-3" type="float_thousand_separator">
+                <option value="">No Separator</option>
+                <option value="," selected="1">Comma</option>
+                <option value=".">Dot</option>
+            </select>
+        </div>
+    </t>
+
+    <t t-name="base_import.OptionDecimalSeparator">
+        <div class="mb-1 oe_import_option_csv_only oe_import_dropdown">
+            <label t-attf-for="float_decimal_separator_#{_id}">Decimal Separator:</label>
+            <select t-attf-id="float_decimal_separator_#{_id}" class="oe_import_formatting oe_import_float_decimal_separator w-100 mb-3" type="float_decimal_separator" value=".">
+                <option value=",">Comma</option>
+                <option value="." selected="1">Dot</option>
+            </select>
+        </div>
+    </t>
+</templates>

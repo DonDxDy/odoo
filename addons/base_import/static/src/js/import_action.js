@@ -101,13 +101,14 @@ var DataImport = AbstractAction.extend({
             this.do_not_change_match = true;
             this['settings_changed']();
         },
-        'click a.oe_import_toggle': function (e) {
-            e.preventDefault();
-            this.$('.oe_import_options').toggle();
-        },
         'click .oe_import_report a.oe_import_report_count': function (e) {
             e.preventDefault();
             $(e.target).parent().parent().toggleClass('oe_import_report_showmore');
+        },
+        'click .oe_import_box h4.oe_import_option_title': function (e) {
+            e.preventDefault();
+            $(e.target).find('i').toggleClass('fa-caret-down').toggleClass('fa-caret-up');
+            $(e.target).parent().find('.oe_import_options_toggle').toggleClass('d-none');
         },
         'click .oe_import_report_see_possible_value': function (e) {
             e.preventDefault();
@@ -150,6 +151,7 @@ var DataImport = AbstractAction.extend({
         this._title = _t('Import a File'); // Displayed in the breadcrumbs
         this.do_not_change_match = false;
         this.sheets = [];
+        this.selectionFields = {};
     },
     /**
      * @override
@@ -214,6 +216,7 @@ var DataImport = AbstractAction.extend({
             width: '50%',
             data: _.map(('utf-8 utf-16 windows-1252 latin1 latin2 big5 gb18030 shift_jis windows-1251 koir8_r').split(/\s+/), _make_option),
             query: dataFilteredQuery,
+            minimumResultsForSearch: -1,
             initSelection: function ($e, c) {
                 return c(_make_option($e.val()));
             }
@@ -230,6 +233,7 @@ var DataImport = AbstractAction.extend({
             width: '50%',
             data: data,
             query: dataFilteredQuery,
+            minimumResultsForSearch: -1,
             // this is not provided to initSelection so can't use this.data
             initSelection: function ($e, c) {
                 c(_from_data(data, $e.val()) || _make_option($e.val()))
@@ -246,6 +250,7 @@ var DataImport = AbstractAction.extend({
             width: '50%',
             data: data_digits,
             query: dataFilteredQuery,
+            minimumResultsForSearch: -1,
             initSelection: function ($e, c) {
                 c(_from_data(data_digits, $e.val()) || _make_option($e.val()))
             }
@@ -254,6 +259,7 @@ var DataImport = AbstractAction.extend({
             width: '50%',
             data: data_decimal,
             query: dataFilteredQuery,
+            minimumResultsForSearch: -1,
             initSelection: function ($e, c) {
                 c(_from_data(data_decimal, $e.val()) || _make_option($e.val()))
             }
@@ -284,6 +290,7 @@ var DataImport = AbstractAction.extend({
             width: '50%',
             data: data,
             query: dataFilteredQuery,
+            minimumResultsForSearch: -1,
             initSelection: function ($e, c) {
                 c(_from_data(data, $e.val()) || _make_option($e.val()));
             }
@@ -295,6 +302,7 @@ var DataImport = AbstractAction.extend({
             width: '50%',
             data: data,
             query: dataFilteredQuery,
+            minimumResultsForSearch: -1,
             initSelection: function ($e, c) {
                 c(_from_data(data, $e.val()) || _make_option($e.val()))
             },
@@ -309,10 +317,22 @@ var DataImport = AbstractAction.extend({
             advanced: this.$('input.oe_import_advanced_mode').prop('checked'),
             keep_matches: this.do_not_change_match,
             name_create_enabled_fields: {},
+            skip_unknown_relational_fields: {},
+            boolean_fallback_values: {},
+            selection_fallback_values: {},
             // start at row 1 = skip 0 lines
             skip: Number(this.$('#oe_import_row_start').val()) - 1 || 0,
             limit: Number(this.$('#oe_import_batch_limit').val()) || null,
         };
+
+        // New
+//        _.each(this.$('.oe_import_formatting'), function (opt) {
+//            var type = opt.getAttribute('type');
+//            var value = $(opt).val() || "";  // avoid undefined for date formating
+//            var isDateFormat = type === "date_format" || type === "datetime_format";
+//            options[type] = isDateFormat ? time.moment_to_strftime_format(value) : value;
+//        });
+
         _.each(_.union(this.opts, this.spreadsheet_opts), function (opt) {
             options[opt.name] =
                 self.$('input.oe_import_' + opt.name).val();
@@ -323,17 +343,34 @@ var DataImport = AbstractAction.extend({
         _(this.parse_opts_separators).each(function (opt) {
             options[opt.name] = self.$('input.oe_import_' + opt.name).val();
         });
+
+
         options['fields'] = [];
         if (this.do_not_change_match) {
-            options['fields'] = this.$('.oe_import_fields input.oe_import_match_field').map(function (index, el) {
+            options['fields'] = this.$('input.oe_import_match_field').map(function (index, el) {
                 return $(el).select2('val') || false;
             }).get();
         }
         this.do_not_change_match = false;
-        this.$('input.o_import_create_option').each(function () {
+        this.$('select.o_import_create_option').each(function () {
             var field = this.getAttribute('field');
+            var type = this.getAttribute('type');
+            var isNotFalse = !(this.value === 'false');
             if (field) {
-                options.name_create_enabled_fields[field] = this.checked;
+                if (type === 'many2one' || type === "many2many") {
+                    if (this.value === 'skip') {
+                        options.skip_unknown_relational_fields[field] = true;
+                    } else {
+                        options.name_create_enabled_fields[field] = this.value === 'create';
+                    }
+                } else if (type === 'boolean') {
+                    options.boolean_fallback_values[field] = this.value === 'true' ? '1': '0';
+                } else if (type === 'selection' && isNotFalse) { // skip if value == 'prevent'
+                    options.selection_fallback_values[field] = {
+                        fallback_value: this.value,
+                        selection_values: self.selectionFields[field].map(v => v.toLowerCase())
+                    }
+                }
             }
         });
         return options;
@@ -356,10 +393,11 @@ var DataImport = AbstractAction.extend({
         var import_toggle = false;
         var file = this.$('input.oe_import_file')[0].files[0];
         // some platforms send text/csv, application/csv, or other things if Excel is prevent
-        if ((file.type && _.last(file.type.split('/')) === "csv") || ( _.last(file.name.split('.')) === "csv")) {
-            import_toggle = true;
+        if (!((file.type && _.last(file.type.split('/')) === "csv") || ( _.last(file.name.split('.')) === "csv"))) {
+            this.$form.find('.oe_import_option_csv_only').addClass('d-none');
+//            import_toggle = true;
         }
-        this.$form.find('.oe_import_box').toggle(import_toggle);
+        this.$form.find('.oe_import_box').toggle(true);
         jsonp(this.$form, {
             url: '/base_import/set_file'
         }, this.proxy('settings_changed'));
@@ -371,12 +409,13 @@ var DataImport = AbstractAction.extend({
         // TODO: test that write // succeeded?
         this.$form.removeClass('oe_import_preview_error oe_import_error');
         this.$form.toggleClass(
-            'oe_import_noheaders text-muted',
+            'oe_import_noheaders',
             !this.$('input.oe_import_has_header').prop('checked'));
 
         // Clear the input value to allow onchange to be triggered
         // if the file is the same (for all browsers)
         self.$('input.oe_import_file').val('');
+        this.$('.oe_import_options_cell,.oe_import_options_header').addClass('d-none');
 
         this._rpc({
                 model: 'base_import.import',
@@ -438,7 +477,7 @@ var DataImport = AbstractAction.extend({
         // hide all "true debug" options when not in debug mode
         this.$('.oe_import_debug_option').toggleClass('d-none', !result.debug);
 
-        var $fields = this.$('.oe_import_fields input');
+        var $fields = this.$('.oe_import_match_field');
         this.render_fields_matches(result, $fields);
         var data = this.generate_fields_completion(result);
         var item_finder = function (id, items) {
@@ -458,20 +497,49 @@ var DataImport = AbstractAction.extend({
         $fields.each(function (k,v) {
             var filtered_data = self.generate_fields_completion(result, k);
 
-            var $thing = $();
             var bind = function (d) {};
             if (config.isDebug()) {
-                $thing = $(QWeb.render('ImportView.create_record_option')).insertAfter(v).hide();
                 bind = function (data) {
-                    switch (data.type) {
-                    case 'many2one': case 'many2many':
-                        $thing.find('input').attr('field', data.id);
-                        $thing.show();
-                        break;
-                    default:
-                        $thing.find('input').attr('field', '').prop('checked', false);
-                        $thing.hide();
+                    var $optionsCell = $(v).parent().parent().find('.oe_import_options_cell');
+                    // get options cell related to that field
+                    if (data.type === 'many2one' || data.type === "many2many" || data.type === 'boolean') {
+                        $optionsCell.html(
+                            QWeb.render('ImportView.create_record_option', {data: data})
+                        );
+                        $optionsCell.find('.o_import_create_option').attr('field', data.id).attr('type', data.type);
+                    } else if (data.type === 'selection') {
+                        self._rpc({
+                            route: '/base_import/get_selection_values',
+                            params: {
+                                model: self.res_model,
+                                field: data.id
+                            },
+                        }).then(function (values) {
+                            $optionsCell.html(
+                                QWeb.render('ImportView.create_record_option', {
+                                    data: data,
+                                    values: values,
+                                })
+                            );
+                            $optionsCell.find('.o_import_create_option').attr('field', data.id).attr('type', data.type);
+                            self.selectionFields[data.id] = values;
+                        });
+                    } else if ($optionsCell.find('.o_import_create_option').length == 1) {
+                        $optionsCell.empty();
                     }
+
+                    // Hide/Show options column if at least one field is relational, bool or selection
+                    self.$('.oe_import_options_cell,.oe_import_options_header').toggleClass('d-none', self.$('.o_import_create_option').length == 0);
+
+                    // get comment cell related to that field
+                    var $commentCell = $(v).parent().parent().find('.oe_import_comment_cell');
+                    $commentCell.attr('field', data.id || "");
+
+                    // assign class for field icon
+                    var $mapping_field = $(v).parent().find('.select2-choice');
+                    var oldType = $mapping_field.getAttributes()['type'];
+                    $(v).parent().find('.select2-choice').removeClass('o_import_field_' + oldType).addClass('o_import_field_' + data.type);
+                    $mapping_field.attr('type', data.type);
                 }
             }
 
@@ -489,14 +557,53 @@ var DataImport = AbstractAction.extend({
                     var data = item_finder(default_value);
                     bind(data);
                     callback(data);
+                    self._handleMultiMapping(v, data);
                 },
-                placeholder: _t('Don\'t import'),
+                placeholder: _t('To import, select a field...'),
                 width: 'resolve',
                 dropdownCssClass: 'oe_import_selector'
             }).on('change', function (e) {
-                bind(item_finder(e.currentTarget.value));
+                self._cleanComments(e);
+                var data = item_finder(e.currentTarget.value);
+                bind(data);
+                self._handleMultiMapping(e.currentTarget, data);
             });
         });
+    },
+    _cleanComments: function (e) {
+        // Check that the column was not mapped to same field than another column
+        if (e.removed) {
+            var $sameMappedFields = self.$('.oe_import_comment_cell[field="' + e.removed.id + '"]').find('.oe_import_same_mapped_field');
+            if ($sameMappedFields.length == 2) {
+                // remove all same mapped field comments
+                $sameMappedFields.remove();
+            }
+        }
+        // remove all comments for this column
+        $(e.currentTarget).parent().parent().find('.oe_import_comment_cell').empty();
+    },
+    _handleMultiMapping: function (currentTarget, data) {
+        // check if two columns are mapped on the same fields (for char/text fields)
+        var $sameMappedFields = self.$('.oe_import_comment_cell[field="' + data.id + '"]');
+        if ($sameMappedFields.length >= 2) {
+            if (data.type === 'char' || data.type === 'text') {
+                $sameMappedFields.each(function (idx, fieldComment) {
+                    $(fieldComment).html(
+                        QWeb.render('ImportView.comment_same_mapped_field', {
+                            field: data.text,
+                        })
+                    );
+                });
+            } else {  // if column is mapped on an already mapped field, remove that field from the old column.
+                var $targetMappedFieldId = $(currentTarget).parent().find('div.oe_import_match_field').getAttributes()['id'];
+                _.each($sameMappedFields, function(fieldComment) {
+                    var $mappingCell = $(fieldComment).parent().find('div.oe_import_match_field');
+                    if ($mappingCell.getAttributes()['id'] !== $targetMappedFieldId) {
+                        $mappingCell.select2('val', '');
+                    }
+                });
+            }
+        }
     },
     generate_fields_completion: function (root, index) {
         var self = this;
@@ -594,10 +701,10 @@ var DataImport = AbstractAction.extend({
 
     //- import itself
     call_import: function (kwargs) {
-        var fields = this.$('.oe_import_fields input.oe_import_match_field').map(function (index, el) {
+        var fields = this.$('input.oe_import_match_field').map(function (index, el) {
             return $(el).select2('val') || false;
         }).get();
-        var columns = this.$('.oe_import_grid-header .oe_import_grid-cell .o_import_header_name').map(function () {
+        var columns = this.$('.o_import_header_name').map(function () {
             return $(this).text().trim().toLowerCase() || false;
         }).get();
 
@@ -682,6 +789,10 @@ var DataImport = AbstractAction.extend({
             args: args.concat([opts]),
             kwargs: kwargs
         }).then(function (results) {
+            // Clean comments
+            self.$('.oe_import_comment_cell, .oe_import_error_report').find('.alert-error').remove();
+            self.$form.removeClass('oe_import_error');
+
             _.each(results.messages, offset_by(opts.skip));
             if (!kwargs.dryrun && !results.ids) {
                 // update skip to failed batch
@@ -753,7 +864,8 @@ var DataImport = AbstractAction.extend({
         this.trigger_up('history_back');
     },
     onresults: function (event, from, to, results) {
-        var fields = this.$('.oe_import_fields input.oe_import_match_field').map(function (index, el) {
+        var self = this;
+        var fields = this.$('input.oe_import_match_field').map(function (index, el) {
             return $(el).select2('val') || false;
         }).get();
 
@@ -791,71 +903,101 @@ var DataImport = AbstractAction.extend({
             return order + _.indexOf(fields, group[0].field);
         });
 
-        this.$form.addClass('oe_import_error');
-        this.$('.oe_import_error_report').html(
-            QWeb.render('ImportView.error', {
-                errors: messagesSorted,
-                at: function (rows) {
-                    var from = rows.from + offset;
-                    var to = rows.to + offset;
-                    var rowName = '';
-                    if (results.name.length > rows.from && results.name[rows.from] !== '') {
-                        rowName = _.str.sprintf(' (%s)', results.name[rows.from]);
-                    }
-                    if (from === to) {
-                        return _.str.sprintf(_t("at row %d%s"), from, rowName);
-                    }
-                    return _.str.sprintf(_t("between rows %d and %d"),
-                                         from, to);
-                },
-                at_multi: function (rows) {
-                    var from = rows.from + offset;
-                    var to = rows.to + offset;
-                    var rowName = '';
-                    if (results.name.length > rows.from && results.name[rows.from] !== '') {
-                        rowName = _.str.sprintf(' (%s)', results.name[rows.from]);
-                    }
-                    if (from === to) {
-                        return _.str.sprintf(_t("Row %d%s"), from, rowName);
-                    }
-                    return _.str.sprintf(_t("Between rows %d and %d"),
-                                         from, to);
-                },
-                at_multi_header: function (numberLines) {
-                    return _.str.sprintf(_t("at %d different rows:"),
-                                         numberLines);
-                },
-                more: function (n) {
-                    return _.str.sprintf(_t("(%d more)"), n);
-                },
-                info: function (msg) {
-                    if (typeof msg === 'string') {
-                        return _.str.sprintf(
-                            '<div class="oe_import_moreinfo oe_import_moreinfo_message">%s</div>',
-                            _.str.escapeHTML(msg));
-                    }
-                    if (msg instanceof Array) {
-                        return _.str.sprintf(
-                            '<div class="oe_import_moreinfo oe_import_moreinfo_choices"><a href="#" class="oe_import_report_see_possible_value oe_import_see_all"><i class="fa fa-arrow-right"/> %s </a><ul class="oe_import_report_more">%s</ul></div>',
-                            _.str.escapeHTML(_t("See possible values")),
-                            _(msg).map(function (msg) {
-                                return '<li>'
-                                    + _.str.escapeHTML(msg)
-                                + '</li>';
-                            }).join(''));
-                    }
-                    // Final should be object, action descriptor
-                    return [
-                        '<div class="oe_import_moreinfo oe_import_moreinfo_action">',
-                            _.str.sprintf('<a href="#" data-action="%s" class="oe_import_see_all"><i class="fa fa-arrow-right"/> ',
-                                    _.str.escapeHTML(JSON.stringify(msg))),
-                                _.str.escapeHTML(
-                                    _t("See possible values")),
-                            '</a>',
-                        '</div>'
-                    ].join('');
-                },
-            }));
+
+        // regroup error message by field
+        var messagesGroupedByField = {};
+        _.each(messagesSorted, function (errors) {
+            var field = errors[0].field_path || errors[0].field || 0;
+            [errors] = errors.length > 1 ? [errors] : errors;
+            // regroup errors for same value at different rows in the same error.
+            if (Array.isArray(errors) && field) {
+                var row_from = errors[0].rows.from;
+                var row_to = errors[errors.length - 1].rows.to;
+                errors = errors[0];
+                errors.rows.from = row_from;
+                errors.rows.to = row_to;
+            }
+            if (!messagesGroupedByField[field]) {
+                messagesGroupedByField[field] = [errors];
+            } else {
+                messagesGroupedByField[field].push(errors);
+            }
+        });
+
+        _.each(messagesGroupedByField, function (errors, field) {
+            var $errorCell = self.$('.oe_import_comment_cell[field="'+ field +'"]');
+            // If error not linked to a targeted Odoo field, show in global error div
+            if ($errorCell.length === 0) {
+                $errorCell = self.$('.oe_import_error_report');
+                self.$form.addClass('oe_import_error');
+            }
+            $errorCell.append(
+                QWeb.render('ImportView.error', {
+                    errors: errors,
+                    field: field,
+                    at: function (rows) {
+                        var from = rows.from + offset;
+                        var to = rows.to + offset;
+                        var rowName = '';
+                        if (results.name.length > rows.from && results.name[rows.from] !== '') {
+                            rowName = _.str.sprintf(' (%s)', results.name[rows.from]);
+                        }
+                        if (from === to) {
+                            return _.str.sprintf(_t("at row %d%s"), from, rowName);
+                        }
+                        return _.str.sprintf(_t("between rows %d and %d"),
+                                             from, to);
+                    },
+                    at_multi: function (rows) {
+                        var from = rows.from + offset;
+                        var to = rows.to + offset;
+                        var rowName = '';
+                        if (results.name.length > rows.from && results.name[rows.from] !== '') {
+                            rowName = _.str.sprintf(' (%s)', results.name[rows.from]);
+                        }
+                        if (from === to) {
+                            return _.str.sprintf(_t("Row %d%s"), from, rowName);
+                        }
+                        return _.str.sprintf(_t("Between rows %d and %d"),
+                                             from, to);
+                    },
+                    at_multi_header: function (numberLines) {
+                        return _.str.sprintf(_t("at %d different rows:"),
+                                             numberLines);
+                    },
+                    more: function (n) {
+                        return _.str.sprintf(_t("(%d more)"), n);
+                    },
+                    info: function (msg) {
+                        if (typeof msg === 'string') {
+                            return _.str.sprintf(
+                                '<div class="oe_import_moreinfo oe_import_moreinfo_message">%s</div>',
+                                _.str.escapeHTML(msg));
+                        }
+                        if (msg instanceof Array) {
+                            return _.str.sprintf(
+                                '<div class="oe_import_moreinfo oe_import_moreinfo_choices"><a href="#" class="oe_import_report_see_possible_value oe_import_see_all"><i class="fa fa-arrow-right"/> %s </a><ul class="oe_import_report_more">%s</ul></div>',
+                                _.str.escapeHTML(_t("See possible values")),
+                                _(msg).map(function (msg) {
+                                    return '<li>'
+                                        + _.str.escapeHTML(msg)
+                                    + '</li>';
+                                }).join(''));
+                        }
+                        // Final should be object, action descriptor
+                        return [
+                            '<div class="oe_import_moreinfo oe_import_moreinfo_action">',
+                                _.str.sprintf('<a href="#" data-action="%s" class="oe_import_see_all"><i class="fa fa-arrow-right"/> ',
+                                        _.str.escapeHTML(JSON.stringify(msg))),
+                                    _.str.escapeHTML(
+                                        _t("See possible values")),
+                                '</a>',
+                            '</div>'
+                        ].join('');
+                    },
+                })
+            );
+        });
     },
     toggle_partial: function (result) {
         var $form = this.$('.oe_import');
