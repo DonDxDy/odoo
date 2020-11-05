@@ -7,6 +7,7 @@ from random import randint
 
 from odoo import api, fields, models
 from odoo.addons.http_routing.models.ir_http import slug
+from odoo.http import request
 from odoo.osv import expression
 from odoo.tools.mail import is_html_empty
 from odoo.tools.translate import _, html_translate
@@ -51,8 +52,9 @@ class Track(models.Model):
              " * Grey is the default situation\n"
              " * Red indicates something is preventing the progress of this track\n"
              " * Green indicates the track is ready to be pulled to the next stage")
-    # speaker
-    partner_id = fields.Many2one('res.partner', 'Speaker')
+    # partner_id is the partner used to contact the speaker.
+    partner_id = fields.Many2one('res.partner', 'Contact')
+    # these fields describe the Speaker personal information
     partner_name = fields.Char(
         string='Name', compute='_compute_partner_info',
         readonly=False, store=True, tracking=10)
@@ -66,16 +68,23 @@ class Track(models.Model):
         string='Biography', compute='_compute_partner_biography',
         readonly=False, store=True)
     partner_function = fields.Char(
-        'Job Position', related='partner_id.function',
-        compute_sudo=True, readonly=True)
+        'Job Position', compute='_compute_partner_info',
+        store=True, readonly=False)
     partner_company_name = fields.Char(
-        'Company Name', related='partner_id.parent_name',
-        compute_sudo=True, readonly=True)
+        'Company Name', compute='_compute_partner_company_name',
+        readonly=False, store=True)
     image = fields.Image(
         string="Speaker Photo", compute="_compute_speaker_image",
         readonly=False, store=True,
         max_width=256, max_height=256)
     location_id = fields.Many2one('event.track.location', 'Location')
+    # speaker contact information, if partner_id then related to partner_id
+    contact_email = fields.Char(
+        string='Contact Email', compute='_compute_contact_info',
+        readonly=False, store=True, tracking=20)
+    contact_phone = fields.Char(
+        string='Contact Phone', compute='_compute_contact_info',
+        readonly=False, store=True, tracking=30)
     # time information
     date = fields.Datetime('Track Date')
     date_end = fields.Datetime('Track End Date', compute='_compute_end_date', store=True)
@@ -145,13 +154,33 @@ class Track(models.Model):
 
     # SPEAKER
 
+    @api.depends('partner_id', 'partner_id.phone', 'partner_id.email')
+    def _compute_contact_info(self):
+        for track in self:
+            if track.partner_id:
+                track.contact_email = track.partner_id.email
+                track.contact_phone = track.partner_id.phone
+
     @api.depends('partner_id')
     def _compute_partner_info(self):
         for track in self:
             if track.partner_id:
-                track.partner_name = track.partner_id.name
-                track.partner_email = track.partner_id.email
-                track.partner_phone = track.partner_id.phone
+                if not track.partner_name:
+                    track.partner_name = track.partner_id.name
+                if not track.partner_email:
+                    track.partner_email = track.partner_id.email
+                if not track.partner_phone:
+                    track.partner_phone = track.partner_id.phone
+                if not track.partner_function:
+                    track.partner_function = track.partner_id.function
+
+    @api.depends('partner_id', 'partner_id.company_type')
+    def _compute_partner_company_name(self):
+        for track in self:
+            if track.partner_id.company_type == 'company':
+                track.partner_company_name = track.partner_id.name
+            elif not track.partner_company_name:
+                track.partner_company_name = track.partner_id.parent_id.name
 
     @api.depends('partner_id')
     def _compute_partner_biography(self):
@@ -371,23 +400,66 @@ class Track(models.Model):
     def _message_get_suggested_recipients(self):
         recipients = super(Track, self)._message_get_suggested_recipients()
         for track in self:
-            if track.partner_email and track.partner_email != track.partner_id.email:
-                track._message_add_suggested_recipient(recipients, email=track.partner_email, reason=_('Speaker Email'))
+            if track.partner_id:
+                if track.partner_id not in recipients and track.contact_email:
+                    track._message_add_suggested_recipient(recipients, email=track.contact_email, reason=_('Contact Email'))
+            else:
+                #  Priority: contact information then speaker information
+                if track.contact_email and track.contact_email != track.partner_id.email:
+                    track._message_add_suggested_recipient(recipients, email=track.contact_email, reason=_('Contact Email'))
+                if not track.contact_email and track.partner_email and track.partner_email != track.partner_id.email:
+                    track._message_add_suggested_recipient(recipients, email=track.partner_email, reason=_('Speaker Email'))
         return recipients
 
     def _message_post_after_hook(self, message, msg_vals):
-        if self.partner_email and not self.partner_id:
-            # we consider that posting a message with a specified recipient (not a follower, a specific one)
-            # on a document without customer means that it was created through the chatter using
-            # suggested recipients. This heuristic allows to avoid ugly hacks in JS.
-            new_partner = message.partner_ids.filtered(lambda partner: partner.email == self.partner_email)
-            if new_partner:
-                self.search([
-                    ('partner_id', '=', False),
-                    ('partner_email', '=', new_partner.email),
-                    ('stage_id.is_cancel', '=', False),
-                ]).write({'partner_id': new_partner.id})
+        #  OVERRIDE
+        #  If a partner_id is set, it means it has been created at message_post or existed before that. 
+        #  Therefore, if there is no partner_id, it means that the user used the M2O creation through chatter.
+        #  Below, we deal with that case and catch info after searching for the created partner.
+        if not self.partner_id:
+            if self.contact_email:
+                new_partner = message.partner_ids.filtered(lambda partner: partner.email == self.contact_email)
+                if new_partner:
+                    self.search([
+                        ('partner_id', '=', False),
+                        ('contact_email', '=', new_partner.email),
+                        ('stage_id.is_cancel', '=', False),
+                    ]).write({'partner_id': new_partner.id})
+            elif self.partner_email:
+                new_partner = message.partner_ids.filtered(lambda partner: partner.email == self.partner_email)
+                if new_partner:
+                    self.search([
+                        ('partner_id', '=', False),
+                        ('partner_email', '=', new_partner.email),
+                        ('stage_id.is_cancel', '=', False),
+                    ]).write({'partner_id': new_partner.id})
         return super(Track, self)._message_post_after_hook(message, msg_vals)
+
+    @api.returns('mail.message', lambda value: value.id)
+    def message_post(self, **kwargs):
+        #  OVERRIDE
+        #  Creates a new contact if no partner is set on track nor created through chatter, whose id will be in 'partner_ids' 
+        #  (case treated in message_post_after_hook) and no partner is set on track if an email is available. 
+        #  The contact_email has priority over partner_email to create the new contact.
+        #  The id is added to parner_ids to subscribe the new contact to the track.
+        if not kwargs['partner_ids'] and not self.partner_id:
+            if self.contact_email:
+                new_contact = request.env['res.partner'].sudo().create({
+                    'name': 'New Contact: ' + self.contact_email,
+                    'email': self.contact_email,
+                    'phone': self.contact_phone,
+                })
+                self.partner_id = new_contact.id
+                kwargs['partner_ids'].append(new_contact.id)
+            elif self.partner_email:
+                new_contact = request.env['res.partner'].sudo().create({
+                    'name': 'New Speaker: ' + self.partner_email,
+                    'email': self.partner_email,
+                    'phone': self.partner_phone,
+                })
+                self.partner_id = new_contact.id
+                kwargs['partner_ids'].append(new_contact.id)
+        return super().message_post(**kwargs)
 
     # ------------------------------------------------------------
     # ACTION

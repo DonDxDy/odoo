@@ -80,3 +80,13 @@
   background-color: #ffc7f1;
   color: #6d2c70;
 }
+
+label[for=add_contact_information]{
+  font-weight: normal;
+}
+
+.extra_contact_information{
+  display: none;
+}
+
+.add_contact_information:checked ~ .extra_contact_information{display:block;}

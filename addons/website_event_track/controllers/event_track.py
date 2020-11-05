@@ -398,35 +398,64 @@ class EventTrackController(http.Controller):
 
         return request.render("website_event_track.event_track_proposal", {'event': event, 'main_object': event})
 
+    @http.route(['''/event/<model("event.event"):event>/track_proposal/tags'''], type='json', auth="public", website=True)
+    def website_event_track_tag_read(self, fields, domain):
+        return {
+            'read_results': request.env['event.track.tag'].search_read(domain, fields)
+        }
+
     @http.route(['''/event/<model("event.event"):event>/track_proposal/post'''], type='http', auth="public", methods=['POST'], website=True)
     def event_track_proposal_post(self, event, **post):
         if not event.can_access_from_current_website():
             raise NotFound()
 
-        tags = []
-        for tag in event.allowed_track_tag_ids:
-            if post.get('tag_' + str(tag.id)):
-                tags.append(tag.id)
+        #  Tags Handler
+        tagEntries = post['tags'].split(',')
+        tags_registered = []
+        for tag in tagEntries:
+            if tag:
+                tags_registered.append(int(tag))
+
+        #  On the form, contact_name and at least one of contact_phone and contact_email must be filled.
+        #  Therefore, empty contacts are not considered here. No contact is created if the user do not tick
+        #  the additional information checkbox on the track proposal form.
+        contact = False
+        if 'add_contact_information' in post:
+            contact = request.env['res.partner'].sudo().create({
+                'name': post['contact_name'],
+                'email': post['contact_email'],
+                'phone': post['contact_phone'],
+            })
 
         track = request.env['event.track'].sudo().create({
             'name': post['track_name'],
             'partner_name': post['partner_name'],
-            'partner_email': post['email_from'],
-            'partner_phone': post['phone'],
-            'partner_biography': plaintext2html(post['biography']),
+            'partner_email': post['partner_email'],
+            'partner_phone': post['partner_phone'],
+            'partner_biography': plaintext2html(post['partner_biography']),
+            'partner_company_name': post['partner_company_name'],
+            'partner_function': post['partner_function'],
             'event_id': event.id,
-            'tag_ids': [(6, 0, tags)],
+            'tag_ids': [(6, 0, tags_registered)],
             'user_id': False,
             'description': plaintext2html(post['description']),
-            'image': base64.b64encode(post['image'].read()) if post.get('image') else False
+            'image': base64.b64encode(post['image'].read()) if post.get('image') else False,
+            'partner_id': contact.id if contact else False,
+            'contact_phone': contact.phone if contact else False,
+            'contact_email': contact.email if contact else False,
         })
-        if request.env.user != request.website.user_id:
-            track.sudo().message_subscribe(partner_ids=request.env.user.partner_id.ids)
-        else:
-            partner = request.env['res.partner'].sudo().search([('email', '=', post['email_from'])])
+
+        if request.env.user == request.website.user_id:
+            #  Public user is removed from subscription if he creates the track.
+            track.sudo().message_unsubscribe(partner_ids=request.env.user.partner_id.ids)
+
+        if contact and contact.email:
+            partner = request.env['res.partner'].sudo().search([('email', '=', contact.email)])
             if partner:
                 track.sudo().message_subscribe(partner_ids=partner.ids)
-        return request.render("website_event_track.event_track_proposal", {'track': track, 'event': event})
+            else:
+                track.sudo().message_subscribe(partner_ids=[contact.id])
+        return request.render("website_event_track.event_track_proposal", {'track': track, 'event': event, 'main_object': event})
 
     # ------------------------------------------------------------
     # TOOLS
