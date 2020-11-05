@@ -2368,8 +2368,8 @@ const SnippetOptionWidget = Widget.extend({
     /**
      * Refresh the target in the wysiwyg.
      */
-    async updateChangesInWysiwyg($target = this.$target) {
-        return this.wysiwyg.updateChanges($target);
+    async updateChangesInWysiwyg($target = this.$target, context) {
+        return this.wysiwyg.updateChanges($target, context);
     },
 
     //--------------------------------------------------------------------------

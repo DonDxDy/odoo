@@ -798,19 +798,28 @@ var Wysiwyg = Widget.extend({
             this._transform($node);
         }
     },
-    async updateChanges($target) {
-        const updateChanges = async (context) => {
+    async updateChanges($target, context = this.editor) {
+        const updateChanges = async (context2) => {
             const html = $target.html();
             $target.html('');
             const attributes = [...$target[0].attributes].reduce( (acc, attribute) => {
                 acc[attribute.name] = attribute.value;
                 return acc
-            }, {})
-            await this.editorHelpers.updateAttributes(context, $target[0], attributes);
-            await this.editorHelpers.empty(context, $target[0]);
-            await this.editorHelpers.insertHtml(context, html, $target[0], 'INSIDE');
+            }, {});
+            console.log('1');
+            await Promise.resolve();
+            console.log('2');
+            await this.editorHelpers.updateAttributes(context2, $target[0], attributes);
+            console.log('3');            
+            await this.editorHelpers.empty(context2, $target[0]);
+            console.log('4');
+            await this.editorHelpers.insertHtml(context2, html, $target[0], 'INSIDE');    
+            console.log('5');
+            
+            
         };
-        await this.editor.execCommand(updateChanges);
+        await Promise.resolve();
+        await context.execCommand(updateChanges);
     },
     withDomMutationsObserver ($target, callback) {
         callback();
