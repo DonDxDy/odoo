@@ -12,6 +12,8 @@ const {
     start,
 } = require('mail/static/src/utils/test_utils.js');
 
+const { makeTestPromise } = require('web.test_utils');
+
 const {
     file: {
         createFile,
@@ -84,6 +86,48 @@ QUnit.test('no conflicts between file uploaders', async function (assert) {
         this.env.models['mail.attachment'].all().length,
         2,
         'Uploaded file should be the only attachment added'
+    );
+});
+
+QUnit.test('does not crash when an attachment is removed before its upload stats', async function (assert) {
+    assert.expect(1);
+
+    const attachmentUploadedPromise = makeTestPromise();
+    await this.start({
+        async mockFetch(resource, init) {
+            const _super = this._super.bind(this, ...arguments);
+            if (resource === '/web/binary/upload_attachment') {
+                await attachmentUploadedPromise;
+            }
+            return _super;
+        },
+    });
+    const fileUploader = await this.createFileUploaderComponent();
+    const file1 = await createFile({
+        name: 'text1.txt',
+        content: 'hello, world',
+        contentType: 'text/plain',
+    });
+    const file2 = await createFile({
+        name: 'text2.txt',
+        content: 'hello, world',
+        contentType: 'text/plain',
+    });
+    inputFiles(
+        fileUploader.el.querySelector('.o_FileUploader_input'),
+        [file1, file2]
+    );
+    await nextAnimationFrame();
+    const attachment = this.env.models['mail.attachment'].find(attachment =>
+        attachment.isTemporary &&
+        attachment.filename === 'text2.txt'
+    );
+    await attachment.remove();
+    attachmentUploadedPromise.resolve();
+    assert.strictEqual(
+        this.env.models['mail.attachment'].all().length,
+        1,
+        'Uploaded file should be the only attachment created'
     );
 });
 
