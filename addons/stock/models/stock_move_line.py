@@ -658,18 +658,35 @@ class StockMoveLine(models.Model):
             uom = move_line.product_uom_id
             line_key = str(move_line.product_id.id) + "_" + name + (description or "") + "uom " + str(uom.id)
 
+            qty_ordered = move_line.move_id.product_uom_qty
+            # Loop to get backorders, and backorders' backorders, and so and so...
+            backorders = self.env['stock.picking']
+            current_picking = move_line.picking_id
+            while current_picking.backorder_ids:
+                backorders |= current_picking.backorder_ids
+                current_picking = current_picking.backorder_ids
+            if backorders:
+                # Adds the quantities delayed to backorders in order to retrieve the original ordered qty.
+                following_move_lines = backorders.move_lines.filtered(lambda ml: ml.product_id == move_line.product_id)
+                qty_ordered += sum(following_move_lines.mapped('product_uom_qty'))
+
             if line_key not in aggregated_move_lines:
                 aggregated_move_lines[line_key] = {'name': name,
                                                    'description': description,
                                                    'qty_done': move_line.qty_done,
+                                                   'qty_ordered': qty_ordered,
                                                    'product_uom': uom.name,
                                                    'product': move_line.product_id}
             else:
                 aggregated_move_lines[line_key]['qty_done'] += move_line.qty_done
 
         for aggregated_move_line_name, aggregated_move_line in aggregated_move_lines.items():
-            aggregated_move_line['qty_done'] = float_repr(
-                aggregated_move_line['qty_done'],
-                precision_digits=aggregated_move_line['decimal_place'],
-            )
+            aggregated_move_line.update({
+                'qty_done': float_repr(
+                    aggregated_move_line['qty_done'], precision_digits=decimal_precision
+                ),
+                'qty_ordered': float_repr(
+                    aggregated_move_line['qty_ordered'], precision_digits=decimal_precision
+                ),
+            })
         return aggregated_move_lines
