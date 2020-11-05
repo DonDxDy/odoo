@@ -3,7 +3,6 @@ odoo.define('web.weekly_recurrent_task_tests', function (require) {
     
     const FormView = require('web.FormView');
     const testUtils = require('web.test_utils');
-    let result;
     
 
     QUnit.module('weekly task', {
@@ -11,10 +10,27 @@ odoo.define('web.weekly_recurrent_task_tests', function (require) {
             this.data = {
                 partner: {
                     fields: {
-                        bar: {string: "Bar", type: "boolean"},
+                        id: {strin: "id", type:"integer"},
+                        mon: {string: "Mon", type: "boolean"},
+                        tue: {string: "Tue", type: "boolean"},
+                        wed: {string: "Wed", type: "boolean"},
+                        thu: {string: "Thu", type: "boolean"},
+                        fri: {string: "Fri", type: "boolean"},
+                        sat: {string: "Sat", type: "boolean"},
+                        sun: {string: "Sun", type: "boolean"},
+
                     },
                     records: [
-                        { bar: true, },
+                        {
+                            id : 1,
+                            mon: false,
+                            tue: false,
+                            wed: false,
+                            thu: false,
+                            fri: false,
+                            sat: false,
+                            sun: false,
+                        },
                     ],
                 },
             };
@@ -22,70 +38,76 @@ odoo.define('web.weekly_recurrent_task_tests', function (require) {
     }, function () {
             QUnit.module('weekly recurrent task widget');
 
-            QUnit.test('simple weekdays widget test', async function (assert) {
-                assert.expect(5);
-        
-                var form = await testUtils.createView({
+            QUnit.test('simple day of week widget', async function (assert) {
+                assert.expect(8);
+
+                let step = 0;
+                const form = await testUtils.createView({
                     View: FormView,
                     model: 'partner',
                     data: this.data,
+                    res_id: 1,
                     debug:1,
                     arch: '<form string="Partners">' +
                             '<sheet>' +
                                 '<group>' +
-                                    '<field name="bar" widget="web_weekly_recurrent_task"/>' +
+                                    '<widget name="web_weekly_recurrent_task" force_save="1"/>' +
+                                    '<field name="mon" invisible="1"/>'+
+                                    '<field name="tue" invisible="1"/>'+
+                                    '<field name="wed" invisible="1"/>'+
+                                    '<field name="thu" invisible="1"/>'+
+                                    '<field name="fri" invisible="1"/>'+
+                                    '<field name="sat" invisible="1"/>'+
+                                    '<field name="sun" invisible="1"/>'+
                                 '</group>' +
                             '</sheet>' +
                         '</form>',
+                    mockRPC: function (route, args) {
+                        if (args.method === 'write') {
+                            step++;
+                            if (step === 1) {
+                                assert.strictEqual(args.args[1].sun, true,
+                                "value of sunday should be true");
+                                this.data.partner.records[0].sun = args.args[1].sun;
+                            }
+                            if (step === 2) {
+                                assert.strictEqual(args.args[1].mon, true,
+                                "value of monday should be true");
+
+                                assert.strictEqual(args.args[1].tue, true,
+                                "value of tuesday should be true");
+
+                                assert.strictEqual(args.args[1].sun, false,
+                                "value of sunday should be false");
+                            }
+                            return Promise.resolve();
+                        }
+                        return this._super.apply(this, arguments);
+                    },
                 });
-                
-                function generate_random_number(unwantedNumber){
-                    do{
-                        result=Math.floor((Math.random() * 6));
-                    }while(unwantedNumber.includes(result));
-                    return result;
-                }
-                assert.containsOnce(form, 'i.fa-info-circle');
-                await testUtils.dom.click(document.querySelector(".fa-info-circle"));
 
-                let count = 0;
-                document.querySelectorAll(".custom-control-input").forEach( item =>{
-                    if(item.checked){
-                        count += 1;
-                    }
-                });
+                await testUtils .form.clickEdit(form);
+                await testUtils.dom.click(document.getElementById('sun'));
 
-                assert.strictEqual(count, 1,"Initially only one checkbox should be checked")
-
-                const today = new Date();
-                const unwantedNumber = [today.getDay()];
-                const week_day_list = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-                 
-                let day_number = generate_random_number(unwantedNumber);
-                let day = week_day_list[day_number];
-                unwantedNumber.push(day_number);                
-                
-                await testUtils.dom.click(document.getElementById(day));
-                assert.strictEqual(document.getElementById(day).checked, true,
-                    "check box should be checked");
-
-                await testUtils.dom.click(document.getElementById(day));
-                assert.strictEqual(document.getElementById(day).checked, false,
-                    "check box should be unchecked");
-
-                day_number = generate_random_number(unwantedNumber);
-                day = week_day_list[day_number];
-                await testUtils.dom.click(document.getElementById(day));
-                
+                assert.strictEqual(document.getElementById('sun').checked, true,
+                    "sunday check box should be checked");
                 await testUtils.form.clickSave(form);
-                count = 0;
-                document.querySelectorAll(".custom-control-input").forEach( item =>{
-                    if(item.checked){
-                        count += 1;
-                    }
-                });
-                assert.strictEqual(count, 2,"while saving only one checkbox should be checked");
 
+                await testUtils.form.clickEdit(form);
+
+                await testUtils.dom.click(document.getElementById('mon'));
+                assert.strictEqual(document.getElementById('mon').checked, true,
+                    "monday check box should be checked");
+                
+                await testUtils.dom.click(document.getElementById('tue'));
+                assert.strictEqual(document.getElementById('tue').checked, true,
+                "tuesday check box should be checked");
+
+                await testUtils.dom.click(document.getElementById('sun'));
+                assert.strictEqual(document.getElementById('sun').checked, false,
+                "sunday check box should be unchecked");
+
+                await testUtils.form.clickSave(form);
                 form.destroy();
             });            
         });

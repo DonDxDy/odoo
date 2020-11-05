@@ -150,9 +150,12 @@
                                     <div attrs="{'invisible': [('recurrency', '=', False)]}">
                                         <group>
                                             <label for="interval"/>
-                                            <div class="o_row">
-                                                <field name="interval" attrs="{'required': [('recurrency', '=', True)]}"/>
-                                                <field name="rrule_type" attrs="{'required': [('recurrency', '=', True)]}"/>
+                                            <div class="o_col">
+                                                <div class="o_row">
+                                                    <field name="interval" attrs="{'required': [('recurrency', '=', True)]}"/>
+                                                    <field name="rrule_type" attrs="{'required': [('recurrency', '=', True)]}"/>
+                                                </div>
+                                                <widget name="web_weekly_recurrent_task" attrs="{'invisible': [('rrule_type', '!=', 'weekly')]}"/>
                                             </div>
                                             <label string="Until" for="end_type"/>
                                             <div class="o_row">
@@ -160,9 +163,6 @@
                                                 <field name="count" attrs="{'invisible': [('end_type', '!=', 'count')], 'required': [('recurrency', '=', True)]}"/>
                                                 <field name="until" attrs="{'invisible': [('end_type', '!=', 'end_date')], 'required': [('end_type', '=', 'end_date'), ('recurrency', '=', True)]}"/>
                                             </div>
-                                        </group>
-                                        <group attrs="{'invisible': [('rrule_type', '!=', 'weekly')]}" name="weekdays">
-                                            <field name="weekly" widget="web_weekly_recurrent_task"/>
                                         </group>
                                         <field name="mon" invisible="1"/>
                                         <field name="tue" invisible="1"/>
