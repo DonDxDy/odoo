@@ -7,16 +7,6 @@
       height: calc(100% - 6rem);
     }
 
-    @include media-breakpoint-down(sm) {
-        .o_timeoff_container {
-             height: 15%;
-        }
-
-        .o_calendar_container {
-          height: 85%;
-        }
-    }
-
     .o_timeoff_card {
         border-right: #adb5bd solid 2px;
         text-align: center;
