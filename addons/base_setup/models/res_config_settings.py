@@ -11,11 +11,8 @@ class ResConfigSettings(models.TransientModel):
 
     company_id = fields.Many2one('res.company', string='Company', required=True,
         default=lambda self: self.env.company)
-    user_default_rights = fields.Boolean(
-        "Default Access Rights",
-        config_parameter='base_setup.default_user_rights')
     external_email_server_default = fields.Boolean(
-        "External Email Servers",
+        "Custom Email Servers",
         config_parameter='base_setup.default_external_email_server')
     module_base_import = fields.Boolean("Allow users to import data from CSV/XLS/XLSX/ODS files")
     module_google_calendar = fields.Boolean(
@@ -39,7 +36,6 @@ class ResConfigSettings(models.TransientModel):
     group_multi_currency = fields.Boolean(string='Multi-Currencies',
             implied_group='base.group_multi_currency',
             help="Allows to work in a multi currency environment")
-    paperformat_id = fields.Many2one(related="company_id.paperformat_id", string='Paper format', readonly=False)
     external_report_layout_id = fields.Many2one(related="company_id.external_report_layout_id", readonly=False)
     show_effect = fields.Boolean(string="Show Effect", config_parameter='base_setup.show_effect')
     company_count = fields.Integer('Number of Companies', compute="_compute_company_count")
@@ -60,15 +56,6 @@ class ResConfigSettings(models.TransientModel):
                 'form_view_initial_mode': 'edit',
             },
         }
-
-    def open_default_user(self):
-        action = self.env["ir.actions.actions"]._for_xml_id("base.action_res_users")
-        if self.env.ref('base.default_user', raise_if_not_found=False):
-            action['res_id'] = self.env.ref('base.default_user').id
-        else:
-            raise UserError(_("Default User Template not found."))
-        action['views'] = [[self.env.ref('base.view_users_form').id, 'form']]
-        return action
 
     @api.model
     def _prepare_report_view_action(self, template):

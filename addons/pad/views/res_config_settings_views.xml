@@ -3,7 +3,7 @@
     <record id="res_config_settings_view_form" model="ir.ui.view">
         <field name="name">res.config.settings.view.form.inherit.pad</field>
         <field name="model">res.config.settings</field>
-        <field name="inherit_id" ref="base_setup.res_config_settings_view_form"/>
+        <field name="inherit_id" ref="base_setup.res_config_settings_view_form_integration"/>
         <field name="arch" type="xml">
             <div id="msg_module_pad" position="replace">
                 <div class="content-group" id="pad_configuration_settings" attrs="{'invisible': [('module_pad', '=', False)]}">

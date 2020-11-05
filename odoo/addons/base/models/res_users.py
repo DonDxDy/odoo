@@ -789,6 +789,15 @@ class Users(models.Model):
         # use self.env.user here, because it has uid=SUPERUSER_ID
         return self.env.user.write({'password': new_passwd})
 
+    def open_default_user(self):
+        action = self.env["ir.actions.actions"]._for_xml_id("base.action_res_users")
+        if self.env.ref('base.default_user', raise_if_not_found=False):
+            action['res_id'] = self.env.ref('base.default_user').id
+        else:
+            raise UserError(_("Default User Template not found."))
+        action['views'] = [[self.env.ref('base.view_users_form').id, 'form']]
+        return action
+
     def preference_save(self):
         return {
             'type': 'ir.actions.client',

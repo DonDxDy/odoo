@@ -120,7 +120,11 @@ var BaseSettingRenderer = FormRenderer.extend({
      * @returns {string} icon url
      */
     _getAppIconUrl: function (module) {
-        return module === "general_settings" ? "/base/static/description/settings.png" : "/"+module+"/static/description/icon.png";
+        if (module === "integrations"){
+            return "/base/static/description/integrations.png";
+        } else {
+            return module === "general_settings" ? "/base/static/description/settings.png" : "/"+module+"/static/description/icon.png";
+        }
     },
     /**
      *

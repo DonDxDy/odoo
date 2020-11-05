@@ -232,6 +232,7 @@
                                     <field string="Companies count" name="companies_count" invisible="1"/>
                                 </group>
                                 <field name="groups_id"/>
+                                <button type="object" name="open_default_user" string="Configure default access rights" icon="fa-arrow-right" class="btn-link"/>
                             </page>
                             <page string="Preferences" name="references">
                                 <group>
