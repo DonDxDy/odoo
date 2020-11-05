@@ -317,6 +317,7 @@ snippetOptions.registry.gallery = snippetOptions.SnippetOptionWidget.extend({
         if (name === 'image_removed') {
             data.$image.remove(); // Force the removal of the image before reset
             await this.mode(false, this.getMode(), {context: data.context});
+            data.resolve();
         } else if (name === 'image_index_request') {
             const images = this._getImages();
             let position = _.indexOf(images, data.$image[0]);
@@ -382,7 +383,7 @@ snippetOptions.registry.gallery = snippetOptions.SnippetOptionWidget.extend({
         this.$target
             .removeClass('o_nomode o_masonry o_grid o_slideshow')
             .addClass('o_' + widgetValue);
-        if (params.context) {
+        if (params && params.context) {
             await this[widgetValue](previewMode, undefined, {context: params.context});
         } else {
             await this[widgetValue]();
@@ -494,10 +495,10 @@ snippetOptions.registry.gallery_img = snippetOptions.SnippetOptionWidget.extend(
             this.trigger_up('option_update', {
                 optionName: 'gallery',
                 name: 'image_removed',
-                resolve: resolve,
                 data: {
                     $image: this.$target,
                     context: context,
+                    resolve: resolve,
                 },
             });
         });

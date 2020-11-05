@@ -349,16 +349,23 @@ var SnippetEditor = Widget.extend({
         this.toggleOverlay(false);
         this.toggleOptions(false);
 
+        console.log('removeSnippet1')
         const removeSnippet = async (context) => {
+            console.log('removeSnippe2')
             await new Promise(resolve => {
                 this.trigger_up('call_for_each_child_snippet', {
                     $snippet: this.$snippetBlock,
                     callback: async function (editor, $snippet) {
-                        for (var i in editor.snippetOptionInstances) {
+                        for (const i in editor.snippetOptionInstances) {
+                            console.log('onremove: i start', i)
                             await editor.snippetOptionInstances[i].onRemove(context);
+                            console.log('onremove: i', i)
                         }
                     },
-                    resolve: resolve,
+                    resolve: () => {
+                        console.error('denonce toi batard');
+                        resolve();
+                    },
                 });
             });
             console.log('hehe')
@@ -848,37 +855,42 @@ var SnippetEditor = Widget.extend({
      */
     _onOptionUpdate: async function (ev) {
         var self = this;
-
+        const UID = Math.floor(Math.random() * 1000)
         // If multiple option names are given, we suppose it should not be
         // propagated to parent editor
         if (ev.data.optionNames) {
             ev.stopPropagation();
             for (const name of ev.data.optionNames) {
                 await notifyForEachMatchedOption(name);
-                console.log('finish1')
+                console.log('finish1', UID)
             }
         }
         // If one option name is given, we suppose it should be handle by the
         // first parent editor which can do it
         if (ev.data.optionName) {
-            if (await notifyForEachMatchedOption(ev.data.optionName)) {
+            const cond = await notifyForEachMatchedOption(ev.data.optionName);
+            if (cond) {
                 ev.stopPropagation();
             }
-            console.log('finish2');
+            console.log('finish2', UID);
         }
 
         async function notifyForEachMatchedOption(name) {
             var regex = new RegExp('^' + name + '\\d+$');
             var hasOption = false;
-            for (var key in self.snippetOptionInstances) {
+            for (const key in self.snippetOptionInstances) {
+                console.warn('avant le if carrément', UID);
                 if (key === name || regex.test(key)) {
+                    console.log('before self.snippetOptionInstances', UID);
                     await self.snippetOptionInstances[key].notify(ev.data.name, ev.data.data);
-                    console.log('finish self.snippetOptionInstances');
+                    console.log('finish self.snippetOptionInstances', UID);
                     hasOption = true;
                 }
+                console.log('finish le if carrément', UID)
             }
             return hasOption;
         }
+        console.log("on vas m'appeler", UID)
         ev.data.resolve && ev.data.resolve();
     },
     /**
