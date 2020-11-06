@@ -26,18 +26,21 @@ function factory(dependencies) {
             this.update({ isLoadingMore: true });
             const messageIds = this.fetchedMessages.map(message => message.id);
             const limit = 30;
-            const fetchedMessages = await this.async(() => this._loadMessages({
-                extraDomain: [['id', '<', Math.min(...messageIds)]],
-                limit,
-            }));
-            this.update({ isLoadingMore: false });
-            if (fetchedMessages.length < limit) {
-                this.update({ isAllHistoryLoaded: true });
+            try {
+                const fetchedMessages = await this.async(() => this._loadMessages({
+                    extraDomain: [['id', '<', Math.min(...messageIds)]],
+                    limit,
+                }));
+                if (fetchedMessages.length < limit) {
+                    this.update({ isAllHistoryLoaded: true });
+                }
+                for (const threadView of this.threadViews) {
+                    threadView.addComponentHint('more-messages-loaded', { fetchedMessages });
+                }
+                return fetchedMessages;
+            } finally {
+                this.update({ isLoadingMore: false });
             }
-            for (const threadView of this.threadViews) {
-                threadView.addComponentHint('more-messages-loaded', { fetchedMessages });
-            }
-            return fetchedMessages;
         }
 
         /**
@@ -56,6 +59,9 @@ function factory(dependencies) {
                 extraDomain: [['id', '>', Math.max(...messageIds)]],
                 limit: false,
             });
+            if (!fetchedMessages) {
+                return;
+            }
             for (const threadView of this.threadViews) {
                 threadView.addComponentHint('new-messages-loaded', { fetchedMessages });
             }
@@ -193,6 +199,9 @@ function factory(dependencies) {
                 // happens during destroy or compute executed in wrong order
                 return false;
             }
+            if (this.hasLoadingFailed) {
+                return false;
+            }
             const wasCacheRefreshRequested = this.isCacheRefreshRequested;
             // mark hint as processed
             if (this.isCacheRefreshRequested) {
@@ -284,16 +293,26 @@ function factory(dependencies) {
             const moderated_channel_ids = this.thread.moderation
                 ? [this.thread.id]
                 : undefined;
-            const messages = await this.async(() =>
-                this.env.models['mail.message'].performRpcMessageFetch(
-                    domain,
-                    limit,
-                    moderated_channel_ids,
-                    context,
-                )
-            );
+            let messages;
+            try {
+                messages = await this.async(() =>
+                    this.env.models['mail.message'].performRpcMessageFetch(
+                        domain,
+                        limit,
+                        moderated_channel_ids,
+                        context,
+                    )
+                );
+            } catch(e) {
+                this.update({
+                    hasLoadingFailed: true,
+                    isLoading: false,
+                });
+                throw e;
+            }
             this.update({
                 fetchedMessages: [['link', messages]],
+                hasLoadingFailed: false,
                 isLoaded: true,
                 isLoading: false,
             });
@@ -313,15 +332,14 @@ function factory(dependencies) {
          *
          * @private
          */
-        _onHasToLoadMessagesChanged() {
+        async _onHasToLoadMessagesChanged() {
             if (!this.hasToLoadMessages) {
                 return;
             }
-            this._loadMessages().then(fetchedMessages => {
-                for (const threadView of this.threadViews) {
-                    threadView.addComponentHint('messages-loaded', { fetchedMessages });
-                }
-            });
+            const fetchedMessages = await this._loadMessages();
+            for (const threadView of this.threadViews) {
+                threadView.addComponentHint('messages-loaded', { fetchedMessages });
+            }
         }
 
         /**
@@ -377,6 +395,12 @@ function factory(dependencies) {
             dependencies: ['threadMessages'],
         }),
         /**
+         * Determines whether the last message fetch failed.
+         */
+        hasLoadingFailed: attr({
+            default: false,
+        }),
+        /**
          * Determines whether `this` should load initial messages. This field is
          * computed and should be considered read-only.
          * @see `isCacheRefreshRequested` to request manual refresh of messages.
@@ -384,6 +408,7 @@ function factory(dependencies) {
         hasToLoadMessages: attr({
             compute: '_computeHasToLoadMessages',
             dependencies: [
+                'hasLoadingFailed',
                 'isCacheRefreshRequested',
                 'isLoaded',
                 'isLoading',

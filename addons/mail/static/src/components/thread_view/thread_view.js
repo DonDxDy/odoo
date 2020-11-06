@@ -129,6 +129,23 @@ class ThreadView extends Component {
         };
     }
 
+    //--------------------------------------------------------------------------
+    // Handlers
+    //--------------------------------------------------------------------------
+
+    /**
+     * @private
+     */
+    _onClickRetryLoadMessages() {
+        if (!this.threadView) {
+            return;
+        }
+        if (!this.threadView.threadCache) {
+            return;
+        }
+        this.threadView.threadCache.update({ hasLoadingFailed: false });
+    }
+
 }
 
 Object.assign(ThreadView, {
