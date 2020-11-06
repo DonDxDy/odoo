@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="account_view_module_filter" model="ir.ui.view">
+            <field name="name">ir.module.module.list.select.inherit</field>
+            <field name="model">ir.module.module</field>
+            <field name="inherit_id" ref="base.view_module_filter"/>
+            <field name="mode">primary</field>
+            <field name="arch" type="xml">
+                <xpath expr="//searchpanel" position="replace">
+                    <!-- Hide the search panel -->
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>
