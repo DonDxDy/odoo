@@ -290,11 +290,12 @@ var PivotModel = AbstractModel.extend({
      * @override
      * @param {Object} params
      */
-    init: function () {
+    init: function (parent, params = {}) {
         this._super.apply(this, arguments);
         this.numbering = {};
         this.data = null;
         this._loadDataDropPrevious = new concurrency.DropPrevious();
+        this.searchModel = params.searchModel;
     },
 
     //--------------------------------------------------------------------------
@@ -1073,6 +1074,18 @@ var PivotModel = AbstractModel.extend({
             .map(function (g) {
                 return g.split(':')[0];
             });
+
+        const searchGroupbys = this.searchModel.get('filters', f => f.type === 'groupBy' && !f.customGroup);
+        if (searchGroupbys && searchGroupbys.length) {
+            const searchFields = searchGroupbys.map((group, index) => {
+                return {
+                    name: group.fieldName,
+                    field: this.groupableFields[group.fieldName],
+                    active: groupedFieldNames.includes(group.fieldName)
+                };
+            });
+            return searchFields;
+        }
 
         var fields = Object.keys(this.groupableFields)
             .map((fieldName, index) => {
