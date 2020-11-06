@@ -955,12 +955,14 @@ var SnippetEditor = Widget.extend({
 */
 var SnippetsMenu = Widget.extend({
     id: 'oe_snippets',
+    xmlDependencies: ['/web_editor/static/src/xml/editor.xml'],
     cacheSnippetTemplate: {},
     events: {
         'click .oe_snippet': '_onSnippetClick',
         'click .o_install_btn': '_onInstallBtnClick',
         'click .o_we_add_snippet_btn': '_onBlocksTabClick',
         'click .o_we_invisible_entry': '_onInvisibleEntryClick',
+        'click #snippet_custom .o_rename_btn': '_onRenameBtnClick',
         'click #snippet_custom .o_delete_btn': '_onDeleteBtnClick',
         'mousedown': '_onMouseDown',
         'input .o_snippet_search_filter_input': '_onSnippetSearchInput',
@@ -1830,8 +1832,13 @@ var SnippetsMenu = Widget.extend({
                     }));
                 }
 
-                // Create the delete button for custom snippets
+                // Create the rename and delete button for custom snippets
                 if (isCustomSnippet) {
+                    const btnRenameEl = document.createElement('we-button');
+                    btnRenameEl.dataset.snippetId = $snippet.data('oeSnippetId');
+                    btnRenameEl.classList.add('o_rename_btn', 'fa', 'fa-pencil', 'btn', 'o_we_hover_success');
+                    btnRenameEl.title = _.str.sprintf(_t("Rename %s"), name);
+                    $snippet.append(btnRenameEl);
                     const btnEl = document.createElement('we-button');
                     btnEl.dataset.snippetId = $snippet.data('oeSnippetId');
                     btnEl.classList.add('o_delete_btn', 'fa', 'fa-trash', 'btn', 'o_we_hover_danger');
@@ -2615,6 +2622,40 @@ var SnippetsMenu = Widget.extend({
                 },
             }, {
                 text: _t("No"),
+                close: true,
+            }],
+        }).open();
+    },
+    /**
+     * @private
+     */
+    _onRenameBtnClick: function (ev) {
+        const $snippet = $(ev.target).closest('.oe_snippet');
+        const dialog = new Dialog(this, {
+            title: _t('Rename Your Block'),
+            size: 'small',
+            $content: $(core.qweb.render('web_editor.dialog.rename_snippet', {
+                currentSnippetName: $snippet.attr('name')
+            })),
+            buttons: [{
+                text: _t("Rename"),
+                close: true,
+                classes: 'btn-primary',
+                click: async () => {
+                    const snippetName = dialog.el.querySelector('.o_we_snippet_name_input').value;
+                    await this._rpc({
+                        model: 'ir.ui.view',
+                        method: 'rename_snippet',
+                        kwargs: {
+                            'name': snippetName,
+                            'view_id': parseInt(ev.target.dataset.snippetId),
+                            'template_key': this.options.snippets,
+                        },
+                    });
+                    await this._loadSnippetsTemplates(true);
+                },
+            }, {
+                text: _t("Cancel"),
                 close: true,
             }],
         }).open();

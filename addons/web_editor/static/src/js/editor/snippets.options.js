@@ -4735,41 +4735,24 @@ registry.SnippetSave = SnippetOptionWidget.extend({
      */
     saveSnippet: function (previewMode, widgetValue, params) {
         return new Promise(resolve => {
-            const dialog = new Dialog(this, {
-                title: _t("Save Your Block"),
-                size: 'small',
-                $content: $(qweb.render('web_editor.dialog.save_snippet', {
-                    currentSnippetName: _.str.sprintf(_t("Custom %s"), this.data.snippetName),
-                })),
-                buttons: [{
-                    text: _t("Save"),
-                    classes: 'btn-primary',
-                    close: true,
-                    click: async () => {
-                        const snippetKey = this.$target[0].dataset.snippet;
-                        let thumbnailURL;
-                        this.trigger_up('snippet_thumbnail_url_request', {
-                            key: snippetKey,
-                            onSuccess: url => thumbnailURL = url,
-                        });
-                        // Because the snippet needs to be cleaned, which requires
-                        // the snippet mutex to be unlocked, this option cannot
-                        // wait for the saving to be done to release the mutex.
-                        this.trigger_up('save_custom_snippet', {
-                            target: this.$target[0],
-                            snippetName: dialog.el.querySelector('.o_we_snippet_name_input').value,
-                            thumbnailURL: thumbnailURL,
-                            templateKey: this.options.snippets,
-                            snippetKey: snippetKey,
-                        });
-                        resolve();
-                    },
-                }, {
-                    text: _t("Discard"),
-                    close: true,
-                }],
-            }).open();
-            dialog.on('closed', this, () => resolve());
+            let defaultSnippetName = _.str.sprintf(_t("Custom %s"), this.data.snippetName);
+            const snippetKey = this.$target[0].dataset.snippet;
+            let thumbnailURL;
+            this.trigger_up('snippet_thumbnail_url_request', {
+                key: snippetKey,
+                onSuccess: url => thumbnailURL = url,
+            });
+            // Because the snippet needs to be cleaned, which requires
+            // the snippet mutex to be unlocked, this option cannot
+            // wait for the saving to be done to release the mutex.
+            this.trigger_up('save_custom_snippet', {
+                target: this.$target[0],
+                snippetName: defaultSnippetName,
+                thumbnailURL: thumbnailURL,
+                templateKey: this.options.snippets,
+                snippetKey: snippetKey,
+            });
+            resolve();
         });
     },
 });

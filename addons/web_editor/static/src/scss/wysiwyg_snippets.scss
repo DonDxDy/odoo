@@ -431,10 +431,10 @@ body.editor_enable.editor_has_snippets {
         #snippet_custom .oe_snippet {
             width: 100%;
 
-            &, .oe_snippet_thumbnail, .o_delete_btn {
+            &, .oe_snippet_thumbnail, .o_rename_btn, .o_delete_btn {
                 display: flex;
             }
-            .oe_snippet_thumbnail, .o_delete_btn {
+            .oe_snippet_thumbnail, .o_rename_btn, .o_delete_btn {
                 align-items: center;
             }
             .oe_snippet_thumbnail {
@@ -445,14 +445,18 @@ body.editor_enable.editor_has_snippets {
             }
             .oe_snippet_thumbnail_img {
                 flex-shrink: 0;
-                width: 40px;
-                height: 32px;
+                width: 41px;
+                height: 30px; // 82x60 -> 41x30
                 padding: 0;
             }
-            .o_delete_btn {
+            .o_rename_btn, .o_delete_btn {
                 @extend %we-generic-link;
                 padding-top: 0;
                 padding-bottom: 0;
+                padding-left: 0;
+            }
+            &:not(:hover) .o_rename_btn, &:not(:hover) .o_delete_btn {
+                display: none;
             }
         }
     }
