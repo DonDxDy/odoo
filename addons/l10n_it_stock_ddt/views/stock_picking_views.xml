@@ -16,8 +16,9 @@
             </xpath>
             <xpath expr="//field[@name='carrier_id']" position="after">
                 <field name="l10n_it_country_code" invisible="1"/>
-                <field name="l10n_it_transport_reason_id" string="Transport Reason" attrs="{'invisible': [('l10n_it_country_code', '!=', 'IT')]}"/>
-                <field name="l10n_it_transport_method_id" string="Transport Method" attrs="{'invisible': [('l10n_it_country_code', '!=', 'IT')]}"/>
+                <field name="l10n_it_transport_reason" string="Transport Reason" attrs="{'invisible': [('l10n_it_country_code', '!=', 'IT')]}"/>
+                <field name="l10n_it_transport_method" string="Transport Method" attrs="{'invisible': [('l10n_it_country_code', '!=', 'IT')]}"/>
+                <field name="l10n_it_transport_method_details" string="Transport Reason" attrs="{'invisible': [('l10n_it_country_code', '!=', 'IT')]}"/>
                 <field name="l10n_it_parcels" string="Parcels" attrs="{'invisible': [('l10n_it_country_code', '!=', 'IT')]}"/>
             </xpath>
         </field>
