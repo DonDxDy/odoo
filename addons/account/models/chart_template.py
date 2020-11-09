@@ -170,7 +170,7 @@ class AccountChartTemplate(models.Model):
             'company_id': company.id,
         })
 
-    def try_loading(self, company=False):
+    def try_loading(self, company=False, install_demo=True):
         """ Installs this chart of accounts for the current company if not chart
         of accounts had been created for it yet.
         """
@@ -184,12 +184,25 @@ class AccountChartTemplate(models.Model):
         if not company.chart_template_id and not self.existing_accounting(company):
             for template in self:
                 template.with_context(default_company_id=company.id)._load(15.0, 15.0, company)
-        # Install the demo data when the first localization is instanciated on the company
-        if tools.config['demo'].get('account'):
-            self.env['ir.module.module'].search([
-                ('name', '=', 'l10n_demo'),
-                ('state', '=', 'uninstalled')
-            ]).sudo().button_install()
+            # Install the demo data when the first localization is instanciated on the company
+            if install_demo and tools.config['demo'].get('account'):
+                self.with_context(
+                    default_company_id=company.id,
+                    allowed_company_ids=[company.id],
+                )._create_demo_data()
+
+    def _create_demo_data(self):
+        try:
+            demo_data = self._get_demo_data()
+            for model, record in demo_data:
+                created = self.env[model]._load_records([{
+                    'xml_id': "account.%s" % xml_id if '.' not in xml_id else xml_id,
+                    'values': data,
+                } for xml_id, data in record])
+                self._post_create_demo_data(created)
+        except Exception:
+            # Do not rollback installation of CoA if demo data failed
+            _logger.exception('Error while loading accounting demo data')
 
     def _load(self, sale_tax_rate, purchase_tax_rate, company):
         """ Installs this chart of accounts on the current company, replacing

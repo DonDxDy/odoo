@@ -476,28 +476,6 @@ class AccountAccount(models.Model):
         for account in self.browse(self.env.context['active_ids']):
             account.copy()
 
-    @api.model
-    def _get_demo_account(self, xml_id, user_type_id, company):
-        """Find the most appropriate account possible for demo data creation.
-
-        :param xml_id (str): the xml_id of the account template in the generic coa
-        :param user_type_id (str): the full xml_id of the account type wanted
-        :param company (Model<res.company>): the company for which we search the account
-        :return (Model<account.account>): the most appropriate record found
-        """
-        return (
-            self.browse(self.env['ir.model.data'].search([
-                ('name', '=', '%d_%s' % (company.id, xml_id)),
-                ('model', '=', 'account.account'),
-                ('module', 'like', 'l10n%')
-            ], limit=1).res_id)
-            or self.search([
-                ('user_type_id', '=', self.env.ref(user_type_id).id),
-                ('company_id', '=', company.id)
-            ], limit=1)
-            or self.search([('company_id', '=', company.id)], limit=1)
-        )
-
 
 class AccountGroup(models.Model):
     _name = "account.group"
