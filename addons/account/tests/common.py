@@ -12,6 +12,8 @@ class AccountTestInvoicingCommon(SavepointCase):
 
     @classmethod
     def copy_account(cls, account):
+        if not account:
+            return account
         suffix_nb = 1
         while True:
             new_code = '%s (%s)' % (account.code, suffix_nb)
@@ -47,6 +49,7 @@ class AccountTestInvoicingCommon(SavepointCase):
         cls.env = cls.env(user=user)
         cls.cr = cls.env.cr
 
+        cls.chart_template = chart_template
         cls.company_data_2 = cls.setup_company_data('company_2_data', chart_template=chart_template)
         cls.company_data = cls.setup_company_data('company_1_data', chart_template=chart_template)
 
@@ -191,7 +194,7 @@ class AccountTestInvoicingCommon(SavepointCase):
                 account = cls.env['account.account'].search(domain, limit=1)
             return account
 
-        chart_template = chart_template or cls.env.company.chart_template_id
+        chart_template = chart_template or cls.chart_template
         company = cls.env['res.company'].create({
             'name': company_name,
             **kwargs,
@@ -332,7 +335,7 @@ class AccountTestInvoicingCommon(SavepointCase):
                     'amount_type': 'percent',
                     'amount': 10.0,
                     'tax_exigibility': 'on_payment',
-                    'cash_basis_transition_account_id': company_data['default_account_tax_sale'].copy().id,
+                    'cash_basis_transition_account_id': cls.copy_account(company_data['default_account_tax_sale']).id,
                     'invoice_repartition_line_ids': [
                         (0, 0, {
                             'factor_percent': 100,
