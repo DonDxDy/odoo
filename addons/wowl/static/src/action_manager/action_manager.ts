@@ -18,6 +18,7 @@ import type {
 import { Route } from "../services/router";
 import { evaluateExpr } from "../py/index";
 import { makeContext } from "../core/context";
+import { LegacyViewDialog } from "../legacy/legacy_view_dialog";
 declare const odoo: Odoo;
 
 // -----------------------------------------------------------------------------
@@ -204,9 +205,16 @@ export class ActionContainer extends Component<{}, OdooEnv> {
   static template = tags.xml`
     <div t-name="wowl.ActionContainer" class="o_action_manager">
       <t t-if="main.Component" t-component="main.Component" t-props="main.props" t-key="main.id"/>
-      <Dialog t-if="dialog.Component" t-props="dialog.dialogProps" t-key="dialog.id" t-on-dialog-closed="_onDialogClosed">
+      <Dialog t-if="dialog.Component and !dialog.props.dialogClass" t-props="dialog.dialogProps"
+        t-key="dialog.id" t-on-dialog-closed="_onDialogClosed"
+      >
         <t t-component="dialog.Component" t-props="dialog.props"/>
       </Dialog>
+      <t t-if="dialog.Component and dialog.props.dialogClass"
+        t-component="dialog.props.dialogClass"
+        ComponentProps="dialog.props" Component="dialog.Component"
+        t-key="dialog.id" t-on-dialog-closed="_onDialogClosed"
+      />
     </div>`;
   static components = { Dialog };
   main: Partial<ActionManagerUpdateInfo> = {};
@@ -380,6 +388,9 @@ function makeActionManager(env: OdooEnv): ActionManager {
     if (action.controllers[view.type]) {
       // this controller has already been used, re-import its exported state
       props.state = action.controllers[view.type].exportedState;
+    }
+    if (action.target === "new" && view.isLegacy) {
+      props.dialogClass = LegacyViewDialog;
     }
     return props;
   }
@@ -787,18 +798,23 @@ function makeActionManager(env: OdooEnv): ActionManager {
     actionRequest: ActionRequest,
     options: ActionOptions = {}
   ): Promise<void> {
-    const { active_id = null, active_ids = null, active_model = null } =
-      options.additionalContext || {};
-    const action = await _loadAction(actionRequest, { active_id, active_ids, active_model });
+    const additionalContext = Object.assign(
+      {
+        active_id: null,
+        active_ids: null,
+        active_model: null,
+      },
+      options.additionalContext
+    );
+    const action = await _loadAction(actionRequest, additionalContext);
     switch (action.type) {
       case "ir.actions.act_url":
         return _executeActURLAction(action);
       case "ir.actions.act_window":
         return _executeActWindowAction(action, options);
-      case "ir.actions.act_window_close": {
+      case "ir.actions.act_window_close":
         env.bus.trigger("ACTION_MANAGER:UPDATE", { type: "CLOSE_DIALOG" });
         return dialogCloseProm;
-      }
       case "ir.actions.client":
         return _executeClientAction(action, options);
       case "ir.actions.report":

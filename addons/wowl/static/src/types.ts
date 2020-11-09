@@ -186,6 +186,7 @@ export type ViewSwitcherEntries = ViewSwitcherEntry[];
 export interface ViewProps extends ActionProps {
   actionId?: number;
   context: Context;
+  dialogClass?: Type<Component<{}, OdooEnv>>;
   domain: Domain;
   model: string;
   type: ViewType;
@@ -208,6 +209,7 @@ export type ControllerProps = ActionProps | ViewProps | ClientActionProps;
 interface ViewInfo {
   name: string;
   icon: string;
+  isLegacy?: true;
   multiRecord: boolean;
   type: ViewType;
 }

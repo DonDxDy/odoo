@@ -22,7 +22,11 @@ export function makeLegacyActionManagerService(legacyEnv: any): Service<void> {
     dependencies: ["action_manager"],
     deploy(env: OdooEnv): void {
       legacyEnv.bus.on("do-action", null, (payload: any) => {
-        env.services.action_manager.doAction(payload.action, payload.options || {});
+        const legacyOptions = payload.options || {};
+        // use camelCase instead of snake_case for some keys
+        legacyOptions.additionalContext = legacyOptions.additional_context;
+        delete legacyOptions.additional_context;
+        env.services.action_manager.doAction(payload.action, legacyOptions);
       });
     },
   };
@@ -262,6 +266,7 @@ odoo.define("wowl.legacyViews", async function (require: any) {
       static icon = LegacyView.prototype.icon;
       static multiRecord = LegacyView.prototype.multi_record;
       static type = LegacyView.prototype.viewType;
+      static isLegacy = true as true;
 
       vm = useService("view_manager");
       controllerRef = hooks.useRef("controller");
