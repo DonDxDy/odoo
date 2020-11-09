@@ -129,7 +129,7 @@
                                             <span t-field="move.move_line_ids.product_uom_id" groups="uom.group_uom"/><div class="mt16"/>
                                         </td>
                                         <td>
-                                            <span t-field="move.product_id.lst_price"/>
+                                            <span t-field="move.product_id.lst_price"/><div class="m16"/>
                                         </td>
                                     </tr>
                                 </t>

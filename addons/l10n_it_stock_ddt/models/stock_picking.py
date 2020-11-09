@@ -7,9 +7,18 @@ from odoo import fields, models, api, _
 class StockPicking(models.Model):
     _inherit = "stock.picking"
 
-    l10n_it_transport_reason = fields.Selection([('sale', 'Sale'), ('repair', 'Repair')], default="sale", string='Transport Reason')
-    l10n_it_transport_method = fields.Selection([('sender', 'Sender'), ('recipient', 'Recipient'), ('courier', 'Courier service')], default="sender", string='Transport Method')
-    l10n_it_transport_method_detail = fields.Char('Transport Method Details')
+    l10n_it_transport_reason = fields.Selection([('sale', 'Sale'),
+                                                 ('outsourcing', 'Outsourcing'),
+                                                 ('evaluation', 'Evaluation'),
+                                                 ('gift', 'Gift'),
+                                                 ('transfer', 'Transfer'),
+                                                 ('substitution', 'Substitution'),
+                                                 ('attemped_sale', 'Attempted Sale'),
+                                                 ('loaned_use', 'Loaned for Use'),
+                                                 ('repair', 'Repair')], default="sale", tracking=True, string='Transport Reason')
+    l10n_it_transport_method = fields.Selection([('sender', 'Sender'), ('recipient', 'Recipient'), ('courier', 'Courier service')],
+                                                default="sender", string='Transport Method')
+    l10n_it_transport_method_details = fields.Char('Transport Method Details')
     l10n_it_parcels = fields.Integer(string="Parcels")
     l10n_it_country_code = fields.Char(related="company_id.country_id.code")
     l10n_it_ddt_number = fields.Char('DDT Number')
