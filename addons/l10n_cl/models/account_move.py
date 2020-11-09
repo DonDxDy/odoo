@@ -23,7 +23,7 @@ class AccountMove(models.Model):
                 domain = [('country_id.code', '=', "CL"), ('internal_type', '!=', 'invoice_in')]
                 if self.company_id.partner_id.l10n_cl_sii_taxpayer_type == '1':
                     domain += [('code', '!=', '71')]   # Companies with VAT Affected doesn't have "Boleta de honorarios Electrónica"
-                document_type_ids = self.env['l10n_latam.document.type'].search(domain).ids
+                document_type_ids = self.env['l10n_latam.document.type'].search(domain).ids  # TODO wan search_cache
             else:
                 partner_domain = [
                     ('country_id.code', '=', 'CL'),
@@ -40,7 +40,7 @@ class AccountMove(models.Model):
                     partner_domain += [('code', 'in', ['35', '38', '39', '41', '56', '61'])]
                 elif not self.partner_id.l10n_cl_sii_taxpayer_type or self.partner_id.country_id.code != "CL" or self.partner_id.l10n_cl_sii_taxpayer_type == '4':
                     partner_domain += [('code', 'in', [])]
-                document_type_ids = self.env['l10n_latam.document.type'].search(partner_domain).ids
+                document_type_ids = self.env['l10n_latam.document.type'].search(partner_domain).ids  # TODO wan search_cache
             domain = expression.AND([domain, [('id', 'in', document_type_ids)]])
         return domain
 
