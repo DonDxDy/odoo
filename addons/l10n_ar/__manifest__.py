@@ -106,6 +106,7 @@ Master Data:
     'demo': [
         # we create demo data on different companies (not main_company) to
         # allow different setups and also to allow multi-localization demo data
+        'demo/generic_extend.xml',
         'demo/exento_demo.xml',
         'demo/mono_demo.xml',
         'demo/respinsc_demo.xml',
