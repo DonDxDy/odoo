@@ -595,6 +595,34 @@ QUnit.test('close attachment viewer', async function (assert) {
     );
 });
 
+QUnit.test('close attachment viewer before image load', async function (assert) {
+    assert.expect(1);
+
+    await this.start({ hasDialog: true });
+    const attachment = this.env.models['mail.attachment'].create({
+        filename: "test.png",
+        id: 750,
+        mimetype: 'image/png',
+        name: "test.png",
+    });
+    await this.createAttachmentComponent(attachment, {
+        detailsMode: 'hover',
+        isDownloadable: false,
+        isEditable: false,
+    });
+    await afterNextRender(() => document.querySelector('.o_Attachment_image').click());
+    const image = document.querySelector('.o_AttachmentViewer_viewImage');
+    await afterNextRender(() =>
+        document.querySelector('.o_AttachmentViewer_headerItemButtonClose').click()
+    );
+    image.dispatchEvent(new Event('load', { bubbles: true }));
+    assert.containsNone(
+        document.body,
+        '.o_Dialog',
+        "attachment viewer should be closed after clicking on close button"
+    );
+});
+
 });
 });
 });
