@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<odoo>
-    <record model="res.partner" id="base.res_partner_12">
-        <field name='l10n_ar_afip_responsibility_type_id' ref="l10n_ar.res_IVARI"/>
-    </record>
-    <record model="res.partner" id="base.res_partner_2">
-        <field name='l10n_ar_afip_responsibility_type_id' ref="l10n_ar.res_IVARI"/>
-    </record>
-</odoo>
