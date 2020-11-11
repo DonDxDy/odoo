@@ -10,6 +10,7 @@
         'l10n_co_pos'
     ],
     'data': [
+        'wizard/pos_details.xml',
         'views/templates.xml',
         'views/pos_config_views.xml',
     ],

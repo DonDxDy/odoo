@@ -5,6 +5,7 @@ from odoo import api, models
 
 class PosOrder(models.AbstractModel):
     _inherit = 'report.point_of_sale.report_saledetails'
+    _name = 'report.l10n_co_pos_details.report_saledetails'
     _description = 'Point of Sale Details'
 
     @api.model
@@ -20,3 +21,11 @@ class PosOrder(models.AbstractModel):
                 'total_payment_count': sum(payment.get('count') for payment in result.get('payments')),
             })
         return result
+
+    def _get_report_values(self, docids, data=None):
+        data = dict(data or {})
+        configs = self.env['pos.config'].browse(data['config_ids'])
+        sale_details = self.get_sale_details(data['date_start'], data['date_stop'], configs.ids)
+        sale_details['include_products'] = data['include_products']
+        data.update(sale_details)
+        return data

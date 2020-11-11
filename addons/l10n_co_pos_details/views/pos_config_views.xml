@@ -18,4 +18,22 @@
         </field>
     </record>
 
+    <record id="action_report_co_pos_details" model="ir.actions.act_window">
+        <field name="name">Sales Details</field>
+        <field name="res_model">pos.details.wizard</field>
+        <field name="view_id" ref="view_pos_details_wizard"/>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="sale_details_report" model="ir.actions.report">
+        <field name="name">Sales Details</field>
+        <field name="model">report.l10n_co_pos_details.report_saledetails</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">l10n_co_pos_details.report_saledetails</field>
+    </record>
+
+
+    <menuitem id="menu_report_co_pos_order_details" name="Colombia Sales Details" action="action_report_co_pos_details" parent="point_of_sale.menu_point_rep" sequence="4"/>
+
 </odoo>
