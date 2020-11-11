@@ -214,6 +214,9 @@
                     <ModerationRejectDialog messageLocalIds="[message.localId]" t-on-dialog-closed="_onDialogClosedModerationReject"/>
                 </t>
             </t>
+            <div class="text-right float-right o_Message_Edit" t-on-click="_onClickEditMessage">
+                <span class="fa fa-pencil"/>
+            </div>
         </div>
     </t>
 

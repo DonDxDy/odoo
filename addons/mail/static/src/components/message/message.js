@@ -3,6 +3,7 @@ odoo.define('mail/static/src/components/message/message.js', function (require) 
 
 const components = {
     AttachmentList: require('mail/static/src/components/attachment_list/attachment_list.js'),
+    Composer: require('mail/static/src/components/composer/composer.js'),
     MessageSeenIndicator: require('mail/static/src/components/message_seen_indicator/message_seen_indicator.js'),
     ModerationBanDialog: require('mail/static/src/components/moderation_ban_dialog/moderation_ban_dialog.js'),
     ModerationDiscardDialog: require('mail/static/src/components/moderation_discard_dialog/moderation_discard_dialog.js'),
@@ -468,6 +469,21 @@ class Message extends Component {
             return;
         }
         this.message.author.openProfile();
+    }
+
+    /**
+     * @private
+     * @param {MouseEvent} ev
+     */
+    async _onClickEditMessage(ev) {
+        const composer = this.env.models["mail.composer"].create();
+        const Composer = new components.Composer(this, {
+            composerLocalId: composer.localId,
+            messageId: String(this.message.id),
+            hasCurrentPartnerAvatar: false,
+        });
+        this.el.innerHTML = '';
+        await Composer.mount(this.el);
     }
 
     /**

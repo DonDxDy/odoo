@@ -188,7 +188,11 @@ class Composer extends Component {
             }
             return;
         }
-        await this.composer.postMessage();
+        if (this.props.messageId) {
+            await this.composer.updateMessage(this.props.messageId);
+        } else {
+            await this.composer.postMessage();
+        }
         // TODO: we might need to remove trigger and use the store to wait for the post rpc to be done
         // task-2252858
         this.trigger('o-message-posted');
@@ -413,6 +417,10 @@ Object.assign(Composer, {
         },
         isCompact: Boolean,
         isExpandable: Boolean,
+        messageId: {
+            type: String,
+            optional: true,
+        },
         /**
          * If set, keyboard shortcuts from text input to send message.
          * If not set, will use default values from `ComposerTextInput`.

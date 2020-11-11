@@ -68,6 +68,10 @@
     margin-inline-end: map-get($spacers, 3);
 }
 
+.o_Message_Edit {
+    cursor: pointer;
+}
+
 .o_Message_footer {
     display: flex;
     flex-direction: column;

@@ -117,6 +117,20 @@ function factory(dependencies) {
             this.update({ hasFocus: true });
         }
 
+        getBody() {
+            const escapedAndCompactContent = escapeAndCompactTextContent(this.textInputContent);
+            let body = escapedAndCompactContent.replace(/&nbsp;/g, ' ').trim();
+            // This message will be received from the mail composer as html content
+            // subtype but the urls will not be linkified. If the mail composer
+            // takes the responsibility to linkify the urls we end up with double
+            // linkification a bit everywhere. Ideally we want to keep the content
+            // as text internally and only make html enrichment at display time but
+            // the current design makes this quite hard to do.
+            body = this._generateMentionsLinks(body);
+            body = parseAndTransform(body, addLink);
+            return this._generateEmojisOnHtml(body);
+        }
+
         /**
          * Inserts text content in text input based on selection.
          *
@@ -241,17 +255,7 @@ function factory(dependencies) {
         async postMessage() {
             const thread = this.thread;
             this.thread.unregisterCurrentPartnerIsTyping({ immediateNotify: true });
-            const escapedAndCompactContent = escapeAndCompactTextContent(this.textInputContent);
-            let body = escapedAndCompactContent.replace(/&nbsp;/g, ' ').trim();
-            // This message will be received from the mail composer as html content
-            // subtype but the urls will not be linkified. If the mail composer
-            // takes the responsibility to linkify the urls we end up with double
-            // linkification a bit everywhere. Ideally we want to keep the content
-            // as text internally and only make html enrichment at display time but
-            // the current design makes this quite hard to do.
-            body = this._generateMentionsLinks(body);
-            body = parseAndTransform(body, addLink);
-            body = this._generateEmojisOnHtml(body);
+            const body = this.getBody();
             let postData = {
                 attachment_ids: this.attachments.map(attachment => attachment.id),
                 body,
@@ -326,6 +330,14 @@ function factory(dependencies) {
             } finally {
                 this.update({ isPostingMessage: false });
             }
+        }
+
+        async updateMessage(messageId) {
+            await this.async(() => this.env.services.rpc({
+                model: 'mail.message',
+                method: 'write',
+                args: [[parseInt(messageId)], {body: this.getBody()}],
+            }, { shadow: true }));
         }
 
         /**
