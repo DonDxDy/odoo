@@ -8,11 +8,16 @@
             <div class="o_calendar_sidebar">
                 <div class="o_calendar_mini"/>
             </div>
-            <!-- <div>
-                <button class="o_calendar_button_today btn btn-primary">Today</button>
+            <div class="d-md-none">
+            <button class="o_cp_today_button btn btn-sm btn-link">
+                        <span class="fa-stack o_calendar_button_today">
+                            <i class="fa fa-calendar-o fa-stack-2x" role="img" aria-label="Today" title="Today"/>
+                            <strong class="o_calendar_text fa-stack-1x"/>
+                        </span>
+                    </button>
                 <button type="button" class="btn btn-primary">Calendar</button>
                 <button type="button" class="btn btn-primary">Create</button>
-            </div> -->
+            </div>
         </div>
     </div>
 
