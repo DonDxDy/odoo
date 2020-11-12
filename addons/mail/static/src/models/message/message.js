@@ -85,6 +85,9 @@ function factory(dependencies) {
             if ('id' in data) {
                 data2.id = data.id;
             }
+            if ('is_edited' in data) {
+                data2.is_edited = data.is_edited;
+            }
             if ('is_discussion' in data) {
                 data2.is_discussion = data.is_discussion;
             }
@@ -623,6 +626,12 @@ function factory(dependencies) {
         }),
         is_discussion: attr({
             default: false,
+        }),
+        is_edited: attr({
+            default: false
+        }),
+        is_editing_message: attr({
+            default: false
         }),
         /**
          * Determine whether the message was a needaction. Useful to make it

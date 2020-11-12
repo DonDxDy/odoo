@@ -483,7 +483,7 @@ class Message extends Component {
             hasCurrentPartnerAvatar: false,
             textInputSendShortcuts: ['enter']
         });
-        this.el.innerHTML = '';
+        this.message.update({is_editing_message: true});
         await Composer.mount(this.el);
     }
 

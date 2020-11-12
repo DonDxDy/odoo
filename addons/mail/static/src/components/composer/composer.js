@@ -190,6 +190,7 @@ class Composer extends Component {
         }
         if (this.props.messageLocalId) {
             await this.composer.updateMessage(this.props.messageLocalId);
+            this.destroy();
         } else {
             await this.composer.postMessage();
         }

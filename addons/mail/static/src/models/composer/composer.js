@@ -337,7 +337,7 @@ function factory(dependencies) {
             await this.async(() => this.env.services.rpc({
                 model: 'mail.message',
                 method: 'write',
-                args: [[message.id], {body: this.getBody()}],
+                args: [[message.id], {body: this.getBody(), is_edited: true}],
             }, { shadow: true }));
             const [messageData] = await this.async(() => this.env.services.rpc({
                     model: 'mail.message',
@@ -345,7 +345,7 @@ function factory(dependencies) {
                     args: [[message.id]],
             }, { shadow: true }));
             message.update(Object.assign(
-                {},
+                {is_editing_message: false},
                 this.env.models['mail.message'].convertData(messageData),
                 {
                     originThread: [['insert', {
