@@ -479,8 +479,9 @@ class Message extends Component {
         const composer = this.env.models["mail.composer"].create();
         const Composer = new components.Composer(this, {
             composerLocalId: composer.localId,
-            messageId: String(this.message.id),
+            messageLocalId: this.props.messageLocalId,
             hasCurrentPartnerAvatar: false,
+            textInputSendShortcuts: ['enter']
         });
         this.el.innerHTML = '';
         await Composer.mount(this.el);

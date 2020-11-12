@@ -188,8 +188,8 @@ class Composer extends Component {
             }
             return;
         }
-        if (this.props.messageId) {
-            await this.composer.updateMessage(this.props.messageId);
+        if (this.props.messageLocalId) {
+            await this.composer.updateMessage(this.props.messageLocalId);
         } else {
             await this.composer.postMessage();
         }
@@ -417,7 +417,7 @@ Object.assign(Composer, {
         },
         isCompact: Boolean,
         isExpandable: Boolean,
-        messageId: {
+        messageLocalId: {
             type: String,
             optional: true,
         },

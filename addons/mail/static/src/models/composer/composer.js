@@ -332,12 +332,27 @@ function factory(dependencies) {
             }
         }
 
-        async updateMessage(messageId) {
+        async updateMessage(messageLocalId) {
+            const message = this.env.models["mail.message"].get(messageLocalId);
             await this.async(() => this.env.services.rpc({
                 model: 'mail.message',
                 method: 'write',
-                args: [[parseInt(messageId)], {body: this.getBody()}],
+                args: [[message.id], {body: this.getBody()}],
             }, { shadow: true }));
+            const [messageData] = await this.async(() => this.env.services.rpc({
+                    model: 'mail.message',
+                    method: 'message_format',
+                    args: [[message.id]],
+            }, { shadow: true }));
+            message.update(Object.assign(
+                {},
+                this.env.models['mail.message'].convertData(messageData),
+                {
+                    originThread: [['insert', {
+                        id: message.originThread.id,
+                        model: message.originThread.model,
+                    }]],
+            }));
         }
 
         /**

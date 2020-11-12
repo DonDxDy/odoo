@@ -119,7 +119,7 @@
                                 </div>
                             </t>
                         </div>
-                        <t t-if="props.isCompact">
+                        <t t-if="props.isCompact and !props.messageLocalId">
                             <t t-call="mail.Composer.actionButtons"/>
                         </t>
                     </div>
@@ -140,7 +140,7 @@
                                 showAttachmentsFilenames="props.showAttachmentsFilenames"
                             />
                         </t>
-                        <t t-if="!props.isCompact">
+                        <t t-if="!props.isCompact and !props.messageLocalId">
                             <t t-call="mail.Composer.actionButtons"/>
                         </t>
                     </div>
