@@ -256,9 +256,18 @@ class PosSession(models.Model):
             session.write(values)
         return True
 
+    def _check_if_draft_orders(self):
+        for session in self:
+            for order in session.order_ids:
+                if order.state == "draft":
+                    return True
+            return False
+
     def action_pos_session_closing_control(self):
         self._check_pos_session_balance()
         for session in self:
+            if self._check_if_draft_orders():
+                raise UserError(_("You cannot close the POS when orders are still in draft"))
             if session.state == 'closed':
                 raise UserError(_('This session is already closed.'))
             session.write({'state': 'closing_control', 'stop_at': fields.Datetime.now()})
