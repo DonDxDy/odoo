@@ -19,14 +19,16 @@ Odoo Web core module written in Owl.
     'data': [
         'views/templates.xml',
     ],
-    'owl_qweb': [
-        'static/src/components',
-        'static/src/views'
-    ],
-    'style': [
-        'static/src/utils',
-        'static/src/components',
-        'static/src/views',
-        'static/src/services',
-    ]
+    'assets': {
+        'owl_qweb': [
+            'wowl/static/src/components/**/*',
+            'wowl/static/src/views/**/*',
+        ],
+        'style': [
+            'wowl/static/src/utils/**/*',
+            'wowl/static/src/components/**/*',
+            'wowl/static/src/views/**/*',
+            'wowl/static/src/services/**/*',
+        ],
+    },
 }
