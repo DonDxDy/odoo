@@ -343,19 +343,10 @@ class MrpBomLine(models.Model):
         for line in self:
             line.child_line_ids = line.child_bom_id.bom_line_ids.ids or False
 
-    @api.depends('bom_id')
+    @api.depends('bom_id.operation_ids')
     def _compute_allowed_operation_ids(self):
         for bom_line in self:
-            if not bom_line.bom_id.operation_ids:
-                bom_line.allowed_operation_ids = self.env['mrp.routing.workcenter']
-            else:
-                operation_domain = [
-                    ('id', 'in', bom_line.bom_id.operation_ids.ids),
-                    '|',
-                        ('company_id', '=', bom_line.company_id.id),
-                        ('company_id', '=', False)
-                ]
-                bom_line.allowed_operation_ids = self.env['mrp.routing.workcenter'].search(operation_domain)
+            bom_line.allowed_operation_ids = bom_line.bom_id.operation_ids.ids
 
     @api.onchange('product_uom_id')
     def onchange_product_uom_id(self):
@@ -438,19 +429,10 @@ class MrpByProduct(models.Model):
         'mrp.routing.workcenter', 'Produced in Operation', check_company=True,
         domain="[('id', 'in', allowed_operation_ids)]")
 
-    @api.depends('bom_id')
+    @api.depends('bom_id.operation_ids')
     def _compute_allowed_operation_ids(self):
         for byproduct in self:
-            if not byproduct.bom_id.operation_ids:
-                byproduct.allowed_operation_ids = self.env['mrp.routing.workcenter']
-            else:
-                operation_domain = [
-                    ('id', 'in', byproduct.bom_id.operation_ids.ids),
-                    '|',
-                        ('company_id', '=', byproduct.company_id.id),
-                        ('company_id', '=', False)
-                ]
-                byproduct.allowed_operation_ids = self.env['mrp.routing.workcenter'].search(operation_domain)
+            byproduct.allowed_operation_ids = byproduct.bom_id.operation_ids.ids
 
     @api.onchange('product_id')
     def onchange_product_id(self):

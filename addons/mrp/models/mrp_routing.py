@@ -19,8 +19,7 @@ class MrpRoutingWorkcenter(models.Model):
         'mrp.bom', 'Bill of Material', check_company=True,
         index=True, ondelete='cascade',
         help="The Bill of Material this operation is linked to")
-    company_id = fields.Many2one(
-        'res.company', 'Company', default=lambda self: self.env.company)
+    company_id = fields.Many2one('res.company', 'Company', related='bom_id.company_id')
     worksheet_type = fields.Selection([
         ('pdf', 'PDF'), ('google_slide', 'Google Slide'), ('text', 'Text')],
         string="Work Sheet", default="text",
