@@ -181,12 +181,6 @@ class StockMove(models.Model):
     forecast_expected_date = fields.Datetime('Forecasted Expected date', compute='_compute_forecast_information')
     lot_ids = fields.Many2many('stock.production.lot', compute='_compute_lot_ids', inverse='_set_lot_ids', string='Serial Numbers', readonly=False)
 
-    @api.onchange('product_id', 'picking_type_id')
-    def onchange_product(self):
-        if self.product_id:
-            product = self.product_id.with_context(lang=self._get_lang())
-            self.description_picking = product._get_description(self.picking_type_id)
-
     @api.depends('has_tracking', 'picking_type_id.use_create_lots', 'picking_type_id.use_existing_lots', 'state')
     def _compute_display_assign_serial(self):
         for move in self:
@@ -861,8 +855,14 @@ class StockMove(models.Model):
             else:
                 return moves_todo[-1:].state or 'draft'
 
+    @api.onchange('product_id', 'picking_type_id')
+    def _onchange_product(self):
+        if self.product_id:
+            product = self.product_id.with_context(lang=self._get_lang())
+            self.description_picking = product._get_description(self.picking_type_id)
+
     @api.onchange('product_id')
-    def onchange_product_id(self):
+    def _onchange_product_id(self):
         product = self.product_id.with_context(lang=self._get_lang())
         self.name = product.partner_ref
         self.product_uom = product.uom_id.id
@@ -885,7 +885,7 @@ class StockMove(models.Model):
             }
 
     @api.onchange('move_line_ids', 'move_line_nosuggest_ids')
-    def onchange_move_line_ids(self):
+    def _onchange_move_line_ids(self):
         if not self.picking_type_id.use_create_lots:
             # This onchange manages the creation of multiple lot name. We don't
             # need that if the picking type disallows the creation of new lots.
@@ -923,7 +923,7 @@ class StockMove(models.Model):
                 break
 
     @api.onchange('product_uom')
-    def onchange_product_uom(self):
+    def _onchange_product_uom(self):
         if self.product_uom.factor > self.product_id.uom_id.factor:
             return {
                 'warning': {
