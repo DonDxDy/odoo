@@ -998,7 +998,7 @@ ListRenderer.include({
         }
 
         // ignore clicks in autocomplete dropdowns
-        if ($(event.target).parents('.ui-autocomplete').length) {
+        if ($(event.target).parents('.ui-autocomplete').length || $(event.target).is(".ui-autocomplete")) {
             return;
         }
 
