@@ -13,6 +13,7 @@ const components = {
 };
 const useStore = require('mail/static/src/component_hooks/use_store/use_store.js');
 const useUpdate = require('mail/static/src/component_hooks/use_update/use_update.js');
+const { htmlToTextContentInline } = require('mail.utils');
 
 const { _lt } = require('web.core');
 const { getLangDatetimeFormat } = require('web.time');
@@ -476,15 +477,17 @@ class Message extends Component {
      * @param {MouseEvent} ev
      */
     async _onClickEditMessage(ev) {
-        const composer = this.env.models["mail.composer"].create();
+        const composer = this.env.models["mail.composer"].create({
+            textInputContent: htmlToTextContentInline(this.message.body)
+        });
         const Composer = new components.Composer(this, {
             composerLocalId: composer.localId,
             messageLocalId: this.props.messageLocalId,
             hasCurrentPartnerAvatar: false,
-            textInputSendShortcuts: ['enter']
+            textInputSendShortcuts: ['enter'],
         });
         this.message.update({is_editing_message: true});
-        await Composer.mount(this.el);
+        await Composer.mount(this.el.querySelector('.o_Message_core'));
     }
 
     /**

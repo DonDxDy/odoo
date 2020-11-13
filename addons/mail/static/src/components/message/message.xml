@@ -14,7 +14,7 @@
                 'o-starred': message and message.isStarred,
             }" t-on-click="_onClick" t-att-data-message-local-id="message and message.localId"
         >
-            <t t-if="message and !message.is_editing_message" name="rootCondition">
+            <t t-if="message" name="rootCondition">
                 <div class="o_Message_sidebar" t-att-class="{ 'o-message-squashed': props.isSquashed }">
                     <t t-if="!props.isSquashed">
                         <div class="o_Message_authorAvatarContainer o_Message_sidebarItem">
@@ -49,6 +49,9 @@
                                     }" t-on-click="_onClickStar"
                                 />
                             </t>
+                            <div t-if="message.isCurrentPartnerAuthor" class="o_Message_Edit" t-on-click="_onClickEditMessage">
+                                <span class="fa fa-pencil"/>
+                            </div>
                         </div>
                         <t t-if="message.isCurrentPartnerAuthor and threadView and threadView.thread and threadView.thread.hasSeenIndicators">
                             <MessageSeenIndicator class="o_Message_seenIndicator o-message-squashed" messageLocalId="message.localId" threadLocalId="threadView.thread.localId"/>
@@ -139,6 +142,9 @@
                                         }" t-on-click="_onClickMarkAsRead" title="Mark as Read"
                                     />
                                 </t>
+                                <div t-if="message.isCurrentPartnerAuthor" class="o_Message_Edit" t-on-click="_onClickEditMessage">
+                                    <span class="fa fa-pencil"/>
+                                </div>
                             </div>
                         </div>
                         <t t-if="message.isModeratedByCurrentPartner">
@@ -155,7 +161,7 @@
                             </div>
                         </t>
                     </t>
-                    <div class="o_Message_content" t-ref="content">
+                    <div t-if="!message.is_editing_message" class="o_Message_content" t-ref="content">
                         <t t-raw="message.prettyBody"/>
                         <t t-if="message.subtype_description and !message.isBodyEqualSubtypeDescription">
                             <p t-esc="message.subtype_description"/>
@@ -175,6 +181,9 @@
                                     </li>
                                 </t>
                             </ul>
+                        </t>
+                        <t t-if="message.is_edited">
+                            <span class="text-muted o_Message_Edited">(edited)</span>
                         </t>
                     </div>
                     <t t-if="message.subject and threadView and threadView.thread and (threadView.thread.mass_mailing or [env.messaging.inbox, env.messaging.history].includes(threadView.thread))">
@@ -213,12 +222,6 @@
                 <t t-if="state.hasModerationRejectDialog">
                     <ModerationRejectDialog messageLocalIds="[message.localId]" t-on-dialog-closed="_onDialogClosedModerationReject"/>
                 </t>
-                <div t-if="message.is_edited" class="text-right float-right o_Message_Edited">
-                    <span>(edited)</span>
-                </div>
-                <div class="text-right float-right o_Message_Edit" t-on-click="_onClickEditMessage">
-                    <span class="fa fa-pencil"/>
-                </div>
             </t>
         </div>
     </t>

@@ -68,10 +68,6 @@
     margin-inline-end: map-get($spacers, 3);
 }
 
-.o_Message_Edit {
-    cursor: pointer;
-}
-
 .o_Message_footer {
     display: flex;
     flex-direction: column;
@@ -198,6 +194,11 @@
 
         .o_Message_seenIndicator.o-message-squashed {
             display: none;
+        }
+
+        .o_Message_Edit {
+            display: block !important;
+            cursor: pointer;
         }
     }
 
