@@ -188,8 +188,8 @@ class Composer extends Component {
             }
             return;
         }
-        if (this.props.messageLocalId) {
-            await this.composer.updateMessage(this.props.messageLocalId);
+        if (this.composer.messageLocalId) {
+            await this.composer.updateMessage();
             this.destroy();
         } else {
             await this.composer.postMessage();
@@ -281,6 +281,15 @@ class Composer extends Component {
      */
     _onComposerTextInputSendShortcut() {
         this._postMessage();
+    }
+
+    /**
+     * @private
+     */
+    _onComposerTextInputEscShortcut() {
+        const message = this.env.models['mail.message'].get(this.composer.messageLocalId);
+        message.update({is_editing_message: false});
+        this.destroy()
     }
 
     /**
@@ -418,10 +427,6 @@ Object.assign(Composer, {
         },
         isCompact: Boolean,
         isExpandable: Boolean,
-        messageLocalId: {
-            type: String,
-            optional: true,
-        },
         /**
          * If set, keyboard shortcuts from text input to send message.
          * If not set, will use default values from `ComposerTextInput`.

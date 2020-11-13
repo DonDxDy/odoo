@@ -49,7 +49,7 @@
                                     }" t-on-click="_onClickStar"
                                 />
                             </t>
-                            <div t-if="message.isCurrentPartnerAuthor" class="o_Message_Edit" t-on-click="_onClickEditMessage">
+                            <div t-if="message.isCurrentPartnerAuthor and !message.is_editing_message" class="o_Message_command o_Message_Edit" t-on-click="_onClickEditMessage">
                                 <span class="fa fa-pencil"/>
                             </div>
                         </div>
@@ -142,7 +142,7 @@
                                         }" t-on-click="_onClickMarkAsRead" title="Mark as Read"
                                     />
                                 </t>
-                                <div t-if="message.isCurrentPartnerAuthor" class="o_Message_Edit" t-on-click="_onClickEditMessage">
+                                <div t-if="message.isCurrentPartnerAuthor and !message.is_editing_message" class="o_Message_command o_Message_Edit" t-on-click="_onClickEditMessage">
                                     <span class="fa fa-pencil"/>
                                 </div>
                             </div>

@@ -478,11 +478,11 @@ class Message extends Component {
      */
     async _onClickEditMessage(ev) {
         const composer = this.env.models["mail.composer"].create({
-            textInputContent: htmlToTextContentInline(this.message.body)
+            textInputContent: htmlToTextContentInline(this.message.body),
+            messageLocalId: this.message.localId
         });
         const Composer = new components.Composer(this, {
             composerLocalId: composer.localId,
-            messageLocalId: this.props.messageLocalId,
             hasCurrentPartnerAvatar: false,
             textInputSendShortcuts: ['enter'],
         });

@@ -332,8 +332,8 @@ function factory(dependencies) {
             }
         }
 
-        async updateMessage(messageLocalId) {
-            const message = this.env.models["mail.message"].get(messageLocalId);
+        async updateMessage() {
+            const message = this.env.models["mail.message"].get(this.messageLocalId);
             await this.async(() => this.env.services.rpc({
                 model: 'mail.message',
                 method: 'write',
@@ -1009,6 +1009,9 @@ function factory(dependencies) {
         mentionedPartners: many2many('mail.partner', {
             compute: '_computeMentionedPartners',
             dependencies: ['textInputContent'],
+        }),
+        messageLocalId: attr({
+            default: "",
         }),
         /**
          * Determines the extra `mail.partner` (on top of existing followers)
