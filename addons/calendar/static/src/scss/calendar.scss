@@ -68,9 +68,3 @@
         font-weight: bold;
     }
 }
-
-.o_other_calendar_panel {
-    @include media-breakpoint-down(md) {
-        display: none !important;
-    }
-}
