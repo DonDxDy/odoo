@@ -791,7 +791,7 @@ QUnit.test('prevent attachment delete on non-authored message', async function (
     );
 });
 
-QUnit.test('subtype description should be displayed if it is different than body', async function (assert) {
+QUnit.test('subtype description should be displayed if it is different than body and have tracking value', async function (assert) {
     assert.expect(2);
 
     await this.start();
@@ -799,6 +799,13 @@ QUnit.test('subtype description should be displayed if it is different than body
         body: "<p>Hello</p>",
         id: 100,
         subtype_description: 'Bonjour',
+        tracking_value_ids: [{
+            changed_field: "Name",
+            field_type: "char",
+            id: 6,
+            new_value: "",
+            old_value: "Marc",
+        }],
     });
     await this.createMessageComponent(message);
     assert.containsOnce(
@@ -808,12 +815,12 @@ QUnit.test('subtype description should be displayed if it is different than body
     );
     assert.strictEqual(
         document.querySelector(`.o_Message_content`).textContent,
-        "HelloBonjour",
+        "HelloBonjourName:Marc",
         "message content should display both body and subtype description when they are different"
     );
 });
 
-QUnit.test('subtype description should not be displayed if it is similar to body', async function (assert) {
+QUnit.test('subtype description should not be displayed if it is similar to body and doesn\'t have tracking value', async function (assert) {
     assert.expect(2);
 
     await this.start();

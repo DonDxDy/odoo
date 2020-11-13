@@ -1564,6 +1564,7 @@ QUnit.test('message with subtype should be displayed (and not considered as empt
     });
     this.data['mail.message'].records.push(
         {
+            body: '',
             channel_ids: [11],
             id: 101,
             subtype_id: 10,
