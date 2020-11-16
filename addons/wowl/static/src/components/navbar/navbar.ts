@@ -11,9 +11,16 @@ export interface NavBarState {
   selectedApp: null | MenuTree;
 }
 
+class AppsMenuItem extends DropdownItem {
+  mounted() {
+    super.mounted();
+    this.el!.setAttribute("data-menu-xmlid", this.props.payload.xmlid);
+  }
+}
+
 export class NavBar extends Component<{}, OdooEnv> {
   static template = "wowl.NavBar";
-  static components = { Dropdown, DropdownItem };
+  static components = { Dropdown, DropdownItem, AppsMenuItem };
   currentAppSectionsExtra: MenuTree[] = [];
   actionManager = useService("action_manager");
   menuRepo = useService("menus");
