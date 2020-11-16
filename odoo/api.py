@@ -528,6 +528,7 @@ class Environment(Mapping):
     def user(self):
         """Return the current user (as an instance).
 
+        :return: current user - sudoed
         :rtype: :class:`~odoo.addons.base.models.res_users`"""
         return self(su=True)['res.users'].browse(self.uid)
 
@@ -539,7 +540,7 @@ class Environment(Mapping):
         fallback on current user main company.
 
         :raise AccessError: invalid or unauthorized `allowed_company_ids` context key content.
-        :return: current company (default=`self.user.company_id`)
+        :return: current company (default=`self.user.company_id`) - sudoed
         :rtype: res.company
 
         .. warning::
@@ -558,7 +559,8 @@ class Environment(Mapping):
                 user_company_ids = self.user.company_ids.ids
                 if any(cid not in user_company_ids for cid in company_ids):
                     raise AccessError(_("Access to unauthorized or invalid companies."))
-            return self['res.company'].browse(company_ids[0])
+            # sudoed environment to be coherent with the user property logic
+            return self(su=True)['res.company'].browse(company_ids[0])
         return self.user.company_id
 
     @lazy_property
@@ -569,7 +571,7 @@ class Environment(Mapping):
         fallback on current user companies.
 
         :raise AccessError: invalid or unauthorized `allowed_company_ids` context key content.
-        :return: current companies (default=`self.user.company_ids`)
+        :return: current companies (default=`self.user.company_ids`) - sudoed
         :rtype: res.company
 
         .. warning::
@@ -588,7 +590,8 @@ class Environment(Mapping):
                 user_company_ids = self.user.company_ids.ids
                 if any(cid not in user_company_ids for cid in company_ids):
                     raise AccessError(_("Access to unauthorized or invalid companies."))
-            return self['res.company'].browse(company_ids)
+            # sudoed environment to be coherent with the user property logic
+            return self(su=True)['res.company'].browse(company_ids)
         # By setting the default companies to all user companies instead of the main one
         # we save a lot of potential trouble in all "out of context" calls, such as
         # /mail/redirect or /web/image, etc. And it is not unsafe because the user does
