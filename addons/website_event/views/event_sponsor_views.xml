@@ -145,8 +145,9 @@
         <field name="help" type="html">
 <p class="o_view_nocontent_smiling_face">
   Create a Sponsor
-</p>
-        </field>
+</p><p>
+    Sponsors might be advertised on your event pages footer.
+</p></field>
     </record>
 
 </data>

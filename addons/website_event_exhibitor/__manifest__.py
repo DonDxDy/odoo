@@ -11,7 +11,7 @@
     'website': 'https://www.odoo.com/page/events',
     'description': "",
     'depends': [
-        'website_event_track',
+        'website_event',
         'website_jitsi',
     ],
     'data': [
