@@ -31,6 +31,9 @@ class Event(models.Model):
     subtitle = fields.Char('Event Subtitle', translate=True)
     # registration
     is_participating = fields.Boolean("Is Participating", compute="_compute_is_participating")
+    # sponsors
+    sponsor_ids = fields.One2many('event.sponsor', 'event_id', 'Sponsors')
+    sponsor_count = fields.Integer('Sponsor Count', compute='_compute_sponsor_count')
     # website
     website_published = fields.Boolean(tracking=True)
     website_menu = fields.Boolean(
@@ -101,6 +104,12 @@ class Event(models.Model):
 
         for event in self:
             event.is_participating = event in events
+
+    def _compute_sponsor_count(self):
+        data = self.env['event.sponsor'].read_group([], ['event_id'], ['event_id'])
+        result = dict((data['event_id'][0], data['event_id_count']) for data in data)
+        for event in self:
+            event.sponsor_count = result.get(event.id, 0)
 
     @api.depends('event_type_id')
     def _compute_website_menu(self):

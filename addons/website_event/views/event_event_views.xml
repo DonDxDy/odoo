@@ -12,6 +12,12 @@
             </field>
             <div name="button_box" position="inside">
                 <field name="website_url" invisible="1"/>
+                <button name="%(event_sponsor_action_from_event)d"
+                        type="action"
+                        class="oe_stat_button"
+                        icon="fa-black-tie">
+                    <field name="sponsor_count" string="Sponsors" widget="statinfo"/>
+                </button>
                 <field name="is_published" widget="website_redirect_button"/>
             </div>
             <xpath expr="//field[@name='stage_id']" position="before">
@@ -39,6 +45,9 @@
         <field name="arch" type="xml">
             <field name="company_id" position="after">
                 <field name="website_id" groups="website.group_multi_website" domain="['|', ('company_id', '=', company_id), ('company_id', '=', False)]" optional="show"/>
+            </field>
+            <field name="stage_id" position="after">
+                <field name="sponsor_count" readonly="1" optional="hide"/>
             </field>
         </field>
     </record>

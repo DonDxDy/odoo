@@ -3,7 +3,7 @@
 
 {
     'name': 'Events',
-    'version': '1.1',
+    'version': '1.2',
     'category': 'Marketing/Events',
     'sequence': 140,
     'summary': 'Publish events, sell tickets',
@@ -17,6 +17,7 @@
     ],
     'data': [
         'data/event_data.xml',
+        'data/event_sponsor_data.xml',
         'views/assets.xml',
         'views/res_config_settings_views.xml',
         'views/event_snippets.xml',
@@ -24,8 +25,10 @@
         'views/event_templates_page.xml',
         'views/event_templates_page_registration.xml',
         'views/event_templates_page_misc.xml',
+        'views/event_templates_sponsor.xml',
         'views/event_templates_widgets.xml',
         'views/website_templates.xml',
+        'views/event_sponsor_views.xml',
         'views/event_event_views.xml',
         'views/event_registration_views.xml',
         'views/event_type_views.xml',
@@ -38,6 +41,7 @@
     'demo': [
         'data/res_partner_demo.xml',
         'data/website_visitor_demo.xml',
+        'data/event_sponsor_demo.xml',
         'data/event_demo.xml',
         'data/event_registration_demo.xml',
     ],
