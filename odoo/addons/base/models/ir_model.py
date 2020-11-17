@@ -276,6 +276,9 @@ class IrModel(models.Model):
         return True
 
     def unlink(self):
+        if not self:
+            return True
+
         # Prevent manual deletion of module tables
         if not self._context.get(MODULE_UNINSTALL_FLAG):
             for model in self:
@@ -300,6 +303,9 @@ class IrModel(models.Model):
         return res
 
     def write(self, vals):
+        if not self:
+            return True
+
         if '__last_update' in self._context:
             self = self.with_context({k: v for k, v in self._context.items() if k != '__last_update'})
         if 'model' in vals and any(rec.model != vals['model'] for rec in self):
@@ -882,6 +888,9 @@ class IrModelFields(models.Model):
         return res
 
     def write(self, vals):
+        if not self:
+            return True
+
         # if set, *one* column can be renamed here
         column_rename = None
 
@@ -1306,13 +1315,17 @@ class IrModelSelection(models.Model):
                                   'preferably through a custom addon!'))
         recs = super().create(vals_list)
 
-        # setup models; this re-initializes model in registry
-        self.flush()
-        self.pool.setup_models(self._cr)
+        if recs:
+            # setup models; this re-initializes model in registry
+            self.flush()
+            self.pool.setup_models(self._cr)
 
         return recs
 
     def write(self, vals):
+        if not self:
+            return True
+
         if (
             not self.env.user._is_admin() and
             any(record.field_id.state != 'manual' for record in self)
@@ -1342,6 +1355,9 @@ class IrModelSelection(models.Model):
         return result
 
     def unlink(self):
+        if not self:
+            return True
+
         # Prevent manual deletion of module columns
         if (
             self.pool.ready
@@ -1783,15 +1799,16 @@ class IrModelAccess(models.Model):
     #
     @api.model_create_multi
     def create(self, vals_list):
-        self.call_cache_clearing_methods()
+        if vals_list:
+            self.call_cache_clearing_methods()
         return super(IrModelAccess, self).create(vals_list)
 
     def write(self, values):
-        self.call_cache_clearing_methods()
+        self and self.call_cache_clearing_methods()
         return super(IrModelAccess, self).write(values)
 
     def unlink(self):
-        self.call_cache_clearing_methods()
+        self and self.call_cache_clearing_methods()
         return super(IrModelAccess, self).unlink()
 
 
@@ -1938,7 +1955,7 @@ class IrModelData(models.Model):
 
     def unlink(self):
         """ Regular unlink method, but make sure to clear the caches. """
-        self.clear_caches()
+        self and self.clear_caches()
         return super(IrModelData, self).unlink()
 
     def _lookup_xmlids(self, xml_ids, model):

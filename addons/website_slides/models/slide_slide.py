@@ -37,9 +37,7 @@ class SlidePartnerRelation(models.Model):
 
     def create(self, values):
         res = super(SlidePartnerRelation, self).create(values)
-        completed = res.filtered('completed')
-        if completed:
-            completed._set_completed_callback()
+        res.filtered('completed')._set_completed_callback()
         return res
 
     def write(self, values):
@@ -49,6 +47,8 @@ class SlidePartnerRelation(models.Model):
         return res
 
     def _set_completed_callback(self):
+        if not self:
+            return
         self.env['slide.channel.partner'].search([
             ('channel_id', 'in', self.channel_id.ids),
             ('partner_id', 'in', self.partner_id.ids),

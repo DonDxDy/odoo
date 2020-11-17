@@ -69,6 +69,8 @@ class ProductTemplate(models.Model):
         return res
 
     def unlink(self):
+        if not self:
+            return True
         time_product = self.env.ref('sale_timesheet.time_product')
         if time_product.product_tmpl_id in self:
             raise ValidationError(_('The %s product is required by the Timesheet app and cannot be archived/deleted.') % time_product.name)
@@ -93,7 +95,7 @@ class ProductProduct(models.Model):
         return self.type == 'service' and self.service_policy == 'delivered_timesheet'
 
     def unlink(self):
-        time_product = self.env.ref('sale_timesheet.time_product')
+        time_product = self.env.ref('sale_timesheet.time_product') if self else self.browse()
         if time_product in self:
             raise ValidationError(_('The %s product is required by the Timesheet app and cannot be archived/deleted.') % time_product.name)
         return super(ProductProduct, self).unlink()
@@ -101,7 +103,7 @@ class ProductProduct(models.Model):
     def write(self, vals):
         # timesheet product can't be archived
         test_mode = getattr(threading.currentThread(), 'testing', False) or self.env.registry.in_test_mode()
-        if not test_mode and 'active' in vals and not vals['active']:
+        if self and not test_mode and 'active' in vals and not vals['active']:
             time_product = self.env.ref('sale_timesheet.time_product')
             if time_product in self:
                 raise ValidationError(_('The %s product is required by the Timesheet app and cannot be archived/deleted.') % time_product.name)

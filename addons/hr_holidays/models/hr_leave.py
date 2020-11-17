@@ -787,6 +787,9 @@ class HolidaysRequest(models.Model):
         return holidays
 
     def write(self, values):
+        if not self:
+            return True
+
         is_officer = self.env.user.has_group('hr_holidays.group_hr_holidays_user') or self.env.is_superuser()
 
         if not is_officer:
@@ -815,6 +818,9 @@ class HolidaysRequest(models.Model):
         return result
 
     def unlink(self):
+        if not self:
+            return True
+
         error_message = _('You cannot delete a time off which is in %s state')
         state_description_values = {elem[0]: elem[1] for elem in self._fields['state']._description_selection(self.env)}
 

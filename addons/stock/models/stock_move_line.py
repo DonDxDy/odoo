@@ -245,7 +245,7 @@ class StockMoveLine(models.Model):
         return mls
 
     def write(self, vals):
-        if self.env.context.get('bypass_reservation_update'):
+        if not self or self.env.context.get('bypass_reservation_update'):
             return super(StockMoveLine, self).write(vals)
 
         if 'product_id' in vals and any(vals.get('state', ml.state) != 'draft' and vals['product_id'] != ml.product_id.id for ml in self):
@@ -388,6 +388,8 @@ class StockMoveLine(models.Model):
         return res
 
     def unlink(self):
+        if not self:
+            return True
         precision = self.env['decimal.precision'].precision_get('Product Unit of Measure')
         for ml in self:
             if ml.state in ('done', 'cancel'):

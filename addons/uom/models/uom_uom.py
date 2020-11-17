@@ -12,6 +12,8 @@ class UoMCategory(models.Model):
     name = fields.Char('Unit of Measure Category', required=True, translate=True)
 
     def unlink(self):
+        if not self:
+            return True
         uom_categ_unit = self.env.ref('uom.product_uom_categ_unit')
         uom_categ_wtime = self.env.ref('uom.uom_categ_wtime')
         if any(categ.id in (uom_categ_unit + uom_categ_wtime).ids for categ in self):
@@ -107,6 +109,8 @@ class UoM(models.Model):
         return super(UoM, self).write(values)
 
     def unlink(self):
+        if not self:
+            return True
         uom_categ_unit = self.env.ref('uom.product_uom_categ_unit')
         uom_categ_wtime = self.env.ref('uom.uom_categ_wtime')
         if any(uom.category_id.id in (uom_categ_unit + uom_categ_wtime).ids and uom.uom_type == 'reference' for uom in self):

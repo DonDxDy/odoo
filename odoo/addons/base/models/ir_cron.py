@@ -291,7 +291,7 @@ class ir_cron(models.Model):
            to make sure a following write() or unlink() will not block due
            to a process currently executing those cron tasks"""
         try:
-            self._cr.execute("""SELECT id FROM "%s" WHERE id IN %%s FOR UPDATE NOWAIT""" % self._table,
+            self and self._cr.execute("""SELECT id FROM "%s" WHERE id IN %%s FOR UPDATE NOWAIT""" % self._table,
                              [tuple(self.ids)], log_exceptions=False)
         except psycopg2.OperationalError:
             self._cr.rollback()  # early rollback to allow translations to work for the user feedback
