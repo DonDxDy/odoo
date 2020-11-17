@@ -878,7 +878,7 @@ class HrExpenseSheet(models.Model):
         for expense in self:
             if expense.state in ['post', 'done']:
                 raise UserError(_('You cannot delete a posted or paid expense.'))
-        super(HrExpenseSheet, self).unlink()
+        return super(HrExpenseSheet, self).unlink()
 
     # --------------------------------------------
     # Mail Thread
