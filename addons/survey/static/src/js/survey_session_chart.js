@@ -171,6 +171,40 @@ publicWidget.registry.SurveySessionChart = publicWidget.Widget.extend({
                     }
                 }
             },
+            plugins: [{
+                beforeInit: function (chart) {
+                    const nbrCol = chart.data.labels.length;
+                    let charPerLine = 25;
+                    const maxWordLength = chart.data.labels.join(' ').split(' ').sort((a, b) => b.length - a.length)[0].length;
+                    if (nbrCol > 4) {
+                        charPerLine = nbrCol > 8 ? 7 : nbrCol > 6 ? 10 : 15;
+                        chart.options.scales.xAxes[0].ticks.fontSize = maxWordLength > charPerLine ? 15 : chart.width * (nbrCol) / 100;
+                    }
+                    chart.data.labels.forEach(function (value, index, array) {
+                        let test = value.split(" ");
+                        var a = [];
+                        let tmp = [];
+                        let actualLength = 0;
+                        let j = 0;
+                        for (let i = 0; i < test.length; i++) {
+                            tmp.push(test[i]);
+                            actualLength += tmp[j].length
+                            if (
+                                actualLength < charPerLine - tmp.length + 1 && i+1 < test.length &&
+                                tmp.join(' ').length + test[i+1].length < charPerLine
+                            ) {
+                                j++;
+                                continue;
+                            }
+                            let newPart = tmp.join(' ');
+                            a.push(newPart);
+                            tmp = [];
+                            actualLength = j = 0;
+                        }
+                        array[index] = a;
+                    });
+                },
+            }],
         };
     },
 
@@ -181,7 +215,7 @@ publicWidget.registry.SurveySessionChart = publicWidget.Widget.extend({
      */
     _extractChartLabels: function () {
         return this.questionStatistics.map(function (point) {
-            return point.text.length > 20 ? point.text.substring(0, 17) + '...' : point.text;
+            return point.text;
         });
     },
 
