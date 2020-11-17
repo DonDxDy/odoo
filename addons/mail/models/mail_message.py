@@ -1099,6 +1099,10 @@ class Message(models.Model):
                 vals['module_icon'] = modules.module.get_module_icon(self.env[vals['model']]._original_module)
         return vals_list
 
+    def update_message(self, vals):
+        self.write(vals)
+        return self.read(['body', 'attachment_ids'])
+
     def _get_message_format_fields(self):
         return [
             'id', 'body', 'date', 'author_id', 'email_from',  # base message fields

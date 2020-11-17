@@ -334,15 +334,15 @@ function factory(dependencies) {
 
         async updateMessage() {
             const message = this.env.models["mail.message"].get(this.messageLocalId);
-            await this.async(() => this.env.services.rpc({
-                model: 'mail.message',
-                method: 'write',
-                args: [[message.id], {body: this.getBody(), is_edited: true}],
-            }, { shadow: true }));
+            const vals = {
+                body: this.getBody(),
+                attachment_ids: this.attachments.map(attachment => attachment.id),
+                is_edited: true
+            };
             const [messageData] = await this.async(() => this.env.services.rpc({
-                    model: 'mail.message',
-                    method: 'message_format',
-                    args: [[message.id]],
+                model: 'mail.message',
+                method: 'update_message',
+                args: [[message.id], vals],
             }, { shadow: true }));
             message.update(Object.assign(
                 {is_editing_message: false},
