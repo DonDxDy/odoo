@@ -73,7 +73,7 @@ class ProductProduct(models.Model):
     _description = "Product"
     _inherits = {'product.template': 'product_tmpl_id'}
     _inherit = ['mail.thread', 'mail.activity.mixin']
-    _order = 'default_code, name, id'
+    _order = 'priority desc, default_code, name, id'
 
     # price: total price, context dependent (partner, pricelist, quantity)
     price = fields.Float(
@@ -123,6 +123,8 @@ class ProductProduct(models.Model):
     packaging_ids = fields.One2many(
         'product.packaging', 'product_id', 'Product Packages',
         help="Gives the different ways to package the same product.")
+
+    priority = fields.Selection(related='product_tmpl_id.priority', readonly=True, store=True)
 
     # all image fields are base64 encoded and PIL-supported
 

@@ -78,6 +78,34 @@ class ProductProduct(models.Model):
         }
         return action
 
+    @api.model
+    def _name_search(self, name, args=None, operator='ilike', limit=100, name_get_uid=None):
+        if name and self._context.get('purchase_favorites'):
+            partner_id = self._context.get('partner_id')
+            if partner_id:
+                product_ids = super(ProductProduct, self)._name_search(name, args, operator, None, name_get_uid)
+                company_id = self._context.get('company_id')
+                date_from = fields.Datetime.to_string(fields.Date.context_today(self) - relativedelta(years=1))
+                done_states = ['purchase', 'done']
+                weighted_res = []
+                for product_id in product_ids:
+                    domain = [
+                        ('product_id', '=', product_id),
+                        ('partner_id', '=', partner_id),
+                        ('date_order', '>=', date_from),
+                        ('state', 'in', done_states),
+                        ('company_id', '=', company_id),
+                    ]
+                    result = self.env['purchase.report'].read_group(domain, ['qty_ordered'], 'product_id')
+                    qty_ordered = result[0]['qty_ordered'] if result else 0
+                    weighted_res.append([qty_ordered, product_id])
+                weighted_res.sort(key=lambda res: res[0], reverse=True)
+                result = [res[1] for res in weighted_res]
+                if limit:
+                    result = result[:limit]
+                return result
+        return super(ProductProduct, self)._name_search(name, args, operator, limit, name_get_uid)
+
 
 class ProductCategory(models.Model):
     _inherit = "product.category"
