@@ -57,18 +57,18 @@ class TestQweb(TransactionCaseWithUserDemo):
         self.assertEqual(html, ("""<!DOCTYPE html>
 <html>
     <head>
-        <link rel="stylesheet" href="http://test.external.link/style1.css"/>
-        <link rel="stylesheet" href="http://test.external.link/style2.css"/>
+        <link rel="stylesheet" href="http://www.example.com/style1.css"/>
+        <link rel="stylesheet" href="http://www.example.com/style2.css"/>
         <link type="text/css" rel="stylesheet" href="http://test.cdn%(css)s" data-asset-xmlid="%(asset_xmlid)s" data-asset-version="%(asset_version)s"/>
         <meta/>
-        <script type="text/javascript" src="http://test.external.link/javascript1.js"></script>
-        <script type="text/javascript" src="http://test.external.link/javascript2.js"></script>
+        <script type="text/javascript" src="http://www.example.com/javascript1.js"></script>
+        <script type="text/javascript" src="http://www.example.com/javascript2.js"></script>
         <script type="text/javascript" src="http://test.cdn%(js)s" data-asset-xmlid="%(asset_xmlid)s" data-asset-version="%(asset_version)s"></script>
     </head>
     <body>
-        <img src="http://test.external.link/img.png" loading="lazy"/>
+        <img src="http://www.example.com/img.png" loading="lazy"/>
         <img src="http://test.cdn/website/static/img.png" loading="lazy"/>
-        <a href="http://test.external.link/link">x</a>
+        <a href="http://www.example.com/link">x</a>
         <a href="http://test.cdn/web/content/local_link">x</a>
         <span style="background-image: url('http://test.cdn/web/image/2')">xxx</span>
         <div widget="html"><span class="toto">
