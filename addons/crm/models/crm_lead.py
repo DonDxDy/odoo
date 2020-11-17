@@ -196,6 +196,8 @@ class Lead(models.Model):
         compute='_compute_probabilities', readonly=False, store=True)
     automated_probability = fields.Float('Automated Probability', compute='_compute_probabilities', readonly=True, store=True)
     is_automated_probability = fields.Boolean('Is automated probability?', compute="_compute_is_automated_probability")
+    lead_duplicates_count = fields.Integer('# Lead duplicates', compute='_compute_lead_duplicates_count')
+
     # External records
     meeting_count = fields.Integer('# Meetings', compute='_compute_meeting_count')
     lost_reason = fields.Many2one(
@@ -410,6 +412,12 @@ class Lead(models.Model):
                 lead.ribbon_message = _('By saving this change, the customer phone number will also be updated.')
             else:
                 lead.ribbon_message = False
+
+    @api.depends('email_from', 'partner_id')
+    def _compute_lead_duplicates_count(self):
+        for lead in self:
+            lead_duplicates = self._get_lead_duplicates(lead.partner_id, lead.email_from)
+            lead.lead_duplicates_count = len(lead_duplicates) - 1
 
     def _search_phone_mobile_search(self, operator, value):
         if len(value) <= 2:
@@ -824,6 +832,15 @@ class Lead(models.Model):
         }
         return action
 
+    def action_show_lead_duplicates(self):
+        """ Open kanban view to display duplicate leads or opportunity.
+            :return dict: dictionary value for created kanban view
+        """
+        self.ensure_one()
+        action = self.env["ir.actions.actions"]._for_xml_id("crm.crm_lead_duplicated_leads")
+        action['domain'] = self._get_lead_duplicates_domain(self.partner_id, self.email_from)
+        return action
+
     def action_snooze(self):
         self.ensure_one()
         today = date.today()
@@ -1119,6 +1136,23 @@ class Lead(models.Model):
         """
         if not email and not partner:
             return self.env['crm.lead']
+        domain = self._get_lead_duplicates_domain(partner, email, include_lost)
+        return self.with_context(active_test=False).search(domain)
+
+    def _get_lead_duplicates_domain(self, partner=None, email=None, include_lost=False):
+        """ Returns the domain of the leads considered as "duplicate". A lead will
+            can will be considered as "duplicate" if:
+            - The lead has the given email address (after being normalized)
+            - Or, the lead is linked to the given partner
+
+        :param partner : optional customer when searching duplicated
+        :param email: email (possibly formatted) to search
+        :param boolean include_lost: if True, search includes archived opportunities
+          (still only active leads are considered). If False, search for active
+          and not won leads and opportunities;
+        """
+        if not email and not partner:
+            return []
 
         domain = []
         for normalized_email in [tools.email_normalize(email) for email in tools.email_split(email)]:
@@ -1135,7 +1169,7 @@ class Lead(models.Model):
         else:
             domain += ['&', ('active', '=', True), '|', ('probability', '=', False), ('probability', '<', 100)]
 
-        return self.with_context(active_test=False).search(domain)
+        return domain
 
     def _create_customer(self):
         """ Create a partner from lead data and link it to the lead.

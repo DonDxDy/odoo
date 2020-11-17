@@ -2,6 +2,7 @@
 <odoo>
     <template id="assets_backend" name="CRM assets backend" inherit_id="web.assets_backend">
         <xpath expr="." position="inside">
+            <link rel="stylesheet" type="text/scss" href="/crm/static/src/scss/crm.scss"/>
             <script type="text/javascript" src="/crm/static/src/js/crm_form.js"/>
             <script type="text/javascript" src="/crm/static/src/js/crm_kanban.js"/>
             <script type="text/javascript" src="/crm/static/src/js/systray_activity_menu.js"/>
