@@ -26,7 +26,7 @@ class ChooseDeliveryPackage(models.TransientModel):
         return defaults
 
     picking_id = fields.Many2one('stock.picking', 'Picking')
-    delivery_packaging_id = fields.Many2one('product.packaging', 'Delivery Packaging', check_company=True)
+    delivery_packaging_id = fields.Many2one('product.packaging.type', 'Delivery Packaging', check_company=True)
     shipping_weight = fields.Float('Shipping Weight')
     weight_uom_name = fields.Char(string='Weight unit of measure label', compute='_compute_weight_uom_name')
     company_id = fields.Many2one(related='picking_id.company_id')
