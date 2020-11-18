@@ -150,11 +150,34 @@ class Alias(models.Model):
 
         catchall_alias = self.env['ir.config_parameter'].sudo().get_param('mail.catchall.alias')
         bounce_alias = self.env['ir.config_parameter'].sudo().get_param('mail.bounce.alias')
+        alias_domain = self._default_alias_domain()
+        new_alias_name = f'{sanitized_name}@{alias_domain}' if alias_domain else sanitized_name
+
+        if sanitized_name in [catchall_alias, bounce_alias]:
+            raise UserError(_('The e-mail alias %(new_alias_name)s is already used as catchall/bounce alias. Please choose another alias.',
+                              new_alias_name=new_alias_name))
+
         domain = [('alias_name', '=', sanitized_name)]
         if self:
             domain += [('id', 'not in', self.ids)]
-        if sanitized_name in [catchall_alias, bounce_alias] or self.search_count(domain):
-            raise UserError(_('The e-mail alias is already used. Please enter another one.'))
+
+        matching_alias = self.search(domain)
+        if matching_alias:
+            if matching_alias.alias_parent_model_id:
+                if matching_alias.alias_parent_thread_id:
+                    # If parent model and parent thread ID both are set, display document name also in the warning
+                    document_name = self.env[matching_alias.alias_parent_model_id.model].browse(matching_alias.alias_parent_thread_id).display_name
+                    alias_parent_model_name = f'{document_name} {matching_alias.alias_parent_model_id.name}'
+                else:
+                    # Only display model name otherwise
+                    alias_parent_model_name = matching_alias.alias_parent_model_id.name
+                raise UserError(_('The e-mail alias %(new_alias_name)s is already used by the %(alias_parent_model_name)s. Choose another alias or change it on the other document.',
+                                  new_alias_name=new_alias_name,
+                                  alias_parent_model_name=alias_parent_model_name))
+            else:
+                raise UserError(_('The e-mail alias %(new_alias_name)s is already linked with %(alias_model_name)s. Choose another alias or change it on the linked model.',
+                                  new_alias_name=new_alias_name,
+                                  alias_model_name=matching_alias.alias_model_id.name))
         return sanitized_name
 
     def open_document(self):
