@@ -155,6 +155,8 @@ FormRenderer.include({
             } else {
                 await this._updateChatterContainerComponent();
             }
+            let session = this.getSession();
+            session.record_company_id = this.state.data.company_id && this.state.data.company_id.res_id || false;
             await this._mountChatterContainerComponent();
         }
     },

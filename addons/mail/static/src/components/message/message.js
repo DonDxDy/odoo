@@ -263,6 +263,9 @@ class Message extends Component {
      * @returns {Object}
      */
     get trackingValues() {
+        const company_id = this.env.session.record_company_id;
+        const currency_company_id = company_id && this.env.session.companies_currency_id ? this.env.session.companies_currency_id[company_id] : false;
+        const currency = currency_company_id && this.env.session.currencies ? this.env.session.currencies[currency_company_id] : false;
         return this.message.tracking_value_ids.map(trackingValue => {
             const value = Object.assign({}, trackingValue);
             value.changed_field = _.str.sprintf(this.env._t("%s:"), value.changed_field);
@@ -283,6 +286,21 @@ class Message extends Component {
                 if (value.new_value) {
                     value.new_value =
                         moment(value.new_value).local().format('LL');
+                }
+            } else if (value.field_type === 'monetary' && currency) {
+                if (value.old_value) {
+                    if (currency.position === 'after') {
+                        value.old_value = String(value.old_value).concat(` ${currency.symbol}`);
+                    } else {
+                        value.old_value = `${currency.symbol}`.concat(String(value.old_value));
+                    }
+                }
+                if (value.new_value) {
+                    if (currency.position === 'after') {
+                        value.new_value = String(value.new_value).concat(` ${currency.symbol}`);
+                    } else {
+                        value.new_value = `${currency.symbol}`.concat(String(value.new_value));
+                    }
                 }
             }
             return value;

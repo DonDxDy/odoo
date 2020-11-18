@@ -36,6 +36,9 @@ QUnit.module('message_tests.js', {
                 data: this.data,
             }));
             this.env = env;
+            this.env.session.record_company_id = 1;
+            this.env.session.companies_currency_id = {1: 1};
+            this.env.session.currencies = {1: {symbol: '$', position: 'before'}};
             this.widget = widget;
         };
     },
@@ -1189,6 +1192,64 @@ QUnit.test('rendering of tracked field with change of value from empty to string
         document.querySelector('.o_Message_trackingValue').textContent,
         "Name:Marc",
         "should display the correct content of tracked field with change of value from empty to string (Total: -> Marc)"
+    );
+});
+
+QUnit.test('basic rendering of tracking value (monetary type)', async function (assert) {
+    assert.expect(8);
+
+    await this.start();
+    const message = this.env.models['mail.message'].create({
+        id: 11,
+        tracking_value_ids: [{
+            changed_field: "Revenue",
+            field_type: "monetary",
+            id: 6,
+            new_value: 500,
+            old_value: 1000,
+        }],
+    });
+
+    await this.createMessageComponent(message);
+    assert.containsOnce(
+        document.body,
+        '.o_Message_trackingValue',
+        "should display a tracking value"
+    );
+    assert.containsOnce(
+        document.body,
+        '.o_Message_trackingValueFieldName',
+        "should display the name of the tracked field"
+    );
+    assert.strictEqual(
+        document.querySelector('.o_Message_trackingValueFieldName').textContent,
+        "Revenue:",
+        "should display the correct tracked field name (Revenue)",
+    );
+    assert.containsOnce(
+        document.body,
+        '.o_Message_trackingValueOldValue',
+        "should display the old value"
+    );
+    assert.strictEqual(
+        document.querySelector('.o_Message_trackingValueOldValue').textContent,
+        "$1000",
+        "should display the correct old value with the currency symbol ($1000)",
+    );
+    assert.containsOnce(
+        document.body,
+        '.o_Message_trackingValueSeparator',
+        "should display the separator"
+    );
+    assert.containsOnce(
+        document.body,
+        '.o_Message_trackingValueNewValue',
+        "should display the new value"
+    );
+    assert.strictEqual(
+        document.querySelector('.o_Message_trackingValueNewValue').textContent,
+        "$500",
+        "should display the correct new value with the currency symbol ($500)",
     );
 });
 

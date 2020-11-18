@@ -62,6 +62,8 @@ class Http(models.AbstractModel):
                 # current_company should be default_company
                 "user_companies": {'current_company': (user.company_id.id, user.company_id.name), 'allowed_companies': [(comp.id, comp.name) for comp in user.company_ids]},
                 "currencies": self.get_currencies(),
+                "company_currency_id": request.env['res.company'].browse(session_info['company_id']).currency_id.id if session_info['company_id'] else None,
+                "companies_currency_id": {comp.id: comp.currency_id.id for comp in request.env.user.company_ids},
                 "show_effect": True,
                 "display_switch_company_menu": user.has_group('base.group_multi_company') and len(user.company_ids) > 1,
                 "cache_hashes": cache_hashes,
