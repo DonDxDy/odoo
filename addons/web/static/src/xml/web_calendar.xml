@@ -16,7 +16,6 @@
                     <strong class="o_calendar_text fa-stack-1x" t-esc="_gettoday"/>
                 </span>
             </button>
-            <button class="btn btn-primary">Calendars</button>
             <button class="btn btn-primary">Create</button>
         </div>
     </div>
