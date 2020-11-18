@@ -225,6 +225,7 @@ ListRenderer.include({
             _.each(oldData, function (rec) {
                 if (rec.id !== id) {
                     self._destroyFieldWidgets(rec.id);
+                    self._updateAllModifiers(rec);
                 }
             });
 
