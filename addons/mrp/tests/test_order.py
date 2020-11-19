@@ -271,7 +271,7 @@ class TestMrpOrder(TestMrpCommon):
                 (0, 0, {'product_id': self.product_8.id, 'product_qty': 4.16})
             ],
             'operation_ids': [
-                (0, 0, {'name': 'Gift Wrap Maching', 'workcenter_id': self.workcenter_1.id, 'time_cycle': 15, 'sequence': 1}),
+                (0, 0, {'name': 'Gift Wrap Maching', 'workcenter_id': self.workcenter_1.id, 'time_cycle': 15}),
             ]
         })
         production_form = Form(self.env['mrp.production'])

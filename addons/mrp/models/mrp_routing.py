@@ -7,14 +7,11 @@ from odoo import api, fields, models, _
 class MrpRoutingWorkcenter(models.Model):
     _name = 'mrp.routing.workcenter'
     _description = 'Work Center Usage'
-    _order = 'sequence, id'
+    _order = 'workcenter_id, bom_id'
     _check_company_auto = True
 
     name = fields.Char('Operation', required=True)
     workcenter_id = fields.Many2one('mrp.workcenter', 'Work Center', required=True, check_company=True)
-    sequence = fields.Integer(
-        'Sequence', default=100,
-        help="Gives the sequence order when displaying a list of routing Work Centers.")
     bom_id = fields.Many2one(
         'mrp.bom', 'Bill of Material', check_company=True,
         index=True, ondelete='cascade',
@@ -34,6 +31,7 @@ class MrpRoutingWorkcenter(models.Model):
         ('manual', 'Set duration manually')], string='Duration Computation',
         default='manual')
     time_mode_batch = fields.Integer('Based on', default=10)
+    time_computed_on = fields.Char('Computed on last', compute='_compute_time_computed_on')
     time_cycle_manual = fields.Float(
         'Manual Duration', default=60,
         help="Time in minutes:"
@@ -42,6 +40,13 @@ class MrpRoutingWorkcenter(models.Model):
     time_cycle = fields.Float('Duration', compute="_compute_time_cycle")
     workorder_count = fields.Integer("# Work Orders", compute="_compute_workorder_count")
     workorder_ids = fields.One2many('mrp.workorder', 'operation_id', string="Work Orders")
+
+    @api.depends('time_mode', 'time_mode_batch')
+    def _compute_time_computed_on(self):
+        manual_operation = self.filtered(lambda op: op.time_mode == 'manual')
+        manual_operation.time_computed_on = ''
+        for operation in (self - manual_operation):
+            operation.time_computed_on = _('%i work orders') % operation.time_mode_batch
 
     @api.depends('time_cycle_manual', 'time_mode', 'workorder_ids')
     def _compute_time_cycle(self):

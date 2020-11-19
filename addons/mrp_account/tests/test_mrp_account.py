@@ -35,7 +35,7 @@ class TestMrpAccount(TestMrpCommon):
             'product_qty': 4.0,
             'consumption': 'flexible',
             'operation_ids': [
-                (0, 0, {'name': 'Gift Wrap Maching', 'workcenter_id': cls.workcenter_1.id, 'time_cycle': 15, 'sequence': 1}),
+                (0, 0, {'name': 'Gift Wrap Maching', 'workcenter_id': cls.workcenter_1.id, 'time_cycle': 15}),
             ],
             'type': 'normal',
             'bom_line_ids': [

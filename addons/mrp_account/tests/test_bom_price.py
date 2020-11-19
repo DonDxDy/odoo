@@ -124,21 +124,18 @@ class TestBom(common.TransactionCase):
                     'workcenter_id': workcenter_1.id,
                     'time_mode': 'manual',
                     'time_cycle_manual': 20,
-                    'sequence': 1,
                 }),
                 (0, 0, {
                     'name': 'Drilling',
                     'workcenter_id': workcenter_1.id,
                     'time_mode': 'manual',
                     'time_cycle_manual': 25,
-                    'sequence': 2,
                 }),
                 (0, 0, {
                     'name': 'Fitting',
                     'workcenter_id': workcenter_1.id,
                     'time_mode': 'manual',
                     'time_cycle_manual': 30,
-                    'sequence': 3,
                 }),
             ],
         }),
@@ -149,25 +146,21 @@ class TestBom(common.TransactionCase):
                     'workcenter_id': workcenter_1.id,
                     'time_mode': 'manual',
                     'time_cycle_manual': 20,
-                    'sequence': 1,
                 }),
                 (0, 0, {
                     'name': 'Drilling',
                     'workcenter_id': workcenter_1.id,
                     'time_mode': 'manual',
                     'time_cycle_manual': 25,
-                    'sequence': 2,
                 }),
                 (0, 0, {
                     'name': 'Fitting',
                     'workcenter_id': workcenter_1.id,
                     'time_mode': 'manual',
                     'time_cycle_manual': 30,
-                    'sequence': 3,
                 }),
             ],
         }),
-
 
         # -----------------------------------------------------------------
         # Dinning Table Operation Cost(1 Unit)
@@ -180,7 +173,6 @@ class TestBom(common.TransactionCase):
         # Operation Cost  1 unit = 125
         # -----------------------------------------------------------------
 
-
         # --------------------------------------------------------------------------
         # Table Head Operation Cost (1 Dozen)
         # --------------------------------------------------------------------------
@@ -191,7 +183,6 @@ class TestBom(common.TransactionCase):
         # ----------------------------------------
         # Operation Cost 1 dozen (125 per dozen) and 10.42 for 1 Unit
         # --------------------------------------------------------------------------
-
 
         self.assertEqual(self.dining_table.standard_price, 1000, "Initial price of the Product should be 1000")
         self.dining_table.button_bom_cost()
