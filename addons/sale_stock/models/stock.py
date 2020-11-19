@@ -51,25 +51,6 @@ class StockMove(models.Model):
                     values={'self': picking_id, 'origin': sale_order_id},
                     subtype_id=self.env.ref('mail.mt_note').id)
 
-    def _generate_sale_order_lines(self):
-        sale_order_lines_vals = []
-        for move in self:
-            product = move.product_id
-            so_line = {
-                'move_ids': [(6, 0, move.ids)],
-                'name': product.display_name,
-                'order_id': move.picking_id.sale_id.id,
-                'product_id': product.id,
-                'product_uom_qty': move.product_uom_qty,
-                'price_unit': product.list_price if product.invoice_policy == 'delivery' else 0,
-            }
-            # Create SO line individualy and set the `move_ids` after the
-            # creation to trigger the SO line's `_compute_qty_delivered`.
-            sale_order_lines_vals.append(so_line)
-        new_so_lines = self.env['sale.order.line'].create(sale_order_lines_vals)
-        # TODO: This compute doesn't trigger on the create, need to find better way than manual trigger it.
-        new_so_lines._compute_qty_delivered()
-
 
 class ProcurementGroup(models.Model):
     _inherit = 'procurement.group'
@@ -93,11 +74,29 @@ class StockPicking(models.Model):
 
     def _action_done(self):
         res = super()._action_done()
-        for picking in self:
-            if picking.picking_type_code != 'outgoing' or not picking.sale_id:
+        sale_order_lines_vals = []
+        for move in self.move_lines:
+            # Creates new SO line only for deliveries only and for moves with
+            # qty. done and not linked to an existing SO line.
+            if move.picking_type_id.code != 'outgoing' or not move.picking_id.sale_id or\
+               move.sale_line_id or not move.quantity_done:
                 continue
-            additional_move_lines = picking.move_lines.filtered(lambda mv: mv.quantity_done and not mv.sale_line_id)
-            additional_move_lines._generate_sale_order_lines()
+            product = move.product_id
+            so_line = {
+                'move_ids': [(6, 0, move.ids)],
+                'name': product.display_name,
+                'order_id': move.picking_id.sale_id.id,
+                'product_id': product.id,
+                'product_uom_qty': 0,
+                'price_unit': product.list_price if product.invoice_policy == 'delivery' else 0,
+            }
+            sale_order_lines_vals.append(so_line)
+
+        if sale_order_lines_vals:
+            new_so_lines = self.env['sale.order.line'].create(sale_order_lines_vals)
+            # TODO: We need this compute but it doesn't trigger on the create,
+            # need to find better way than manual trigger it.
+            new_so_lines._compute_qty_delivered()
         return res
 
     def _log_less_quantities_than_expected(self, moves):
