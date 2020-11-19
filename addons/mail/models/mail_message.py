@@ -1101,7 +1101,7 @@ class Message(models.Model):
 
     def update_message(self, vals):
         self.write(vals)
-        return self.read(['body', 'attachment_ids'])
+        return self._message_format(['body', 'attachment_ids'])
 
     def _get_message_format_fields(self):
         return [

@@ -488,6 +488,7 @@ class Message extends Component {
         });
         this.message.update({is_editing_message: true});
         await Composer.mount(this.el.querySelector('.o_Message_core'));
+        this.el.querySelector('.o_Message_core').style.width = '100%';
     }
 
     /**
