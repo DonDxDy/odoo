@@ -159,6 +159,7 @@
                                 <field name="product_uom_category_id" invisible="1"/>
                                 <field name="product_uom_id" options="{'no_open': True, 'no_create': True}" force_save="1" groups="uom.group_uom" attrs="{'readonly': [('state', '!=', 'draft')]}" class="oe_inline"/>
                                 <span class='text-bf'>To Produce</span>
+                                <button type="object" name="action_product_forecast_report" icon="fa-area-chart"/>
                             </div>
                             <label for="lot_producing_id" attrs="{'invisible': ['|', ('state', '=', 'draft'), ('product_tracking', 'in', ('none', False))]}"/>
                             <div class="o_row" attrs="{'invisible': ['|', ('state', '=', 'draft'), ('product_tracking', 'in', ('none', False))]}">

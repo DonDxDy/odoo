@@ -487,6 +487,16 @@ class SaleOrderLine(models.Model):
             return {'warning': warning_mess}
         return {}
 
+    def action_product_forecast_report(self):
+        self.ensure_one()
+        action = self.product_id.action_product_forecast_report()
+        action['context'] = {
+            'active_id': self.product_id.id,
+            'active_model': 'product.product',
+            'order_name': self.order_id.name,
+        }
+        return action
+
     def _prepare_procurement_values(self, group_id=False):
         """ Prepare specific key for moves or other components that will be created from a stock rule
         comming from a sale order line. This method could be override in order to add other custom key that could

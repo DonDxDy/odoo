@@ -32,6 +32,13 @@ class StockMove(models.Model):
         keys_sorted += [move.purchase_line_id.id, move.created_purchase_line_id.id]
         return keys_sorted
 
+    def action_product_forecast_report(self):
+        action = super().action_product_forecast_report()
+        # Replace the picking name with the PO name if it exists
+        if self.purchase_line_id:
+            action['context']['order_name'] = self.purchase_line_id.order_id.name
+        return action
+
     def _get_price_unit(self):
         """ Returns the unit price for the move"""
         self.ensure_one()

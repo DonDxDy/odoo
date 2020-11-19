@@ -22,6 +22,7 @@ class ReplenishmentReport(models.AbstractModel):
             in_sum = sum(quantities)
         res['draft_purchase_qty'] = in_sum
         res['draft_purchase_orders'] = po_lines.mapped("order_id").sorted(key=lambda po: po.name)
+        res['draft_purchase_orders_matched'] = self._get_order_name() in [purchase_order.name for purchase_order in res['draft_purchase_orders']]
         res['qty']['in'] += in_sum
         return res
 

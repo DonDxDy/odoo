@@ -654,8 +654,14 @@ class StockMove(models.Model):
     def action_product_forecast_report(self):
         self.ensure_one()
         action = self.product_id.action_product_forecast_report()
+        action['context'] = {
+            'active_id': self.product_id.id,
+            'active_model': 'product.product',
+            'order_name': self.picking_id.name,
+        }
         warehouse = self.location_id.get_warehouse()
-        action['context'] = {'warehouse': warehouse.id, } if warehouse else {}
+        if warehouse:
+            action['context']['warehouse'] = warehouse.id
         return action
 
     def _do_unreserve(self):

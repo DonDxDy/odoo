@@ -80,7 +80,8 @@ var QtyAtDateWidget = Widget.extend({
         action.context = {
             active_model: 'product.product',
             active_id: this.data.product_id.data.id,
-            warehouse: this.data.warehouse_id && this.data.warehouse_id.res_id
+            warehouse: this.data.warehouse_id && this.data.warehouse_id.res_id,
+            order_line_id: this.data.id,
         };
         return this.do_action(action);
     },

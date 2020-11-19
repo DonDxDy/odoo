@@ -276,6 +276,7 @@ class PurchaseOrderLine(models.Model):
     move_dest_ids = fields.One2many('stock.move', 'created_purchase_line_id', 'Downstream Moves')
     product_description_variants = fields.Char('Custom Description')
     propagate_cancel = fields.Boolean('Propagate cancellation', default=True)
+    forecasted_issue = fields.Boolean(compute='_compute_forecasted_issue')
 
     def _compute_qty_received_method(self):
         super(PurchaseOrderLine, self)._compute_qty_received_method()
@@ -316,6 +317,19 @@ class PurchaseOrderLine(models.Model):
                 line._track_qty_received(total)
                 line.qty_received = total
 
+    @api.depends('qty_invoiced', 'date_planned')
+    def _compute_forecasted_issue(self):
+        for line in self:
+            warehouse = line.order_id.picking_type_id.warehouse_id
+            if line.product_id:
+                virtual_available = line.product_id.with_context(warehouse=warehouse.id, to_date=line.order_id.date_planned).read(['virtual_available'])[0]["virtual_available"]
+                if virtual_available >= 0:
+                    line.forecasted_issue = False
+                else:
+                    line.forecasted_issue = True
+            else:
+                line.forecasted_issue = False
+
     @api.model_create_multi
     def create(self, vals_list):
         lines = super(PurchaseOrderLine, self).create(vals_list)
@@ -332,6 +346,19 @@ class PurchaseOrderLine(models.Model):
         if 'product_qty' in values:
             self.filtered(lambda l: l.order_id.state == 'purchase')._create_or_update_picking()
         return result
+
+    def action_product_forecast_report(self):
+        self.ensure_one()
+        action = self.product_id.action_product_forecast_report()
+        action['context'] = {
+            'active_id': self.product_id.id,
+            'active_model': 'product.product',
+            'order_name': self.order_id.name,
+        }
+        warehouse = self.order_id.picking_type_id.warehouse_id
+        if warehouse:
+            action['context']['warehouse'] = warehouse.id
+        return action
 
     # --------------------------------------------------
     # Business methods

@@ -18,6 +18,7 @@ class ReplenishmentReport(models.AbstractModel):
             out_sum = sum(quantities)
         res['draft_sale_qty'] = out_sum
         res['draft_sale_orders'] = so_lines.mapped("order_id").sorted(key=lambda so: so.name)
+        res['draft_sale_orders_matched'] = self._get_order_name() in [sale_order.name for sale_order in res['draft_sale_orders']]
         res['qty']['out'] += out_sum
         return res
 
@@ -31,3 +32,17 @@ class ReplenishmentReport(models.AbstractModel):
         if warehouse_id:
             domain += [('warehouse_id', '=', warehouse_id)]
         return domain
+
+    def _get_order_name(self):
+        # for SO we need to use order_line_id instead of order_id to avoid problems with the qty_at_date widget
+        order_name = super()._get_order_name()
+        if order_name:
+            return order_name
+        else:
+            if 'order_line_id' in self.env.context:
+                sale_order = self.env['sale.order'].search_read(
+                    [('order_line', 'in', self.env.context['order_line_id'])],
+                    ['name'],
+                    limit=1,
+                )[0]
+                return sale_order['name']

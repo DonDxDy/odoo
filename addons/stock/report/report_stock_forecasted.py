@@ -60,6 +60,10 @@ class ReplenishmentReport(models.AbstractModel):
             }
         }
 
+    def _get_order_name(self):
+        if self.env.context.get('order_name'):
+            return self.env.context.get('order_name')
+
     @api.model
     def _get_report_values(self, docids, data=None):
         return {
@@ -88,6 +92,9 @@ class ReplenishmentReport(models.AbstractModel):
         )]
         res['active_warehouse'] = warehouse.display_name
 
+        order_name = self._get_order_name()
+        res['order_name'] = order_name
+
         # Get the products we're working, fill the rendering context with some of their attributes.
         if product_template_ids:
             product_templates = self.env['product.template'].browse(product_template_ids)
@@ -107,13 +114,22 @@ class ReplenishmentReport(models.AbstractModel):
             res['virtual_available'] = sum(product_variants.mapped('virtual_available'))
         res.update(self._compute_draft_quantity_count(product_template_ids, product_variant_ids, wh_location_ids))
 
-        res['lines'] = self._get_report_lines(product_template_ids, product_variant_ids, wh_location_ids)
+        res['lines'] = self._get_report_lines(product_template_ids, product_variant_ids, wh_location_ids, order_name)
         return res
 
-    def _prepare_report_line(self, quantity, move_out=None, move_in=None, replenishment_filled=True, product=False, reservation=False):
+    def _prepare_report_line(self, quantity, move_out=None, move_in=None, replenishment_filled=True, product=False, reservation=False, order_name=False):
         timezone = self._context.get('tz')
         product = product or (move_out.product_id if move_out else move_in.product_id)
         is_late = move_out.date < move_in.date if (move_out and move_in) else False
+
+        document_in_name = move_in._get_source_document().name if move_in else False
+        document_out_name = move_out._get_source_document().name if move_out else False
+
+        if order_name:
+            is_matched = order_name in [document_out_name, document_in_name]
+        else:
+            is_matched = False
+
         return {
             'document_in': move_in._get_source_document() if move_in else False,
             'document_out': move_out._get_source_document() if move_out else False,
@@ -130,9 +146,10 @@ class ReplenishmentReport(models.AbstractModel):
             'move_out': move_out,
             'move_in': move_in,
             'reservation': reservation,
+            'is_matched': is_matched,
         }
 
-    def _get_report_lines(self, product_template_ids, product_variant_ids, wh_location_ids):
+    def _get_report_lines(self, product_template_ids, product_variant_ids, wh_location_ids, order_name=False):
         in_domain, out_domain = self._move_confirmed_domain(
             product_template_ids, product_variant_ids, wh_location_ids
         )
@@ -154,7 +171,7 @@ class ReplenishmentReport(models.AbstractModel):
                 current = currents[out.product_id.id]
                 reserved = out.product_uom._compute_quantity(out.reserved_availability, product.uom_id)
                 currents[product.id] -= reserved
-                lines.append(self._prepare_report_line(reserved, move_out=out, reservation=True))
+                lines.append(self._prepare_report_line(reserved, move_out=out, order_name=order_name, reservation=True))
 
             for out in outs_per_product[product.id]:
                 # Reconcile with the current stock.
@@ -167,7 +184,7 @@ class ReplenishmentReport(models.AbstractModel):
                 if not float_is_zero(taken_from_stock, precision_rounding=product.uom_id.rounding):
                     currents[product.id] -= taken_from_stock
                     demand -= taken_from_stock
-                    lines.append(self._prepare_report_line(taken_from_stock, move_out=out))
+                    lines.append(self._prepare_report_line(taken_from_stock, move_out=out, order_name=order_name))
                 # Reconcile with the ins.
                 if not float_is_zero(demand, precision_rounding=product.uom_id.rounding):
                     index_to_remove = []
@@ -176,7 +193,7 @@ class ReplenishmentReport(models.AbstractModel):
                             continue
                         taken_from_in = min(demand, in_[0])
                         demand -= taken_from_in
-                        lines.append(self._prepare_report_line(taken_from_in, move_in=in_[1], move_out=out))
+                        lines.append(self._prepare_report_line(taken_from_in, move_in=in_[1], move_out=out, order_name=order_name))
                         ins_per_product[out.product_id.id][index][0] -= taken_from_in
                         if ins_per_product[out.product_id.id][index][0] <= 0:
                             index_to_remove.append(index)
@@ -186,7 +203,7 @@ class ReplenishmentReport(models.AbstractModel):
                         ins_per_product[out.product_id.id].pop(index)
                 # Not reconciled.
                 if not float_is_zero(demand, precision_rounding=product.uom_id.rounding):
-                    lines.append(self._prepare_report_line(demand, move_out=out, replenishment_filled=False))
+                    lines.append(self._prepare_report_line(demand, move_out=out, replenishment_filled=False, order_name=order_name))
             # Unused remaining stock.
             free_stock = currents.get(product.id, 0)
             if not float_is_zero(free_stock, precision_rounding=product.uom_id.rounding):
@@ -195,7 +212,7 @@ class ReplenishmentReport(models.AbstractModel):
             for in_ in ins_per_product[product.id]:
                 if float_is_zero(in_[0], precision_rounding=product.uom_id.rounding):
                     continue
-                lines.append(self._prepare_report_line(in_[0], move_in=in_[1]))
+                lines.append(self._prepare_report_line(in_[0], move_in=in_[1], order_name=order_name))
         return lines
 
     @api.model

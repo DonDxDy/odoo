@@ -778,6 +778,19 @@ class MrpProduction(models.Model):
         self.is_locked = not self.is_locked
         return True
 
+    def action_product_forecast_report(self):
+        self.ensure_one()
+        action = self.product_id.action_product_forecast_report()
+        action['context'] = {
+            'active_id': self.product_id.id,
+            'active_model': 'product.product',
+            'order_name': self.name,
+        }
+        warehouse = self.picking_type_id.warehouse_id
+        if warehouse:
+            action['context']['warehouse'] = warehouse.id
+        return action
+
     def _create_workorder(self):
         for production in self:
             if not production.bom_id:

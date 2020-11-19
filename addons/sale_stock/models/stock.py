@@ -26,6 +26,13 @@ class StockMove(models.Model):
         keys_sorted.append(move.sale_line_id.id)
         return keys_sorted
 
+    def action_product_forecast_report(self):
+        action = super().action_product_forecast_report()
+        # Replace the picking name with the SO name if it exists
+        if self.sale_line_id:
+            action['context']['order_name'] = self.sale_line_id.order_id.name
+        return action
+
     def _get_related_invoices(self):
         """ Overridden from stock_account to return the customer invoices
         related to this stock move.
