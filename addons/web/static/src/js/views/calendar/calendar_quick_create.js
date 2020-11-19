@@ -29,7 +29,7 @@ var QuickCreate = Dialog.extend({
      * @param {Object} dataTemplate
      * @param {Object} dataCalendar
      */
-    init: function (parent, buttons, options, dataTemplate, dataCalendar) {debugger
+    init: function (parent, buttons, options, dataTemplate, dataCalendar) {
         this._buttons = buttons || false;
         this.options = options;
 
