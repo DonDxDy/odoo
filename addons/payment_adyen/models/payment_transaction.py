@@ -115,7 +115,7 @@ class PaymentTransaction(models.Model):
             raise ValidationError("Adyen: " + _("Received data with missing merchant reference"))
 
         tx = self.env['payment.transaction'].search([('reference', '=', reference)])
-        if not tx or len(tx) > 1:
+        if len(tx) != 1:
             raise ValidationError(
                 "Adyen: " + _(
                     "received data with reference %(ref)s matching %(num_tx)d transaction(s)",

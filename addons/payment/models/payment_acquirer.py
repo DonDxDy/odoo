@@ -375,7 +375,7 @@ class PaymentAcquirer(models.Model):
 
         :param float amount: The amount to pay for the transaction
         :param int currency_id: The currency of the transaction, as a `res.currency` id
-        :param int country_id|None: The customer country as a `res.country` id
+        :param int country_id|None: The customer country, as a `res.country` id
         :return: The computed fees
         :rtype: float
         """

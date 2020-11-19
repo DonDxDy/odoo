@@ -80,8 +80,8 @@ class PaymentPortal(portal.CustomerPortal):
             ):
                 raise werkzeug.exceptions.NotFound  # Don't leak info about the existence of an id
 
-        user_sudo = request.env.user.sudo()
-        logged_in = not user_sudo._is_public()
+        user = request.env.user
+        logged_in = not user._is_public()
         # If the user is logged in, overwrite the partner set in the params with that of the user.
         # This is something that we want, since security rules are based on the partner and created
         # tokens should not be assigned to the public user. This should have no impact on the
@@ -89,8 +89,8 @@ class PaymentPortal(portal.CustomerPortal):
         # transaction and invoice partners are different).
         partner_is_different = False
         if logged_in:
-            partner_is_different = partner_id and partner_id != user_sudo.partner_id.id
-            partner_id = user_sudo.partner_id.id
+            partner_is_different = partner_id and partner_id != user.partner_id.id
+            partner_id = user.partner_id.id
         elif not partner_id:
             return request.redirect(
                 # Escape special characters to avoid loosing original params when redirected
@@ -100,13 +100,13 @@ class PaymentPortal(portal.CustomerPortal):
         # Instantiate transaction values to their default if not set in parameters
         reference = reference or payment_utils.singularize_reference_prefix(prefix='tx')
         amount = amount or 0.0  # If the amount is invalid, set it to 0 to stop the payment flow
-        currency_id = currency_id or user_sudo.company_id.currency_id.id  # TODO TBE check if a foreign user should pay in his company's currency or his own
-        company_id = company_id or user_sudo.company_id.id
+        currency_id = currency_id or user.company_id.currency_id.id  # TODO TBE check if a foreign user should pay in his company's currency or his own
+        company_id = company_id or user.company_id.id
 
         # Make sure that the currency exists and is active
         currency = request.env['res.currency'].browse(currency_id).exists()
         if not currency or not currency.active:
-            currency = user_sudo.company_id.currency_id
+            currency = user.company_id.currency_id
 
         # Select all acquirers and tokens that match the constraints
         acquirers_sudo = request.env['payment.acquirer'].sudo()._get_compatible_acquirers(
@@ -117,7 +117,7 @@ class PaymentPortal(portal.CustomerPortal):
         ) if logged_in else request.env['payment.token']  #
 
         # Compute the fees taken by acquirers supporting the feature
-        country_id = user_sudo.partner_id.country_id.id
+        country_id = user.partner_id.country_id.id
         fees_by_acquirer = {acq_sudo: acq_sudo._compute_fees(amount, currency.id, country_id)
                             for acq_sudo in acquirers_sudo.filtered('fees_active')}
 

@@ -20,8 +20,7 @@ class PaymentAcquirer(models.Model):
     _inherit = 'payment.acquirer'
 
     provider = fields.Selection(
-        selection_add=[('adyen', "Adyen")], ondelete={'adyen': 'set default'}
-    )
+        selection_add=[('adyen', "Adyen")], ondelete={'adyen': 'set default'})
     adyen_merchant_account = fields.Char(
         string="Merchant Account",
         help="The code of the merchant account to use with this acquirer",
