@@ -19,7 +19,8 @@ class StockMove(models.Model):
 
     def _get_new_picking_values(self):
         vals = super(StockMove, self)._get_new_picking_values()
-        vals['carrier_id'] = self.mapped('sale_line_id.order_id.carrier_id').id
+        carrier_id = self.mapped('group_id.sale_id.carrier_id')
+        vals['carrier_id'] = carrier_id.id if carrier_id and self.rule_id.propagate_carrier_id else False
         return vals
 
     def _key_assign_picking(self):

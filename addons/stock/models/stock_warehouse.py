@@ -484,6 +484,7 @@ class Warehouse(models.Model):
                 },
                 'rules_values': {
                     'active': True,
+                    # 'propagate_carrier_id': self.location_id.usage == 'customer'
                 }
             },
             'crossdock_route_id': {
