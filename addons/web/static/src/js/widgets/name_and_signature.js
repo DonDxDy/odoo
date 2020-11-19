@@ -349,7 +349,7 @@ var NameAndSignature = Widget.extend({
      * @returns {string} cleaned name
      */
     _getCleanedName: function () {
-        var regexRemoveSpecialCharacters = /[^\w\u00E0-\u00FC-'" ]/g;
+        var regexRemoveSpecialCharacters = /[^\w\u00C0-\u00FC-'" ]/g;
         var text = this.getName().replace(regexRemoveSpecialCharacters, '');
         if (this.signatureType === 'initial') {
             return (text.split(' ').map(function (w) {
