@@ -150,8 +150,8 @@ class M:
         super().__init__(*arg)
         self._args = kwargs
 class Bool(M):
-    def __init__(self, b):
-        super().__init__()
+    def __init__(self, b, **kwargs):
+        super().__init__(**kwargs)
         self._b = b
     def __bool__(self): return self._b
     def __repr__(self): return repr(self._b)
