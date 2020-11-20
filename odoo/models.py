@@ -1699,7 +1699,7 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
         """
         res = self._search(args, offset=offset, limit=limit, order=order, count=count)
         return res if count else self.browse(res).with_context({
-            k: v + (k == 'active_test')
+            k: v + 1 if k == 'active_test' else v
             for k, v in self.env.context.items()
         })
 
@@ -1794,7 +1794,7 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
         """
         ids = self._name_search(name, args, operator, limit=limit)
         return self.browse(ids).sudo().with_context({
-            k: v + (k == 'active_test')
+            k: v + 1 if k == 'active_test' else v
             for k, v in self.env.context.items()
         }).name_get()
 
