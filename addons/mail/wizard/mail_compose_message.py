@@ -70,9 +70,9 @@ class MailComposer(models.TransientModel):
             result['no_auto_thread'] = True
 
         vals = {}
-        if 'active_domain' in self._context:  # not context.get() because we want to keep global [] domains
+        if 'active_domain' in fields and 'active_domain' in self._context:  # not context.get() because we want to keep global [] domains
             vals['active_domain'] = '%s' % self._context.get('active_domain')
-        if result['composition_mode'] == 'comment':
+        if 'composition_mode' in fields and result['composition_mode'] == 'comment':
             vals.update(self.get_record_data(result))
 
         for field in vals:
@@ -164,7 +164,7 @@ class MailComposer(models.TransientModel):
             result['record_name'] = doc_name_get and doc_name_get[0][1] or ''
             subject = tools.ustr(result['record_name'])
 
-        re_prefix = _('Re:')
+        re_prefix = _('Re:') if subject else ''
         if subject and not (subject.startswith('Re:') or subject.startswith(re_prefix)):
             subject = "%s %s" % (re_prefix, subject)
         result['subject'] = subject
