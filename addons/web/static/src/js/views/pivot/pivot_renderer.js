@@ -1,12 +1,34 @@
 odoo.define('web.PivotRenderer', function (require) {
     "use strict";
 
-    const CustomGroupByItem = require('web.CustomGroupByItem');
+    const GroupByMenu = require('web.GroupByMenu');
     const OwlAbstractRenderer = require('web.AbstractRendererOwl');
     const field_utils = require('web.field_utils');
     const patchMixin = require('web.patchMixin');
 
     const { useExternalListener, useState, useSubEnv, onMounted, onPatched } = owl.hooks;
+
+    class PivotGroupByMenu extends GroupByMenu {
+
+        //----------------------------------------------------------------------
+        // Handlers
+        //----------------------------------------------------------------------
+
+        /**
+         * Handles a click on a menu item in the dropdown to select a groupby.
+         *
+         * @private
+         * @param {Object} field
+         * @param {string} interval
+         */
+        _onClickMenuGroupBy(item, interval) {
+            const field = {
+                name: item.fieldName,
+            };
+            this.trigger('groupby_menu_selection', { field, interval });
+        }
+    }
+    PivotGroupByMenu.template = "web.PivotGroupByMenu";
 
     /**
      * Here is a basic example of the structure of the Pivot Table:
@@ -47,6 +69,8 @@ odoo.define('web.PivotRenderer', function (require) {
             useSubEnv({
                 searchModel: this.props.searchModel,
             });
+            this.hasSearchGroups = this.props.searchModel.get('filters', f => f.type === 'groupBy' && !f.customGroup);
+            this.customGroupableFields = this._formatFields(this.props.fields);
 
             onMounted(() => this._updateTooltip());
 
@@ -61,6 +85,23 @@ odoo.define('web.PivotRenderer', function (require) {
         // Private
         //----------------------------------------------------------------------
 
+        /**
+         * Give `name` and `description` keys to the fields given to the control
+         * panel.
+         * @private
+         * @param {Object} fields
+         * @returns {Object}
+         */
+        _formatFields(fields) {
+            const formattedFields = {};
+            for (const fieldName in fields) {
+                formattedFields[fieldName] = Object.assign({
+                    description: fields[fieldName].string,
+                    name: fieldName,
+                }, fields[fieldName]);
+            }
+            return formattedFields;
+        }
         /**
          * Get the formatted value of the cell
          *
@@ -204,7 +245,7 @@ odoo.define('web.PivotRenderer', function (require) {
 
     PivotRenderer.template = 'web.PivotRenderer';
     PivotRenderer.components = {
-        CustomGroupByItem,
+        PivotGroupByMenu,
     };
 
     return patchMixin(PivotRenderer);
