@@ -4,7 +4,7 @@
 from unittest.mock import patch
 
 from odoo.addons.base.tests.common import SavepointCaseWithUserDemo
-from odoo.tests import common
+from odoo.tests import common, Form
 
 def strip_prefix(prefix, names):
     size = len(prefix)
@@ -751,3 +751,36 @@ class TestComputeOnchange(common.TransactionCase):
             with form.child_ids.edit(2) as line:
                 line.cost = 30
             self.assertEqual(form.cost, 61)
+
+    def test_onchange_editable_compute_one2many(self):
+        ''' The way the computed fields are invalidated depends of the dict order passed as parameter to the 'onchange'
+        method. This is causing some unexpected behavior when dealing with computed editable fields because the user
+        is loosing its custom value right away during the 'onchange'.
+
+        Explanation:
+        During the 'onchange', the one2many value is cache by record._update_cache(changed_values, validate=True).
+        If the field is a one2many, 'value' contains a (1, _, {...}) command for updated lines.
+        Due to 'validate=True', the assignations are triggering invalidation.
+        In case there is anything on the parent model editing any line value, the whole one2many values are returned to
+        the user.
+        '''
+        def assertOnchangeResult(result, expected_one2many_dict):
+            self.assertTrue(result.get('value'))
+            self.assertTrue(result['value'].get('line_ids'))
+            self.assertEqual(len(result['value']['line_ids']), 2) # [(5,), (1, id, {...})]
+            one2many_command = result['value']['line_ids'][1]
+            self.assertEqual(len(one2many_command), 3)
+            self.assertDictEqual(one2many_command[2], expected_one2many_dict)
+
+        record = self.env['test_new_api.compute_editable_one2many'].create({'line_ids': [(0, 0, {'a': 42})]})
+
+        self.assertRecordValues(record.line_ids, [{'a': 42, 'b': 42, 'c': 0}])
+
+        record_form = Form(record)
+        fvg = record_form._view['onchange']
+
+        expected_one2many_dict = {'a': 42, 'b': 12, 'c': 5}
+        result = record.onchange({'line_ids': [(1, record.line_ids.id, {'a': 42, 'b': 12, 'c': 0})]}, 'line_ids', fvg)
+        assertOnchangeResult(result, expected_one2many_dict)
+        result = record.onchange({'line_ids': [(1, record.line_ids.id, {'b': 12, 'a': 42, 'c': 0})]}, 'line_ids', fvg)
+        assertOnchangeResult(result, expected_one2many_dict)

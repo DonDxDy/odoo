@@ -964,7 +964,7 @@ class Field(MetaField('DummyField', (object,), {})):
                     ]))
                 value = env.cache.get(record, self)
 
-            elif self.store and record._origin:
+            elif self.store and record._origin and self.compute and not self.readonly:
                 # new record with origin: fetch from origin
                 value = self.convert_to_cache(record._origin[self.name], record)
                 env.cache.set(record, self, value)
@@ -988,6 +988,11 @@ class Field(MetaField('DummyField', (object,), {})):
                         # fallback to null value if compute gives nothing
                         value = self.convert_to_cache(False, record, validate=False)
                         env.cache.set(record, self, value)
+
+            elif self.store and record._origin:
+                # new record with origin: fetch from origin
+                value = self.convert_to_cache(record._origin[self.name], record)
+                env.cache.set(record, self, value)
 
             elif self.type == 'many2one' and self.delegate and not record.id:
                 # parent record of a new record: new record, with the same

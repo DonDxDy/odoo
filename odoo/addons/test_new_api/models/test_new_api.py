@@ -1147,3 +1147,23 @@ class ComputeMember(models.Model):
         container = self.env['test_new_api.compute.container']
         for member in self:
             member.container_id = container.search([('name', '=', member.name)], limit=1)
+
+
+class ComputeEditableOne2many(models.Model):
+    _name = _description = 'test_new_api.compute_editable_one2many'
+
+    line_ids = fields.One2many(comodel_name='test_new_api.compute_editable_one2many.line', inverse_name='parent_id')
+
+    @api.onchange('line_ids')
+    def _onchange_line_ids(self):
+        for line in self.line_ids:
+            line.c += 5
+
+
+class ComputeEditableOne2manyLine(models.Model):
+    _name = _description = 'test_new_api.compute_editable_one2many.line'
+
+    parent_id = fields.Many2one(comodel_name='test_new_api.compute_editable_one2many')
+    a = fields.Integer()
+    b = fields.Integer(string="B", store=True, readonly=False, related='a')
+    c = fields.Integer()
