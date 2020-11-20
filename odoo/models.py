@@ -143,11 +143,17 @@ def trigger_tree_merge(node1, node2):
             node1.setdefault(key, {})
             trigger_tree_merge(node1[key], node2[key])
 
+class Bool:
+    def __init__(self, b): self._b = b
+    def __bool__(self): return self._b
 WRAPPERS = {
-    int: type('Int', (int,), {}),
-    str: type('Str', (str,), {}),
-    float: type('Float', (float,), {}),
+    t: type(t.__name__.capitalize(), (t,), {})
+    for t in [int, str, float, list]
 }
+WRAPPERS[bool] = Bool
+for v in list(WRAPPERS.values()):
+    WRAPPERS[v] = v
+
 class MetaModel(api.Meta):
     """ The metaclass of all model classes.
         Its main purpose is to register the models per module.
@@ -3853,7 +3859,7 @@ Fields:
 
         # create records with stored fields
         records = self._create(data_list).with_context({
-            k: WRAPPERS[type(v)](v) if k.startswith('default_') else v
+            k: WRAPPERS[type(v)](v) if k.startswith('default_') and type(v) in WRAPPERS else v
             for k, v in self.env.context.items()
         })
 
