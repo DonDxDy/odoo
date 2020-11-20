@@ -1699,7 +1699,7 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
         """
         res = self._search(args, offset=offset, limit=limit, order=order, count=count)
         return res if count else self.browse(res).with_context({
-            k if k != 'active_test' else Str(k): v
+            k: v + (k == 'active_test')
             for k, v in self.env.context.items()
         })
 
@@ -1794,7 +1794,7 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
         """
         ids = self._name_search(name, args, operator, limit=limit)
         return self.browse(ids).sudo().with_context({
-            k if k != 'active_test' else Str(k): v
+            k: v + (k == 'active_test')
             for k, v in self.env.context.items()
         }).name_get()
 
@@ -4227,9 +4227,9 @@ Fields:
         # if the object has an active field ('active', 'x_active'), filter out all
         # inactive records unless they were explicitely asked for
         if self._active_name and active_test and self._context.get('active_test', True):
-            k = next((k for k in self._context if k == 'active_test'), None)
-            if type(k) is Str:
-                _logger.warning(f'Recycled active_test! {id(k)} != {id("active_test")}')
+            active = self.env.context.get('active_test', 0)
+            if active > 1:
+                _logger.warning(f'Recycled active_test! {active}')
             # the item[0] trick below works for domain items and '&'/'|'/'!'
             # operators too
             if not any(item[0] == self._active_name for item in domain):
