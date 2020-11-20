@@ -608,7 +608,15 @@ class TransactionCase(BaseCase):
         cls.addClassCleanup(cls.cr.close)
 
         cls.env = api.Environment(cls.cr, odoo.SUPERUSER_ID, {})
+        cls._env_ctx = cls.env.context
+        cls._env_company = cls.env.company
         cls.addClassCleanup(cls.env.reset)
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        assert cls._env_ctx == cls.env.context
+        assert cls._env_company == cls.env.company
 
     def setUp(self):
         super().setUp()
