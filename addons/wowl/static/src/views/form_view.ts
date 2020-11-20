@@ -6,7 +6,7 @@ import { Pager, usePager } from "./pager";
 import type { DBRecord, ModelBuilder } from "../services/model";
 
 import { useService } from "../core/hooks";
-import { ViewDefinition } from "../services/view_manager";
+import { ViewDescription } from "../services/view_manager";
 const { xml } = tags;
 
 interface FormControllerState {
@@ -121,9 +121,9 @@ function compileFormTemplate(arch: string, name: string): Document {
 class RelationalModel {
   model: ModelBuilder;
   modelName: string;
-  viewDef: () => ViewDefinition;
+  viewDef: () => ViewDescription;
 
-  constructor(model: ModelBuilder, modelName: string, viewDef: () => ViewDefinition) {
+  constructor(model: ModelBuilder, modelName: string, viewDef: () => ViewDescription) {
     this.model = model;
     this.modelName = modelName;
     this.viewDef = viewDef;
@@ -137,7 +137,7 @@ class RelationalModel {
   }
 }
 
-function useRelationalModel(model: string, viewDefinition: () => ViewDefinition) {
+function useRelationalModel(model: string, viewDefinition: () => ViewDescription) {
   const modelService = useService("model");
   return new RelationalModel(modelService, model, viewDefinition);
 }

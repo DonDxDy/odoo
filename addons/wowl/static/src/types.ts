@@ -13,7 +13,6 @@ import type { rpcService } from "./services/rpc";
 import type { userService } from "./services/user";
 import { viewManagerService } from "./services/view_manager";
 import { Breadcrumb } from "./services/action_manager/action_manager";
-import { AbstractController } from "./views/abstract_controller";
 import { UserMenuItemFactory } from "./components/user_menu/user_menu";
 // import type { ComponentAction, FunctionAction } from "./services/action_manager/helpers";
 
@@ -190,6 +189,8 @@ export interface ViewProps extends ActionProps {
   viewSwitcherEntries?: ViewSwitcherEntries;
   withActionMenus?: boolean;
   withFilters?: boolean;
+
+  additionalMeasures?: string[];
 }
 
 export interface ClientActionProps extends ActionProps {
@@ -220,8 +221,8 @@ export interface View {
   icon: string;
   multiRecord: boolean;
   type: ViewType;
-  Component: Type<AbstractController>;
-  Renderer?: Type<Component<RendererProps, OdooEnv>>;
+  Component: Type<Component<ViewProps, OdooEnv>>;
+  Renderer?: Type<Component<RendererProps, OdooEnv>>; // to remove
 }
 
 export interface SystrayItem {

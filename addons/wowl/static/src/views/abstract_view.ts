@@ -1,21 +1,21 @@
-import { Component } from "@odoo/owl";
-import { OdooEnv, RendererProps, ViewProps, ViewType } from "../types";
+import { Component, tags } from "@odoo/owl";
 import { useService } from "../core/hooks";
-import type { ViewDescription } from "./../services/view_manager";
 import { ActionRequest } from "../services/action_manager/action_manager";
+import { ViewDescription } from "../services/view_manager";
+import { OdooEnv, ViewProps, ViewType } from "../types";
+import { ControlPanelSubTemplates } from "./abstract_controller";
 
-export interface ControlPanelSubTemplates {
-  topLeft: string | null;
-  topRight: string | null;
-  bottomLeft: string | null;
-  bottomRight: string | null;
-}
+export class AbstractView extends Component<ViewProps, OdooEnv> {
+  static template = "wowl.AbstractView";
+  static components = {};
 
-export class AbstractController extends Component<ViewProps, OdooEnv> {
-  static template = "wowl.AbstractController";
-  static props = {
-    // TODO
-  };
+  __main__: string = tags.xml`<t/>`;
+  modelFields: { [name: string]: any; } = {};
+  viewDescription: ViewDescription = {} as any;
+  favorites: any[] = [];
+
+  viewManager = useService("view_manager");
+  actionManager = useService("action_manager");
 
   cpSubTemplates: ControlPanelSubTemplates = {
     topLeft: "wowl.Views.ControlPanelTopLeft",
@@ -23,18 +23,6 @@ export class AbstractController extends Component<ViewProps, OdooEnv> {
     bottomLeft: null,
     bottomRight: "wowl.Views.ControlPanelBottomRight",
   };
-
-  vm = useService("view_manager");
-  am = useService("action_manager");
-  viewDescription: ViewDescription = {} as any;
-
-  get rendererProps(): RendererProps {
-    return {
-      arch: (this.viewDescription as ViewDescription).arch,
-      model: this.props.model,
-      fields: (this.viewDescription as ViewDescription).fields,
-    };
-  }
 
   async willStart() {
     const params = {
@@ -48,7 +36,7 @@ export class AbstractController extends Component<ViewProps, OdooEnv> {
       withActionMenus: this.props.withActionMenus,
       withFilters: this.props.withFilters,
     };
-    const viewDescriptions = await this.vm.loadViews(params, options);
+    const viewDescriptions = await this.viewManager.loadViews(params, options);
     this.viewDescription = viewDescriptions[this.props.type];
   }
 
@@ -58,7 +46,7 @@ export class AbstractController extends Component<ViewProps, OdooEnv> {
    * @param {string} jsId
    */
   onBreadcrumbClicked(jsId: string) {
-    this.am.restore(jsId);
+    this.actionManager.restore(jsId);
   }
   /**
    * Called when a view is clicked in the view switcher.
@@ -66,16 +54,16 @@ export class AbstractController extends Component<ViewProps, OdooEnv> {
    * @param {ViewType} viewType
    */
   onViewClicked(viewType: ViewType) {
-    this.am.switchView(viewType);
+    this.actionManager.switchView(viewType);
   }
 
   // Demo code (move to kanban)
   _onExecuteAction(action: ActionRequest) {
-    this.am.doAction(action);
+    this.actionManager.doAction(action);
   }
   _onOpenFormView() {
     if (this.props.type !== "form") {
-      this.am.switchView("form");
+      this.actionManager.switchView("form");
     }
   }
 }

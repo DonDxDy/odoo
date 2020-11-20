@@ -35,6 +35,18 @@
 
     <!-- Views -->
 
+    <t t-name="wowl.AbstractView" owl="1">
+         <div>
+            <t t-call="wowl.ControlPanel">
+                <t t-set="topLeft" t-value="cpSubTemplates.topLeft"/>
+                <t t-set="topRight" t-value="cpSubTemplates.topRight"/>
+                <t t-set="bottomLeft" t-value="cpSubTemplates.bottomLeft"/>
+                <t t-set="bottomRight" t-value="cpSubTemplates.bottomRight"/>
+            </t>
+            <t t-call="{{__main__}}"/>
+        </div>
+    </t>
+
     <t t-name="wowl.AbstractController" owl="1">
          <div>
             <t t-call="wowl.ControlPanel">

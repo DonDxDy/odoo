@@ -1,14 +1,15 @@
 import { Context, Service, OdooEnv, ViewId, ViewType } from "../types";
 
-export interface ViewDefinition {
+export interface ViewDescription {
   arch: string;
   type: ViewType;
   viewId: number;
   fields: { [key: string]: any };
+  favorites: any[];
 }
 
-interface ViewDefinitions {
-  [key: string]: ViewDefinition;
+interface ViewDescriptions {
+  [key: string]: ViewDescription;
 }
 
 interface LoadViewsParams {
@@ -24,7 +25,7 @@ interface LoadViewsOptions {
 }
 
 interface ViewManager {
-  loadViews(params: LoadViewsParams, options: LoadViewsOptions): Promise<ViewDefinitions>;
+  loadViews(params: LoadViewsParams, options: LoadViewsOptions): Promise<ViewDescriptions>;
 }
 
 export const viewManagerService: Service<ViewManager> = {
@@ -40,12 +41,12 @@ export const viewManagerService: Service<ViewManager> = {
      *
      * @param {params} LoadViewsParams
      * @param {options} LoadViewsOptions
-     * @returns {Promise<ViewDefinitions>}
+     * @returns {Promise<ViewDescriptions>}
      */
     async function loadViews(
       params: LoadViewsParams,
       options: LoadViewsOptions
-    ): Promise<ViewDefinitions> {
+    ): Promise<ViewDescriptions> {
       const key = JSON.stringify([params.model, params.views, params.context, options]);
       if (!cache[key]) {
         cache[key] = modelService(params.model).call("load_views", [], {
@@ -56,9 +57,21 @@ export const viewManagerService: Service<ViewManager> = {
             toolbar: options.withActionMenus || false,
           },
           context: params.context,
+        }).then((result) => {
+          const viewDescriptions: ViewDescriptions = result; // we add keys in result for legacy! ---> c'est moche!
+          for (const [_, viewType] of params.views) {
+            const viewDefinition: ViewDescription = (result as any).fields_views[viewType];
+            viewDefinition.fields = Object.assign({}, (result as any).fields, viewDefinition.fields); // before a deep freeze was done.
+            if (options.withFilters) {
+              viewDefinition.favorites = (result as any).filters; // don't think it is useful to add it everywhere.
+            }
+            viewDescriptions[viewType] = viewDefinition;
+          }
+          return viewDescriptions;
         });
+
       }
-      return await cache[key]; // FIXME: clarify the API
+      return await cache[key]; // FIXME: clarify the API --> already better but ...
     }
     return { loadViews };
   },

@@ -164,10 +164,6 @@ odoo.define("wowl.ActionAdapters", function (require: any) {
       return Object.assign({}, state, widgetState);
     }
 
-    async loadViews(model: string, context: Context, views: [ViewId, ViewType][]) {
-      return (await this.vm.loadViews({ model, views, context }, {})).fields_views;
-    }
-
     /**
      * @private
      * @param {OdooEvent} ev
@@ -330,10 +326,11 @@ odoo.define("wowl.legacyViews", async function (require: any) {
       multiRecord: LegacyView.prototype.multi_record,
       type: LegacyView.prototype.viewType,
       Component: Controller as any,
-      Renderer: Component,
     };
 
-    viewRegistry.add(name, view);
+    if (name !== "graph") {
+      viewRegistry.add(name, view);
+    }
   }
   // register views already in the legacy registry, and listens to future registrations
   for (const [name, action] of Object.entries(legacyViewRegistry.entries())) {
