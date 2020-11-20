@@ -24,6 +24,8 @@
 import collections
 import contextlib
 import datetime
+import traceback
+
 import dateutil
 import fnmatch
 import functools
@@ -143,11 +145,18 @@ def trigger_tree_merge(node1, node2):
             node1.setdefault(key, {})
             trigger_tree_merge(node1[key], node2[key])
 
-class Bool:
-    def __init__(self, b): self._b = b
+class M:
+    def __init__(self, *arg, **kwargs):
+        super().__init__(*arg)
+        self._args = kwargs
+class Bool(M):
+    def __init__(self, b):
+        super().__init__()
+        self._b = b
     def __bool__(self): return self._b
+    def __repr__(self): return repr(self._b)
 WRAPPERS = {
-    t: type(t.__name__.capitalize(), (t,), {})
+    t: type(t.__name__.capitalize(), (M, t,), {})
     for t in [int, str, float, list]
 }
 WRAPPERS[bool] = Bool
@@ -1289,7 +1298,9 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
             if key in self._context:
                 val = self._context[key]
                 if isinstance(val, tuple(WRAPPERS.values())):
-                    _logger.warning(f'Recycled default key: {key} => {val}')
+                    _logger.warning(f'Recycled default key: {key} => {val}\n'
+                                    f'FROM{val._args["tb"]}\n'
+                                    f'TO{"".join(traceback.format_stack())}')
                 defaults[name] = val
                 continue
 
@@ -3859,7 +3870,7 @@ Fields:
 
         # create records with stored fields
         records = self._create(data_list).with_context({
-            k: WRAPPERS[type(v)](v) if k.startswith('default_') and type(v) in WRAPPERS else v
+            k: WRAPPERS[type(v)](v, tb=''.join(traceback.format_stack())) if k.startswith('default_') and type(v) in WRAPPERS else v
             for k, v in self.env.context.items()
         })
 
