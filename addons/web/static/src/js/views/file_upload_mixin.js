@@ -152,19 +152,21 @@ const ProgressBarMixin = {
      */
     async _uploadFiles(files, params={}) {
         if (!files || !files.length) { return; }
-        var file_size = null;
-        for (let file = 0; file < files.length; file++) {
-            file_size += files[file].size;
-        }
-        if (file_size > this.max_file_upload) {
-            this.displayNotification({
-                type: 'warning',
-                title: _t('Error'),
-                message: _.str.sprintf(
-                    _t('File Size is too Large.It cannot Upload'),
-                ),
-            });
-            return;
+        if (this.max_file_upload) {
+            var file_size = null;
+            for (let file = 0; file < files.length; file++) {
+                file_size += files[file].size;
+            }
+            if (files[0].size > this.max_file_upload) {
+                this.displayNotification({
+                    type: 'warning',
+                    title: _t('Error'),
+                    message: _.str.sprintf(
+                        _t('File Size is too Large.It cannot Upload'),
+                    ),
+                });
+                return;
+            }
         }
 
         await new Promise(resolve => {
