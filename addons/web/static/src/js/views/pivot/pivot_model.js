@@ -276,6 +276,7 @@ var concurrency = require('web.concurrency');
 var core = require('web.core');
 var dataComparisonUtils = require('web.dataComparisonUtils');
 const Domain = require('web.Domain');
+const { GROUPABLE_TYPES } = require('web.searchUtils');
 var mathUtils = require('web.mathUtils');
 var session = require('web.session');
 
@@ -537,7 +538,8 @@ var PivotModel = AbstractModel.extend({
             origins: this.data.origins,
             rowGroupBys: groupBys.rowGroupBys,
             selectionGroupBys: this._getSelectionGroupBy(groupBys),
-            modelName: this.modelName
+            modelName: this.modelName,
+            customGroupFields: this.customGroupFields,
         };
         if (!raw && state.hasData) {
             state.table = this._getTable();
@@ -578,8 +580,13 @@ var PivotModel = AbstractModel.extend({
         this.defaultGroupedBy = params.groupedBy;
 
         this.fields = params.fields;
+        this.customGroupableFields = this._formatFields(this.fields);
+        this.customGroupFields = Object.values(this.customGroupableFields)
+            .filter(field => this._validateField(field))
+            .sort(({ string: a }, { string: b }) => a > b ? 1 : a < b ? -1 : 0);
         this.modelName = params.modelName;
         this.groupableFields = params.groupableFields;
+        // this.customGroupFields = Object.values(this.groupableFields);
         const measures = this._processMeasures(params.context.pivot_measures) ||
                             params.measures.map(m => m);
         this.data = {
@@ -605,6 +612,33 @@ var PivotModel = AbstractModel.extend({
             };
         }
         return this._loadData();
+    },
+    /**
+     * Give `name` and `description` keys to the fields given to the control
+     * panel.
+     * @private
+     * @param {Object} fields
+     * @returns {Object}
+     */
+    _formatFields(fields) {
+        const formattedFields = {};
+        for (const fieldName in fields) {
+            formattedFields[fieldName] = Object.assign({
+                description: fields[fieldName].string,
+                name: fieldName,
+            }, fields[fieldName]);
+        }
+        return formattedFields;
+    },
+    /**
+         * @private
+         * @param {Object} field
+         * @returns {boolean}
+         */
+    _validateField(field) {
+        return field.sortable &&
+            field.name !== "id" &&
+            GROUPABLE_TYPES.includes(field.type);
     },
     /**
      * @override
@@ -1075,12 +1109,12 @@ var PivotModel = AbstractModel.extend({
                 return g.split(':')[0];
             });
 
-        const searchGroupbys = this.searchModel.get('filters', f => f.type === 'groupBy' && !f.customGroup);
+        const searchGroupbys = this.searchModel.get('filters', f => f.type === 'groupBy');
         if (searchGroupbys && searchGroupbys.length) {
             const searchFields = searchGroupbys.map((group, index) => {
                 return {
                     name: group.fieldName,
-                    field: this.groupableFields[group.fieldName],
+                    field: this.customGroupableFields[group.fieldName],
                     active: groupedFieldNames.includes(group.fieldName)
                 };
             });

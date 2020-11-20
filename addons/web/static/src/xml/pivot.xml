@@ -101,6 +101,7 @@
                     <t t-esc="field.field.string"/>
                 </a>
             </t>
+            <CustomGroupByItem fields="props.customGroupFields" t-on-click.stop.prevent=""/>
         </div>
     </div>
 

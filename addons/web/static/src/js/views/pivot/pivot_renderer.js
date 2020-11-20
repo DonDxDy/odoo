@@ -1,11 +1,12 @@
 odoo.define('web.PivotRenderer', function (require) {
     "use strict";
 
+    const CustomGroupByItem = require('web.CustomGroupByItem');
     const OwlAbstractRenderer = require('web.AbstractRendererOwl');
     const field_utils = require('web.field_utils');
     const patchMixin = require('web.patchMixin');
 
-    const { useExternalListener, useState, onMounted, onPatched } = owl.hooks;
+    const { useExternalListener, useState, useSubEnv, onMounted, onPatched } = owl.hooks;
 
     /**
      * Here is a basic example of the structure of the Pivot Table:
@@ -41,6 +42,10 @@ odoo.define('web.PivotRenderer', function (require) {
                     isXAxis: false,
                     click: false
                 },
+            });
+
+            useSubEnv({
+                searchModel: this.props.searchModel,
             });
 
             onMounted(() => this._updateTooltip());
@@ -198,6 +203,9 @@ odoo.define('web.PivotRenderer', function (require) {
     }
 
     PivotRenderer.template = 'web.PivotRenderer';
+    PivotRenderer.components = {
+        CustomGroupByItem,
+    };
 
     return patchMixin(PivotRenderer);
 
