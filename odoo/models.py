@@ -4954,7 +4954,7 @@ Fields:
         """
         if not ids:
             ids = ()
-        elif ids.__class__ in IdType:
+        elif isinstance(ids, IdType):
             ids = (ids,)
         else:
             ids = tuple(ids)
