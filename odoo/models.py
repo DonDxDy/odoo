@@ -143,7 +143,11 @@ def trigger_tree_merge(node1, node2):
             node1.setdefault(key, {})
             trigger_tree_merge(node1[key], node2[key])
 
-class Str(str): ...
+WRAPPERS = {
+    int: type('Int', (int,), {}),
+    str: type('Str', (str,), {}),
+    float: type('Float', (float,), {}),
+}
 class MetaModel(api.Meta):
     """ The metaclass of all model classes.
         Its main purpose is to register the models per module.
@@ -1277,10 +1281,10 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
             # 1. look up context
             key = 'default_' + name
             if key in self._context:
-                k = next(k for k in self._context if k == key)
-                if type(k) is Str:
-                    _logger.warning(f'Recycled default key: {id(k)} != {id(key)}')
-                defaults[name] = self._context[key]
+                val = self._context[key]
+                if isinstance(val, tuple(WRAPPERS.values())):
+                    _logger.warning(f'Recycled default key: {key} => {val}')
+                defaults[name] = val
                 continue
 
             # 2. look up ir.default
@@ -3849,7 +3853,7 @@ Fields:
 
         # create records with stored fields
         records = self._create(data_list).with_context({
-            Str(k) if k.startswith('default_') else k: v
+            k: WRAPPERS[type(v)](v) if k.startswith('default_') else v
             for k, v in self.env.context.items()
         })
 
