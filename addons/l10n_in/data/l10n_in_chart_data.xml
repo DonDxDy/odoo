@@ -23,6 +23,10 @@
             <field name="name">Money received against share warrants</field>
             <field name="applicability">accounts</field>
         </record>
+        <record id="share_application_money_pending_allotment_tag_account" model="account.account.tag">
+            <field name="name">Share Application Money Pending Allotment</field>
+            <field name="applicability">accounts</field>
+        </record>
         <record id="long_term_borrowings_tag_account" model="account.account.tag">
             <field name="name">Long-term borrowings</field>
             <field name="applicability">accounts</field>
