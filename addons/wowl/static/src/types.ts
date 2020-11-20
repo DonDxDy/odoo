@@ -276,3 +276,26 @@ export type ModelMethod = (args: any[], kwargs: any, model?: string) => any;
 export interface ModelMethods {
   [methodName: string]: ModelMethod;
 }
+
+export type ArchNodeType = "element" | "text";
+
+interface BaseArchNode {
+  type: ArchNodeType;
+}
+
+export interface ElementArchNode extends BaseArchNode {
+  type: "element";
+  tag: string;
+  childNodes: ArchNode[];
+  children: ElementArchNode[];
+  attributes: {[key: string]: any};
+  getAttribute(name: string, defaultValue?: any): any;
+  hasAttribute(name: string): boolean;
+}
+
+export interface TextArchNode extends BaseArchNode {
+  type: "text";
+  text: string;
+}
+
+export type ArchNode = ElementArchNode | TextArchNode;

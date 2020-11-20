@@ -7,11 +7,13 @@ import { Odoo, RuntimeOdoo, OdooBrowser } from "./types";
 
 // remove some day
 import "./demo_data";
-import { legacySetupProm } from "./legacy/legacy_setup";
-import { mapLegacyEnvToWowlEnv } from "./legacy/legacy";
-import "./legacy/root_widget";
-import "./legacy/systray_menu";
-import "./legacy/web_client";
+// import { legacySetupProm } from "./legacy/legacy_setup";
+// import { mapLegacyEnvToWowlEnv } from "./legacy/legacy";
+// import "./legacy/root_widget";
+// import "./legacy/systray_menu";
+// import "./legacy/web_client";
+
+import "./views/arch_parser";
 
 const { whenReady, loadFile } = owl.utils;
 
@@ -64,8 +66,8 @@ declare const odoo: Odoo;
   // start web client
   const root = new WebClient();
   await whenReady();
-  const legacyEnv = await legacySetupProm;
-  mapLegacyEnvToWowlEnv(legacyEnv, env);
+  // const legacyEnv = await legacySetupProm;
+  // mapLegacyEnvToWowlEnv(legacyEnv, env);
 
   await root.mount(document.body, { position: "self" });
   // the chat window and dialog services listen to 'web_client_ready' event in order to initialize themselves:
