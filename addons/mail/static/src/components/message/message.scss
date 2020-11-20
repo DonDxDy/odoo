@@ -65,6 +65,7 @@
 
 .o_Message_core {
     min-width: 0; // allows this flex child to shrink more than its content
+    width: 100%;
     margin-inline-end: map-get($spacers, 3);
 }
 
@@ -81,6 +82,7 @@
 
 .o_Message_headerCommands {
     margin-inline-end: map-get($spacers, 2);
+    margin: auto 0 auto auto;
     align-self: center;
 
     .o_Message_headerCommand {
@@ -184,7 +186,10 @@
 
     &:hover, &.o-clicked {
 
+        background-color: whitesmoke;
+
         .o_Message_commands {
+            background-color: white;
             opacity: 1;
         }
 

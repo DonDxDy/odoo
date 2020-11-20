@@ -114,7 +114,7 @@
                                     </Popover>
                                 </t>
                             </t>
-                            <div class="o_Message_commands o_Message_headerCommands" t-att-class="{ 'o-mobile': env.messaging.device.isMobile }">
+                            <div class="o_Message_commands o_Message_headerCommands border border-white rounded" t-att-class="{ 'o-mobile': env.messaging.device.isMobile }">
                                 <t t-if="!message.isTemporary and ((message.message_type !== 'notification' and message.originThread and message.originThread.model === 'mail.channel') or !message.isTransient) and message.moderation_status !== 'pending_moderation'">
                                     <span class="o_Message_command o_Message_commandStar o_Message_headerCommand fa"
                                         t-att-class="{
@@ -142,9 +142,9 @@
                                         }" t-on-click="_onClickMarkAsRead" title="Mark as Read"
                                     />
                                 </t>
-                                <div t-if="message.isCurrentPartnerAuthor and !message.is_editing_message" class="o_Message_command o_Message_Edit" t-on-click="_onClickEditMessage">
-                                    <span class="fa fa-pencil"/>
-                                </div>
+                                <t t-if="message.isCurrentPartnerAuthor and !message.is_editing_message">
+                                    <span class="o_Message_command o_Message_commandsEdit o_Message_headerCommand fa fa-pencil" t-on-click="_onClickEditMessage"/>
+                                </t>
                             </div>
                         </div>
                         <t t-if="message.isModeratedByCurrentPartner">
