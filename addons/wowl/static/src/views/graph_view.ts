@@ -1,26 +1,13 @@
 import { View } from "../types";
 import { AbstractView } from "./abstract_view";
 
-
 export class GraphViewComponent extends AbstractView {
-
   static defaultProps = {
     additionalMeasures: [],
   };
 
-  constructor() {
-    super(...arguments);
-
-    // const { additionalMeasures } = this.props;
-
-
-
-
-
-  }
-
   async willStart() {
-    await super.willStart() 
+    await super.willStart();
     const { arch, fields } = this.viewDescription;
     const parser = new DOMParser();
     const xml = parser.parseFromString(arch, "text/xml");
@@ -32,35 +19,35 @@ export class GraphViewComponent extends AbstractView {
     // const measureStrings = {};
     // let groupBys = [];
     // const groupableFields = {};
-    fields.__count__ = { string: this.env._t("Count"), type: 'integer' };
+    fields.__count__ = { string: this.env._t("Count"), type: "integer" };
 
     for (const node of xml.children) {
-        console.log(node);
-        debugger
-        // let fieldName = node.attrs.name;
-        // if (fieldName === "id") {
-        //     return;
-        // }
-        // const interval = field.attrs.interval;
-        // if (interval) {
-        //     fieldName = fieldName + ':' + interval;
-        // }
-        // if (field.attrs.type === 'measure') {
-        //     const { string } = fields[fieldName];
-        //     measure = fieldName;
-        //     measures[fieldName] = {
-        //         description: string,
-        //         fieldName,
-        //         groupNumber: 0,
-        //         isActive: false,
-        //         itemType: 'measure',
-        //     };
-        // } else {
-        //     groupBys.push(fieldName);
-        // }
-        // if (field.attrs.string) {
-        //     measureStrings[fieldName] = field.attrs.string;
-        // }
+      console.log(node);
+      debugger;
+      // let fieldNamxe = node.attrs.name;
+      // if (fieldName === "id") {
+      //     return;
+      // }
+      // const interval = field.attrs.interval;
+      // if (interval) {
+      //     fieldName = fieldName + ':' + interval;
+      // }
+      // if (field.attrs.type === 'measure') {
+      //     const { string } = fields[fieldName];
+      //     measure = fieldName;
+      //     measures[fieldName] = {
+      //         description: string,
+      //         fieldName,
+      //         groupNumber: 0,
+      //         isActive: false,
+      //         itemType: 'measure',
+      //     };
+      // } else {
+      //     groupBys.push(fieldName);
+      // }
+      // if (field.attrs.string) {
+      //     measureStrings[fieldName] = field.attrs.string;
+      // }
     }
 
     // for (const name in this.fields) {
@@ -143,15 +130,7 @@ export class GraphViewComponent extends AbstractView {
     // this.loadParams.fields = this.fields;
     // this.loadParams.comparisonDomain = params.comparisonDomain;
     // this.loadParams.stacked = this.arch.attrs.stacked !== "False";
-
-
-
-
   }
-
-
-
-
 }
 
 export const GraphView: View = {

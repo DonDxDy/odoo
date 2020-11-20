@@ -4,15 +4,22 @@ import { ActionRequest } from "../services/action_manager/action_manager";
 import { ViewDescription } from "../services/view_manager";
 import { OdooEnv, ViewProps, ViewType } from "../types";
 import { ControlPanelSubTemplates } from "./abstract_controller";
+import { AbstractModel } from "./abstract_model";
 
-export class AbstractView extends Component<ViewProps, OdooEnv> {
+interface ViewEnv extends OdooEnv {
+  models?: { [name: string]: AbstractModel };
+}
+
+export class AbstractView extends Component<ViewProps, ViewEnv> {
   static template = "wowl.AbstractView";
+  static modelClass = AbstractModel;
   static components = {};
 
+  model: AbstractModel;
+
   __main__: string = tags.xml`<t/>`;
-  modelFields: { [name: string]: any; } = {};
+
   viewDescription: ViewDescription = {} as any;
-  favorites: any[] = [];
 
   viewManager = useService("view_manager");
   actionManager = useService("action_manager");
@@ -23,6 +30,19 @@ export class AbstractView extends Component<ViewProps, OdooEnv> {
     bottomLeft: null,
     bottomRight: "wowl.Views.ControlPanelBottomRight",
   };
+
+  constructor() {
+    super(...arguments);
+
+    const modelType = (this.constructor as any).modelClass.type;
+    this.env.models = this.env.models || {};
+    if (this.env.models[modelType]) {
+      this.model = this.env.models[modelType];
+    } else {
+      this.model = new AbstractModel(this.env);
+      this.env.models[modelType] = this.model;
+    }
+  }
 
   async willStart() {
     const params = {
@@ -38,6 +58,10 @@ export class AbstractView extends Component<ViewProps, OdooEnv> {
     };
     const viewDescriptions = await this.viewManager.loadViews(params, options);
     this.viewDescription = viewDescriptions[this.props.type];
+
+    this.model.load({
+      irFilters: this.viewDescription.irFilters,
+    });
   }
 
   /**

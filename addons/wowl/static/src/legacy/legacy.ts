@@ -1,14 +1,5 @@
 import { Component, hooks, tags } from "@odoo/owl";
-import {
-  ClientActionProps,
-  OdooEnv,
-  ViewProps,
-  Context,
-  Service,
-  View,
-  ViewId,
-  ViewType,
-} from "../types";
+import { ClientActionProps, OdooEnv, ViewProps, Service, View } from "../types";
 import { actionRegistry, viewRegistry } from "../registries";
 import { useService } from "../core/hooks";
 import { useSetupAction } from "../services/action_manager/action_manager";
