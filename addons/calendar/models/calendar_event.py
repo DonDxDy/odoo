@@ -495,6 +495,7 @@ class Meeting(models.Model):
         """
         self.ensure_one()
         date = fields.Datetime.from_string(self.start)
+        end_date = fields.Datetime.from_string(self.stop)
 
         if tz:
             timezone = pytz.timezone(tz or 'UTC')
@@ -517,6 +518,13 @@ class Meeting(models.Model):
             # FIXME: formats are specifically encoded to bytes, maybe use babel?
             dummy, format_time = self._get_date_formats()
             result = tools.ustr(date.strftime(format_time + " %Z"))
+
+        elif interval == 'end_day':
+            result =  babel.dates.format_date(date=end_date, format='d MMM', locale=get_lang(self.env).code)
+
+        elif interval == 'end_time':
+            dummy, format_time = self._get_date_formats()
+            result = tools.ustr(end_date.strftime(format_time + " %Z"))
 
         return result
 
@@ -669,7 +677,10 @@ class Meeting(models.Model):
             (current_attendees - previous_attendees)._send_mail_to_attendees('calendar.calendar_template_meeting_invitation')
         if 'start' in values:
             (current_attendees & previous_attendees)._send_mail_to_attendees('calendar.calendar_template_meeting_changedate', ignore_recurrence=not update_recurrence)
-
+        if 'location' in values:
+            (current_attendees & previous_attendees)._send_mail_to_attendees('calendar.calendar_template_meeting_changedlocation', ignore_recurrence=not update_recurrence)
+        if 'description' in values:
+            (current_attendees & previous_attendees)._send_mail_to_attendees('calendar.calendar_template_meeting_changeddescription', ignore_recurrence=not update_recurrence)
         return True
 
     @api.model_create_multi
