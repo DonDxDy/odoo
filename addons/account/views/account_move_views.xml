@@ -1102,6 +1102,9 @@
                                 <!-- Internal note -->
                                 <field name="narration" placeholder="Add an internal note..." nolabel="1" height="50"/>
                             </page>
+                            <page id="analytic_account_lines" string ="Analytic Account Lines" attrs="{'invisible':[('analytic_account_lines_ids','=',False)]}">
+                                <field name="analytic_account_lines_ids"/>
+                            </page>
                         </notebook>
                     </sheet>
                     <!-- Attachment preview -->
