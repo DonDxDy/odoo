@@ -74,12 +74,27 @@ QUnit.module('Base Import Tests', {
             'foo,3,list': '<tree import="0"><field name="foo"/></tree>',
 
             // kanban views
-            'foo,4,kanban': '<kanban><templates><t t-name="kanban-box">' +
-                '<div class="oe_kanban_global_click"><field name="foo"/></div>' +
-                '</t></templates></kanban>',
-            'foo,5,kanban': '<kanban><templates><t t-name="kanban-box">' +
-                '<div class="oe_kanban_global_click"><field name="foo"/></div>' +
-                '</t></templates></kanban>',
+            'foo,4,kanban': `<kanban>
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div><field name="foo"/></div>
+                        </t>
+                    </templates>
+                </kanban>`,
+            'foo,5,kanban': `<kanban create="0">
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div><field name="foo"/></div>
+                        </t>
+                    </templates>
+                </kanban>`,
+            'foo,6,kanban': `<kanban import="0">
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div><field name="foo"/></div>
+                        </t>
+                    </templates>
+                </kanban>`,
 
             // pivot views
             'foo,false,pivot': '<pivot><field name="foobar" type="measure"/></pivot>',
@@ -93,7 +108,7 @@ QUnit.module('Base Import Tests', {
 QUnit.test('import in favorite dropdown in list', async function (assert) {
     assert.expect(2);
 
-    var actionManager = await createActionManager({
+    const actionManager = await createActionManager({
         actions: this.actions,
         archs: this.archs,
         data: this.data,
@@ -102,7 +117,6 @@ QUnit.test('import in favorite dropdown in list', async function (assert) {
     testUtils.mock.intercept(actionManager, 'do_action', function () {
         assert.ok(true, "should have triggered a do_action");
     });
-
     await actionManager.doAction(1);
 
     await cpHelpers.toggleFavoriteMenu(actionManager);
@@ -116,105 +130,87 @@ QUnit.test('import in favorite dropdown in list', async function (assert) {
 QUnit.test('import favorite dropdown item should not in list with create="0"', async function (assert) {
     assert.expect(1);
 
-    const list = await createView({
-        View: ListView,
-        model: 'foo',
+    const actionManager = await createActionManager({
+        actions: this.actions,
+        archs: this.archs,
         data: this.data,
-        arch: '<tree create="0"><field name="foo"/></tree>',
     });
+    await actionManager.doAction(2);
 
-    await testUtils.dom.click(list.$('.o_favorite_menu button'));
-    assert.containsNone(list, '.o_import_menu');
+    await cpHelpers.toggleFavoriteMenu(actionManager);
+    assert.containsNone(actionManager, '.o_import_menu');
 
-    list.destroy();
+    actionManager.destroy();
 });
 
 QUnit.test('import favorite dropdown item should not in list with import="0"', async function (assert) {
     assert.expect(1);
 
-    const list = await createView({
-        View: ListView,
-        model: 'foo',
+    const actionManager = await createActionManager({
+        actions: this.actions,
+        archs: this.archs,
         data: this.data,
-        arch: '<tree import="0"><field name="foo"/></tree>',
     });
+    await actionManager.doAction(3);
 
-    await testUtils.dom.click(list.$('.o_favorite_menu button'));
-    assert.containsNone(list, '.o_import_menu');
+    await cpHelpers.toggleFavoriteMenu(actionManager);
+    assert.containsNone(actionManager, '.o_import_menu');
 
-    list.destroy();
+    actionManager.destroy();
 });
 
 QUnit.test('import in favorite dropdown in kanban', async function (assert) {
     assert.expect(2);
 
-    const kanban = await createView({
-        View: KanbanView,
-        model: 'foo',
+    const actionManager = await createActionManager({
+        actions: this.actions,
+        archs: this.archs,
         data: this.data,
-        arch: `<kanban>
-                <templates>
-                    <t t-name="kanban-box">
-                        <div><field name="foo"/></div>
-                    </t>
-                </templates>
-            </kanban>`,
     });
 
-    testUtils.mock.intercept(kanban, 'do_action', function () {
+    testUtils.mock.intercept(actionManager, 'do_action', function () {
         assert.ok(true, "should have triggered a do_action");
     });
+    await actionManager.doAction(4);
 
-    await testUtils.dom.click(kanban.$('.o_favorite_menu button'));
-    assert.containsOnce(kanban, '.o_import_menu');
+    await cpHelpers.toggleFavoriteMenu(actionManager);
+    assert.containsOnce(actionManager, '.o_import_menu');
 
-    await testUtils.dom.click(kanban.$('.o_import_menu button'));
+    await testUtils.dom.click(actionManager.$('.o_import_menu button'));
 
-    kanban.destroy();
+    actionManager.destroy();
 });
 
 QUnit.test('import favorite dropdown item should not in list with create="0"', async function (assert) {
     assert.expect(1);
 
-    const kanban = await createView({
-        View: KanbanView,
-        model: 'foo',
+    const actionManager = await createActionManager({
+        actions: this.actions,
+        archs: this.archs,
         data: this.data,
-        arch: `<kanban create="0">
-                <templates>
-                    <t t-name="kanban-box">
-                        <div><field name="foo"/></div>
-                    </t>
-                </templates>
-            </kanban>`,
     });
+    await actionManager.doAction(5);
 
-    await testUtils.dom.click(kanban.$('.o_favorite_menu button'));
-    assert.containsNone(kanban, '.o_import_menu');
+    await cpHelpers.toggleFavoriteMenu(actionManager);
+    assert.containsNone(actionManager, '.o_import_menu');
 
-    kanban.destroy();
+    actionManager.destroy();
 });
 
 QUnit.test('import dropdown favorite should not in kanban with import="0"', async function (assert) {
     assert.expect(1);
 
-    const kanban = await createView({
-        View: KanbanView,
-        model: 'foo',
+    const actionManager = await createActionManager({
+        actions: this.actions,
+        archs: this.archs,
         data: this.data,
-        arch: `<kanban import="0">
-                <templates>
-                    <t t-name="kanban-box">
-                        <div><field name="foo"/></div>
-                    </t>
-                </templates>
-            </kanban>`,
     });
+    await actionManager.doAction(6);
 
-    await testUtils.dom.click(kanban.$('.o_favorite_menu button'));
-    assert.containsNone(kanban, '.o_import_menu');
+    await cpHelpers.toggleFavoriteMenu(actionManager);
+    assert.containsNone(actionManager, '.o_import_menu');
 
-    kanban.destroy();
+    actionManager.destroy();
 });
 
 QUnit.test('import should not available in favorite dropdown in pivot (other than kanban or list)', async function (assert) {
@@ -222,17 +218,17 @@ QUnit.test('import should not available in favorite dropdown in pivot (other tha
 
     this.data.foo.fields.foobar = { string: "Fubar", type: "integer", group_operator: 'sum' };
 
-    const pivot = await createView({
-        View: PivotView,
-        model: 'foo',
+    const actionManager = await createActionManager({
+        actions: this.actions,
+        archs: this.archs,
         data: this.data,
-        arch: '<pivot><field name="foobar" type="measure"/></pivot>',
     });
+    await actionManager.doAction(7);
 
-    await testUtils.dom.click(pivot.$('.o_favorite_menu button'));
-    assert.containsNone(pivot, '.o_import_menu');
+    await cpHelpers.toggleFavoriteMenu(actionManager);
+    assert.containsNone(actionManager, '.o_import_menu');
 
-    pivot.destroy();
+    actionManager.destroy();
 });
 
 QUnit.test('import should not available in favorite dropdown in dialog view', async function (assert) {
