@@ -146,22 +146,40 @@ def trigger_tree_merge(node1, node2):
             trigger_tree_merge(node1[key], node2[key])
 
 class M:
-    def __init__(self, *arg, **kwargs):
-        super().__init__(*arg)
-        self._args = kwargs
+    def __new__(cls, *arg, **kwargs):
+        inst = super().__new__(cls, *arg)
+        inst._args = kwargs
+        return inst
 class Bool(M):
-    def __init__(self, b, **kwargs):
-        super().__init__(**kwargs)
-        self._b = b
+    def __new__(cls, b, **kwargs):
+        inst = super().__new__(cls, **kwargs)
+        inst._b = b
+        return inst
     def __bool__(self): return self._b
     def __repr__(self): return repr(self._b)
+class List(list):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self._args = kwargs
+
 WRAPPERS = {
-    t: type(t.__name__.capitalize(), (M, t,), {})
-    for t in [int, str, float, list]
+    t: type(t.__name__.capitalize(), (M, t), {})
+    for t in [int, str, float]
 }
 WRAPPERS[bool] = Bool
+WRAPPERS[list] = List
 for v in list(WRAPPERS.values()):
     WRAPPERS[v] = v
+def wrap(Wrapper, *args, **kwargs):
+    try:
+        return Wrapper(*args, **kwargs)
+    except Exception:
+        _logger.error(
+            "%s(%s, %s)",
+            Wrapper, ', '.join(map(repr, args)),
+            ', '.join(f'{k}={v!r}' for k, v in kwargs.items())
+        )
+        raise
 
 class MetaModel(api.Meta):
     """ The metaclass of all model classes.
@@ -3870,7 +3888,7 @@ Fields:
 
         # create records with stored fields
         records = self._create(data_list).with_context({
-            k: WRAPPERS[type(v)](v, tb=''.join(traceback.format_stack())) if k.startswith('default_') and type(v) in WRAPPERS else v
+            k: wrap(WRAPPERS[type(v)], v, tb=''.join(traceback.format_stack())) if k.startswith('default_') and type(v) in WRAPPERS else v
             for k, v in self.env.context.items()
         })
 
