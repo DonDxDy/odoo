@@ -20,7 +20,7 @@ import { userService } from "./services/user";
 import { viewManagerService } from "./services/view_manager";
 import { ComponentAction, FunctionAction, Service, SystrayItem, Type, View } from "./types";
 // import { FormView } from "./views/form_view";
-import { GraphView } from "./views/graph_view";
+import { GraphView } from "./views/graph/graph_view";
 // import { KanbanView } from "./views/kanban_view";
 // import { ListView } from "./views/list_view";
 // import { PivotView } from "./views/pivot_view";

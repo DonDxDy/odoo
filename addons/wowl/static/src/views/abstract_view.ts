@@ -34,12 +34,13 @@ export class AbstractView extends Component<ViewProps, ViewEnv> {
   constructor() {
     super(...arguments);
 
-    const modelType = (this.constructor as any).modelClass.type;
+    const Model = (this.constructor as any).modelClass;
+    const modelType = Model.type;
     this.env.models = this.env.models || {};
     if (this.env.models[modelType]) {
       this.model = this.env.models[modelType];
     } else {
-      this.model = new AbstractModel(this.env);
+      this.model = new Model(this.env);
       this.env.models[modelType] = this.model;
     }
   }
@@ -59,7 +60,7 @@ export class AbstractView extends Component<ViewProps, ViewEnv> {
     const viewDescriptions = await this.viewManager.loadViews(params, options);
     this.viewDescription = viewDescriptions[this.props.type];
 
-    this.model.load({
+    await this.model.load({
       irFilters: this.viewDescription.irFilters,
     });
   }
