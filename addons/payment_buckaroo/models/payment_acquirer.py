@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
+
 from hashlib import sha1
 from werkzeug import urls
 
@@ -8,20 +10,19 @@ from odoo import fields, models
 class AcquirerBuckaroo(models.Model):
     _inherit = 'payment.acquirer'
 
-    provider = fields.Selection(selection_add=[
-        ('buckaroo', 'Buckaroo')
-    ], ondelete={'buckaroo': 'set default'})
-    brq_websitekey = fields.Char('WebsiteKey', required_if_provider='buckaroo', groups='base.group_user')
-    brq_secretkey = fields.Char('SecretKey', required_if_provider='buckaroo', groups='base.group_user')
+    provider = fields.Selection(
+        selection_add=[('buckaroo', "Buckaroo")], ondelete={'buckaroo': 'set default'})
+    brq_websitekey = fields.Char(string="WebsiteKey", required_if_provider='buckaroo', groups='base.group_system')
+    brq_secretkey = fields.Char(string="SecretKey", required_if_provider='buckaroo', groups='base.group_system')
 
     def _get_buckaroo_urls(self):
         """ Buckaroo URLs
         """
         self.ensure_one()
         if self.state == 'enabled':
-            return 'https://checkout.buckaroo.nl/html/',
+            return 'https://checkout.buckaroo.nl/html/'
         else:
-            return 'https://testcheckout.buckaroo.nl/html/',
+            return 'https://testcheckout.buckaroo.nl/html/'
 
     def _buckaroo_generate_digital_sign(self, inout, values):
         """ Generate the shasign for incoming or outgoing communications.

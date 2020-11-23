@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 # TODO mba: cleand the test
 from lxml import objectify
 from werkzeug import urls
 
-import odoo.tests
+import odoo
 from odoo.addons.payment.models.payment_acquirer import ValidationError
 from odoo.addons.payment.tests.common import PaymentAcquirerCommon
 from odoo.addons.payment_buckaroo.controllers.main import BuckarooController
@@ -24,7 +25,6 @@ class BuckarooCommon(PaymentAcquirerCommon):
             'brq_secretkey': 'dummy',
             'state': 'test',
         })
-
 
 @odoo.tests.tagged('post_install', '-at_install', 'external', '-standard')
 class BuckarooForm(BuckarooCommon):

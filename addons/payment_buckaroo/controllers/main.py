@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 import logging
@@ -22,11 +23,11 @@ class BuckarooController(http.Controller):
         '/payment/buckaroo/error',
         '/payment/buckaroo/reject',
     ], type='http', auth='public', csrf=False)
-    def buckaroo_return(self, **post):
+    def buckaroo_return_from_redirect(self, **data):
         """ Buckaroo."""
-        _logger.info('Buckaroo: entering form_feedback with post data %s', pprint.pformat(post))  # debug
-        request.env['payment.transaction'].sudo()._handle_feedback_data(provider='buckaroo', data=post)
-        post = {key.upper(): value for key, value in post.items()}
+        _logger.info("Buckaroo: entering form_feedback with post data %s", pprint.pformat(data))  # debug
+        request.env['payment.transaction'].sudo()._handle_feedback_data(provider='buckaroo', data=data)
+        post = {key.upper(): value for key, value in data.items()}
         # TODO mba may be remove the return_url
         return_url = post.get('ADD_RETURNDATA') or '/'
         return werkzeug.utils.redirect('/payment/status')
