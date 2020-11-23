@@ -12,6 +12,9 @@ $o-tip-duration-in: 200ms;
 $o-tip-size-duration-in: floor($o-tip-duration-in * 3 / 4);
 $o-tip-size-delay-in: $o-tip-duration-in - $o-tip-size-duration-in;
 
+$o-tip-content-padding-vertical: 7px;
+$o-tip-content-padding-horizontal: $o-tip-content-padding-vertical * 2;
+
 @keyframes move-left-right {
     0% {
         transform: translate(-$o-tip-bounce-half-size, 0);
@@ -123,7 +126,7 @@ $o-tip-size-delay-in: $o-tip-duration-in - $o-tip-size-duration-in;
         overflow: hidden;
         direction: ltr;
         position: relative;
-        padding: 7px 14px;
+        padding: $o-tip-content-padding-vertical $o-tip-content-padding-horizontal;
         background-color: inherit;
         color: transparent;
         visibility: hidden;
@@ -145,6 +148,12 @@ $o-tip-size-delay-in: $o-tip-duration-in - $o-tip-size-duration-in;
         }
         > p:last-child {
             margin-bottom: 0;
+        }
+
+        // To properly measure text dimension, never actually displayed
+        &.measure {
+            // Padding must include the size of the border of the active tooltip
+            padding: ($o-tip-content-padding-vertical + $o-tip-border-width) ($o-tip-content-padding-horizontal + $o-tip-border-width);
         }
     }
 
