@@ -19,13 +19,18 @@ class CustomerPortal(portal.CustomerPortal):
 
     def _prepare_home_portal_values(self, counters):
         values = super()._prepare_home_portal_values(counters)
+        PurchaseOrder = request.env['purchase.order']
+        if 'rfq_count' in counters:
+            values['rfq_count'] = PurchaseOrder.search_count([
+                ('state', 'in', ['sent'])
+            ]) if PurchaseOrder.check_access_rights('read', raise_exception=False) else 0
         if 'purchase_count' in counters:
-            values['purchase_count'] = request.env['purchase.order'].search_count([
+            values['purchase_count'] = PurchaseOrder.search_count([
                 ('state', 'in', ['purchase', 'done', 'cancel'])
-            ]) if request.env['purchase.order'].check_access_rights('read', raise_exception=False) else 0
+            ]) if PurchaseOrder.check_access_rights('read', raise_exception=False) else 0
         return values
 
-    def _purchase_order_get_page_view_values(self, order, access_token, **kwargs):
+    def _purchase_order_get_page_view_values(self, order, access_token, history, **kwargs):
         #
         def resize_to_48(b64source):
             if not b64source:
@@ -35,8 +40,62 @@ class CustomerPortal(portal.CustomerPortal):
         values = {
             'order': order,
             'resize_to_48': resize_to_48,
+            'report_type': 'html',
         }
-        return self._get_page_view_values(order, access_token, values, 'my_purchases_history', False, **kwargs)
+        return self._get_page_view_values(order, access_token, values, history, False, **kwargs)
+
+    @http.route(['/my/rfq', '/my/rfq/page/<int:page>'], type='http', auth="user", website=True)
+    def portal_my_requests_for_quotation(self, page=1, date_begin=None, date_end=None, sortby=None, filterby=None, **kw):
+        values = self._prepare_portal_layout_values()
+        PurchaseOrder = request.env['purchase.order']
+
+        domain = [
+            ('state', '=', 'sent')
+        ]
+
+        if date_begin and date_end:
+            domain += [('create_date', '>', date_begin), ('create_date', '<=', date_end)]
+
+        searchbar_sortings = {
+            'date': {'label': _('Newest'), 'order': 'create_date desc, id desc'},
+            'name': {'label': _('Name'), 'order': 'name asc, id asc'},
+            'amount_total': {'label': _('Total'), 'order': 'amount_total desc, id desc'},
+        }
+        # default sort by value
+        if not sortby:
+            sortby = 'date'
+        order = searchbar_sortings[sortby]['order']
+
+        # count for pager
+        rfq_count = PurchaseOrder.search_count(domain)
+        # make pager
+        pager = portal_pager(
+            url="/my/rfq",
+            url_args={'date_begin': date_begin, 'date_end': date_end, 'sortby': sortby, 'filterby': filterby},
+            total=rfq_count,
+            page=page,
+            step=self._items_per_page
+        )
+        # search the purchase orders to display, according to the pager data
+        rfqs = PurchaseOrder.search(
+            domain,
+            order=order,
+            limit=self._items_per_page,
+            offset=pager['offset']
+        )
+        request.session['my_rfqs_history'] = rfqs.ids[:100]
+
+        values.update({
+            'date': date_begin,
+            'rfqs': rfqs,
+            'page_name': 'rfq',
+            'pager': pager,
+            'searchbar_sortings': searchbar_sortings,
+            'sortby': sortby,
+            'filterby': filterby,
+            'default_url': '/my/rfq',
+        })
+        return request.render("purchase.portal_my_purchase_rfqs", values)
 
     @http.route(['/my/purchase', '/my/purchase/page/<int:page>'], type='http', auth="user", website=True)
     def portal_my_purchase_orders(self, page=1, date_begin=None, date_end=None, sortby=None, filterby=None, **kw):
@@ -118,7 +177,11 @@ class CustomerPortal(portal.CustomerPortal):
         if confirm_type == 'reception':
             order_sudo._confirm_reception_mail()
 
-        values = self._purchase_order_get_page_view_values(order_sudo, access_token, **kw)
+        if order_sudo.state in ('sent'):
+            history = 'my_rfqs_history'
+        else:
+            history = 'my_purchases_history'
+        values = self._purchase_order_get_page_view_values(order_sudo, access_token, history, **kw)
         update_date = kw.get('update')
         if update_date == 'True':
             return request.render("purchase.portal_my_purchase_order_update_date", values)
