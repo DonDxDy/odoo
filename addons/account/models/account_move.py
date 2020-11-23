@@ -2547,11 +2547,16 @@ class AccountMove(models.Model):
     def button_cancel(self):
         self.write({'auto_post': False, 'state': 'cancel'})
 
+    def _can_send_invoice(self):
+        return self.user_has_groups('account.group_account_invoice')
+
     def action_invoice_sent(self):
         """ Open a window to compose an email, with the edi invoice template
             message loaded by default
         """
         self.ensure_one()
+        if not self._can_send_invoice():
+            raise AccessError(_('You do not have access to this action.'))
         template = self.env.ref('account.email_template_edi_invoice', raise_if_not_found=False)
         lang = False
         if template:

@@ -25,6 +25,9 @@ class AccountMove(models.Model):
                 pass
         return res
 
+    def _can_send_invoice(self):
+        return super()._can_send_invoice() or self.user_has_groups('sales_team.group_sale_salesman')
+
 class AccountMoveLine(models.Model):
     _inherit = 'account.move.line'
 
