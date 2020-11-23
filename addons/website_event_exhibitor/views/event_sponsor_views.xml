@@ -7,7 +7,7 @@
         <field name="arch" type="xml">
             <xpath expr="//filter[@name='archived']" position="after">
                 <separator/>
-                <filter string="Exhibitor" name="filter_is_exhibitor" domain="[('is_exhibitor', '=', True)]"/>
+                <filter string="Exhibitor" name="filter_is_exhibitor" domain="[('category', 'in', ['exhib', 'online'])]"/>
             </xpath>
         </field>
     </record>
@@ -19,7 +19,7 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='sponsor_type_id']" position="after">
                 <field name="is_published" optional="show"/>
-                <field name="is_exhibitor"/>
+                <field name="category"/>
             </xpath>
         </field>
     </record>
@@ -43,7 +43,8 @@
             <xpath expr="//widget[@name='web_ribbon']" position="before">
                 <div class="oe_button_box" name="button_box">
                     <field name="website_url" invisible="1"/>
-                    <field name="is_published" widget="website_redirect_button"/>
+                    <field name="is_published" widget="website_redirect_button"
+                        attrs="{'invisible': [('category', '=', 'sponsor')]}"/>
                 </div>
             </xpath>
             <xpath expr="//h1" position="after">
@@ -53,7 +54,7 @@
                 </div>
             </xpath>
             <xpath expr="//field[@name='sponsor_type_id']" position="after">
-                <field name="is_exhibitor"/>
+                <field name="category" required="1"/>
             </xpath>
             <xpath expr="//field[@name='mobile']" position="after">
                 <label for="hour_from" string="Opening Hours"/>
@@ -66,17 +67,17 @@
             </xpath>
             <xpath expr="//sheet/group" position="after">
                 <notebook>
-                    <page string="Description">
+                    <page string="Description" attrs="{'invisible':  [('category', '=', 'sponsor')]}">
                         <group>
                             <field name="website_description" nolabel="1"/>
                         </group>
                     </page>
-                    <page string="Exhibitor" attrs="{'invisible': [('is_exhibitor', '=', False)]}">
+                    <page string="Exhibitor" attrs="{'invisible': [('category', '!=', 'online')]}">
                         <group>
                             <group>
-                                <field name="room_name" attrs="{'required': [('is_exhibitor', '=', True)]}" string="Jitsi Name"/>
+                                <field name="room_name" attrs="{'required': [('category', '=', 'online')]}" string="Jitsi Name"/>
                                 <field name="room_lang_id"/>
-                                <field name="room_max_capacity" attrs="{'required': [('is_exhibitor', '=', True)]}"/>
+                                <field name="room_max_capacity" attrs="{'required': [('category', '=', 'online')]}"/>
                                 <field name="chat_room_id" groups="base.group_no_one"/>
                             </group>
                         </group>
