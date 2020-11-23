@@ -154,6 +154,79 @@
         </xpath>
     </t>
 
+    <t t-name="wowl.FormView" owl="1">
+        <t t-call="wowl.FormView.node.common">
+            <t t-set="node" t-value="archRoot"/>
+        </t>
+    </t>
+
+    <t t-name="wowl.FormView.node.children">
+        <t t-foreach="node.children" t-as="child">
+            <t t-call="wowl.FormView.node.common">
+                <t t-set="node" t-value="child"/>
+            </t>
+        </t>
+    </t>
+
+    <t t-name="wowl.FormView.node.common" owl="1">
+        <t t-if="node.type === 'text'">
+            <t t-esc="node.text.trim()"/>
+        </t>
+        <t t-else="">
+            <t t-if="node.tag === 'form'">
+                <div class="o_form_view">
+                    <div>Form View</div>
+                    <t t-call="wowl.FormView.node.children"/>
+                </div>
+            </t>
+            <t t-elif="node.tag === 'sheet'">
+                <div class="o_form_sheet_bg">
+                    <div>Sheet</div>
+                    <t t-call="wowl.FormView.node.children"/>
+                </div>
+            </t>
+            <t t-elif="node.tag === 'field'">
+                <div>
+                    <div>Field</div>
+                </div>
+            </t>
+            <t t-elif="node.tag === 'notebook'">
+                <div>
+                    <div>Notebook</div>
+                    <t t-call="wowl.FormView.node.children"/>
+                </div>
+            </t>
+            <t t-elif="node.tag === 'page'">
+                <div>
+                    <div>Page</div>
+                    <t t-call="wowl.FormView.node.children"/>
+                </div>
+            </t>
+            <t t-elif="node.tag === 'group'">
+                <div>
+                    <div>Group</div>
+                    <t t-call="wowl.FormView.node.children"/>
+                </div>
+            </t>
+            <t t-elif="node.tag === 'button'">
+                <div>
+                    <div>Button</div>
+                </div>
+            </t>
+            <t t-else="">
+                <DynamicTag tag="node.tag" attributes="node.attributes">
+                    <t t-foreach="node.childNodes" t-as="child">
+                        <t t-if="child.type !== 'text' or child.text.trim() !== ''">
+                            <t t-call="wowl.FormView.node.common">
+                                <t t-set="node" t-value="child"/>
+                            </t>
+                        </t>
+                    </t>
+                </DynamicTag>
+            </t>
+        </t>
+    </t>
+
     <!-- ListView -->
 
     <t t-name="wowl.ListView.ControlPanelBottomRight" t-inherit="wowl.Views.ControlPanelBottomRight" t-inherit-mode="primary" owl="1">

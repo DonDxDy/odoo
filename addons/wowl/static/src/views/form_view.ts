@@ -1,5 +1,5 @@
-import { Component, tags, useState } from "@odoo/owl";
-import { OdooEnv, FormRendererProps, View } from "../types";
+import { Component, QWeb, tags, useState } from "@odoo/owl";
+import { ElementArchNode, OdooEnv, FormRendererProps, View } from "../types";
 import { AbstractController, ControlPanelSubTemplates } from "./abstract_controller";
 import { ActionMenus } from "./action_menus/action_menus";
 import { Pager, usePager } from "./pager";
@@ -8,66 +8,53 @@ import type { DBRecord } from "../services/model";
 import { useService } from "../core/hooks";
 const { css, xml } = tags;
 
+import { parseArch } from "./arch_parser";
+
 interface FormControllerState {
   mode: "edit" | "readonly";
   record: DBRecord | null;
 }
 
-class FormRenderer extends Component<FormRendererProps, OdooEnv> {
-  static template = xml`
-    <div class="o_form_view" t-attf-class="{{props.mode === 'readonly' ? 'o_form_readonly' : 'o_form_editable'}}">
-      <div class="o_form_sheet_bg">
-        <div class="o_form_sheet">
-          <div class="o_group">
-            <table class="o_group o_inner_group o_group_col_6">
-              <tbody>
-                <tr>
-                  <td class="o_td_label">ID</td>
-                  <td><t t-esc="props.record and props.record.id"/></td>
-                </tr>
-                <tr>
-                  <td class="o_td_label">Name</td>
-                  <td><t t-esc="props.record and props.record.display_name"/></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  static style = css`
-    .o_form_sheet_bg {
-      border-bottom: 1px solid #ddd;
-      background: url(/web/static/src/img/form_sheetbg.png);
-      .o_form_sheet {
-        margin: 12px auto;
-        min-width: 650px;
-        max-width: 1140px;
-        min-height: 330px;
-        padding: 24px;
-        background: white;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        border: 1px solid #c8c8d3;
-        .o_group {
-          display: inline-block;
-          width: 100%;
-          margin: 10px 0;
-          .o_td_label {
-            border-right: 1px solid #ddd;
-          }
-          .o_td_label + td {
-            padding: 0 36px 0 8px;
-          }
-        }
-        .o_group.o_inner_group {
-          display: inline-table;
-        }
-      }
-    }
-  `;
+interface DynamicTagProps {
+  tag: string;
+  attributes: {[key: string]: any};
 }
+
+class DynamicTag extends Component<DynamicTagProps, OdooEnv> {
+  static template = xml`<t t-call="{{_template}}"/>`;
+  static templates: {[key: string]: string} = {};
+
+  _template: string;
+
+  constructor() {
+    super(...arguments);
+
+    if (!(this.props.tag in DynamicTag.templates)) {
+      DynamicTag.templates[this.props.tag] = xml`
+        <${this.props.tag} t-att="props.attributes">
+          <t t-slot="default"/>
+        </${this.props.tag}>
+      `;
+    }
+    this._template = DynamicTag.templates[this.props.tag];
+    console.log(DynamicTag.templates);
+  }
+}
+
+class FormRenderer extends Component<FormRendererProps, OdooEnv> {
+  static template = "wowl.FormView";
+
+  archRoot: ElementArchNode;
+
+  constructor() {
+    super(...arguments);
+
+    this.archRoot = parseArch(this.props.arch);
+  }
+}
+FormRenderer.components = {
+  DynamicTag,
+};
 
 class FormController extends AbstractController {
   static components = {
