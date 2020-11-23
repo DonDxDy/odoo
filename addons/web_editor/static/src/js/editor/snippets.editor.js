@@ -1514,11 +1514,16 @@ var SnippetsMenu = Widget.extend({
     },
     /**
      * @private
+     * @param {jQuery|undefined} $snippet
+     *        The DOM element whose editors need to be destroyed.
+     *        If no element is given, all the editors are destroyed.
      */
-    _destroyEditors: async function () {
+    _destroyEditors: async function ($snippet) {
         const proms = _.map(this.snippetEditors, async function (snippetEditor) {
-            await snippetEditor.cleanForSave();
-            snippetEditor.destroy();
+            if (!$snippet || $snippet.find(snippetEditor.$target).length) {
+                await snippetEditor.cleanForSave();
+                snippetEditor.destroy();
+            }
         });
         await Promise.all(proms);
         this.snippetEditors.splice(0);
@@ -2284,7 +2289,11 @@ var SnippetsMenu = Widget.extend({
      * @param {OdooEvent} ev
      */
     _onDragAndDropStop: async function (ev) {
-        await this._destroyEditors();
+        const $modal = ev.data.$snippet.closest('.modal');
+        // If the snippet is in a modal, destroy editors only in that modal.
+        // This to prevent the modal from closing because of the cleanForSave
+        // on each editors.
+        await this._destroyEditors($modal.length ? $modal : '');
         await this._activateSnippet(ev.data.$snippet);
     },
     /**
