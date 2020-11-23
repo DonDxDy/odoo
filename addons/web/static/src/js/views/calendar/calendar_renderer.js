@@ -10,6 +10,7 @@ var FieldManagerMixin = require('web.FieldManagerMixin');
 var relational_fields = require('web.relational_fields');
 var session = require('web.session');
 var Widget = require('web.Widget');
+var CalendarQuickCreate = require('web.CalendarQuickCreate');
 const { createYearCalendarView } = require('/web/static/src/js/libs/fullcalendar.js');
 
 var _t = core._t;
@@ -170,6 +171,9 @@ return AbstractRenderer.extend({
         edit_event: '_onEditEvent',
         delete_event: '_onDeleteEvent',
     }),
+    events: {
+        'click .my_class': '_mobile_quick_create',
+    },
 
     /**
      * @constructor

@@ -16,8 +16,8 @@
                     <span class="o_calendar_text fa-stack-1x" t-esc="(new Date().getDate())"/>
                 </span>
             </button>
-            <button class="btn btn-primary">Create
-                <span class="o_calendar_quick_create">
+            <button class="btn btn-primary my_class">Create
+                <span>
                     <strong class="_input o_required_modifier"/>
                 </span>
             </button>

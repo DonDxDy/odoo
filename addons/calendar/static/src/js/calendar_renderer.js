@@ -4,7 +4,7 @@ odoo.define('calendar.CalendarRenderer', function (require) {
 const CalendarRenderer = require('web.CalendarRenderer');
 const CalendarPopover = require('web.CalendarPopover');
 const session = require('web.session');
-
+const CalendarQuickCreate = require('web.CalendarQuickCreate');
 
 const AttendeeCalendarPopover = CalendarPopover.extend({
     template: 'Calendar.attendee.status.popover',
@@ -26,6 +26,10 @@ const AttendeeCalendarPopover = CalendarPopover.extend({
             });
             this.selectedStatusInfo = this.statusInfo[this.event.extendedProps.record.attendee_status];
         }
+    },
+
+    _mobile_quick_create: function (event) {
+        return;
     },
 
     //--------------------------------------------------------------------------
