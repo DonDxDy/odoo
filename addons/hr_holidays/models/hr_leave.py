@@ -74,7 +74,7 @@ class HolidaysRequest(models.Model):
         defaults = self._default_get_request_parameters(defaults)
 
         if 'holiday_status_id' in fields_list and not defaults.get('holiday_status_id'):
-            lt = self.env['hr.leave.type'].search([('valid', '=', True)], limit=1)
+            lt = self.env['hr.leave.type'].search([('valid', '=', True), ('allocation_type', 'in', ['no', 'fixed_allocation'])], limit=1)
 
             if lt:
                 defaults['holiday_status_id'] = lt.id
@@ -818,12 +818,8 @@ class HolidaysRequest(models.Model):
         error_message = _('You cannot delete a time off which is in %s state')
         state_description_values = {elem[0]: elem[1] for elem in self._fields['state']._description_selection(self.env)}
 
-        if not self.user_has_groups('hr_holidays.group_hr_holidays_user'):
-            if any(hol.state != 'draft' for hol in self):
-                raise UserError(error_message % state_description_values.get(self[:1].state))
-        else:
-            for holiday in self.filtered(lambda holiday: holiday.state not in ['draft', 'cancel', 'confirm']):
-                raise UserError(error_message % (state_description_values.get(holiday.state),))
+        for holiday in self.filtered(lambda holiday: holiday.state not in ['draft', 'cancel', 'confirm']):
+            raise UserError(error_message % (state_description_values.get(holiday.state),))
         return super(HolidaysRequest, self).unlink()
 
     def copy_data(self, default=None):

@@ -5,6 +5,7 @@ odoo.define('hr_holidays.dashboard.view_custo', function(require) {
     var CalendarPopover = require('web.CalendarPopover');
     var CalendarController = require("web.CalendarController");
     var CalendarRenderer = require("web.CalendarRenderer");
+    var CalendarModel = require("web.CalendarModel");
     var CalendarView = require("web.CalendarView");
     var viewRegistry = require('web.view_registry');
 
@@ -27,6 +28,13 @@ odoo.define('hr_holidays.dashboard.view_custo', function(require) {
             } else {
                 this.display_name = this.event.extendedProps.record.display_name;
             }
+        },
+    });
+
+    var TimeoffCalendarModel = CalendarModel.extend({
+
+        _getFilterDomain: function() {
+            return this._super.apply(this, arguments).concat([["state", "!=", "refuse"]]);
         },
     });
 
@@ -165,6 +173,7 @@ odoo.define('hr_holidays.dashboard.view_custo', function(require) {
         config: _.extend({}, CalendarView.prototype.config, {
             Controller: TimeOffCalendarController,
             Renderer: TimeOffCalendarRenderer,
+            Model: TimeoffCalendarModel,
         }),
     });
 
