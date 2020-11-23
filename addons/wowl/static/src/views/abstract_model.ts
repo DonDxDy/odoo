@@ -1,11 +1,30 @@
+import { evaluateExpr } from "../core/py/index";
 import { makeContext } from "../core/utils";
 import { IrFilter } from "../services/view_manager";
 import { OdooEnv, Context, Domain } from "../types";
+import { assembleDomains } from "./search_utils";
 
 const FAVORITE_PRIVATE_GROUP = 1;
 const FAVORITE_SHARED_GROUP = 2;
 
-interface Favorite extends Filter {
+type FilterType = "filter" | "groupBy" | "comparison" | "field" | "favorite";
+
+interface CommonFilter {
+  type: FilterType;
+  id: number;
+  groupId: number;
+  description: string;
+}
+
+// interface Filter extends CommonFilter {
+
+// }
+
+// interface GroupBy extends CommonFilter {
+
+// }
+
+interface Favorite extends CommonFilter {
   type: "favorite";
   id: number;
   groupId: number;
@@ -23,23 +42,44 @@ interface Favorite extends Filter {
   //     *                      range, rangeDescription, comparisonRange, comparisonRangeDescription, }
 }
 
-interface Filter {
-  type: "filter" | "groupBy" | "comparison" | "field" | "favorite";
-  id: number;
+type ABC = Favorite;
+
+interface ABCs {
+  [filterId: number]: ABC;
+}
+
+interface CommonQueryElement {
+  type: FilterType;
+  filterId: number;
   groupId: number;
-  description: string;
+  optionId?: string;
 }
 
-interface Filters {
-  [filterId: number]: Favorite;
+interface FavoriteQueryElement extends CommonQueryElement {
+  type: "favorite";
 }
 
-interface QueryElements {}
+type QueryElement = FavoriteQueryElement;
 
-type Query = QueryElements[];
+type Query = QueryElement[];
+
+interface PreGroup {
+  id: number;
+  type: FilterType;
+  activities: Query;
+}
+
+interface Group {
+  id: number;
+  type: FilterType;
+  activities: {
+    filter: ABC;
+    filterQueryElements: Query;
+  }[];
+}
 
 interface State {
-  filters: Filters;
+  filters: ABCs;
   query: Query;
 }
 
@@ -53,9 +93,11 @@ export class AbstractModel {
     query: [],
   };
   env: OdooEnv;
+  searchMenuTypes: Set<FilterType>;
 
   constructor(env: OdooEnv, params?: {}) {
     this.env = env;
+    this.searchMenuTypes = new Set(["favorite"]); // hard coded for now ---> what in future?
   }
 
   get domain(): Domain {
@@ -74,23 +116,60 @@ export class AbstractModel {
    * @returns {Array[]}
    */
   getDomain(): Domain {
-    // const groups = this._getGroups();
-    // const userContext = this.env.services.user.context;
+    const groups = this._getGroups();
+    const userContext = this.env.services.user.context;
     try {
-      // return Domain.prototype.stringToArray(this._getDomain(groups), userContext);
-      const firstFilter = Object.values(this.state.filters)[0] as Favorite | undefined;
-      if (firstFilter && firstFilter.type === "favorite") {
-        // return firstFilter.domain;
-        return [];
-      }
-      return [];
+      return evaluateExpr(this._getDomain(groups), userContext);
     } catch (err) {
-      throw new Error(
-        `${this.env._t(
-          "Control panel model extension failed to evaluate domain"
-        )}:/n${JSON.stringify(err)}`
-      );
+      throw new Error(`${this.env._t("Failed to evaluate domain")}:/n${JSON.stringify(err)}`);
     }
+  }
+
+  /**
+   * Return the string or array representation of a domain created by combining
+   * appropriately (with an 'AND') the domains coming from the active groups
+   * of type 'filter', 'favorite', and 'field'.
+   */
+  _getDomain(groups: Group[]) {
+    const types = ["filter", "favorite", "field"];
+    const domains = [];
+    for (const group of groups) {
+      if (types.includes(group.type)) {
+        domains.push(this._getGroupDomain(group));
+      }
+    }
+    return assembleDomains(domains, "AND");
+  }
+
+  /**
+   * Return the string representation of a domain created by combining
+   * appropriately (with an 'OR') the domains coming from the filters
+   * active in the given group.
+   */
+  _getGroupDomain(group: Group) {
+    const domains = group.activities.map(({ filter, filterQueryElements }) => {
+      return this._getFilterDomain(filter, filterQueryElements);
+    });
+    return assembleDomains(domains, "OR");
+  }
+
+  /**
+   * Return the domain of the provided filter.
+   */
+  _getFilterDomain(filter: ABC, filterQueryElements: Query): string {
+    // if (filter.type === 'filter' && filter.hasOptions) {
+    //     const { dateFilterId } = this.activeComparison || {};
+    //     if (this.searchMenuTypes.includes('comparison') && dateFilterId === filter.id) {
+    //         return "[]";
+    //     }
+    //     return this._getDateFilterDomain(filter, filterQueryElements);
+    // } else if (filter.type === 'field') {
+    //     return this._getAutoCompletionFilterDomain(filter, filterQueryElements);
+    // }
+    if (filter.type === "favorite") {
+      return filter.domain;
+    }
+    return "[]";
   }
 
   /**
@@ -99,28 +178,23 @@ export class AbstractModel {
    * @returns {Object[]}
    */
   _getGroups() {
-    // const groups = this.state.query.reduce(
-    //     (groups, queryElem) => {
-    //         const { groupId, filterId } = queryElem;
-    //         let group = groups.find(group => group.id === groupId);
-    //         const filter = this.state.filters[filterId];
-    //         if (!group) {
-    //             const { type } = filter;
-    //             group = {
-    //                 id: groupId,
-    //                 type,
-    //                 activities: []
-    //             };
-    //             groups.push(group);
-    //         }
-    //         group.activities.push(queryElem);
-    //         return groups;
-    //     },
-    //     []
-    // );
-    // groups.forEach(g => this._mergeActivities(g));
-    // return groups;
-    return [];
+    const preGroups: PreGroup[] = [];
+    for (const queryElem of this.state.query) {
+      const { groupId, filterId } = queryElem;
+      let group = preGroups.find((group) => group.id === groupId);
+      const filter = this.state.filters[filterId];
+      if (!group) {
+        const { type } = filter;
+        group = {
+          id: groupId,
+          type,
+          activities: [],
+        };
+        preGroups.push(group);
+      }
+      group.activities.push(queryElem);
+    }
+    return preGroups.map((preGroup) => this._mergeActivities(preGroup));
   }
 
   /**
@@ -212,5 +286,57 @@ export class AbstractModel {
     //     favorite.comparison = comparison;
     // }
     return favorite;
+  }
+
+  /**
+   * Group the query elements in group.activities by qe -> qe.filterId
+   * and changes the form of group.activities to make it more suitable for further
+   * computations.
+   */
+  _mergeActivities(preGroup: PreGroup): Group {
+    const { activities, id, type } = preGroup;
+    let res: { filter: ABC; filterQueryElements: Query }[] = [];
+    switch (type) {
+      case "filter":
+      case "groupBy": {
+        for (const activity of activities) {
+          const { filterId } = activity;
+          let a = res.find(({ filter }) => filter.id === filterId);
+          if (!a) {
+            a = {
+              filter: this.state.filters[filterId],
+              filterQueryElements: [],
+            };
+            res.push(a);
+          }
+          a.filterQueryElements.push(activity);
+        }
+        break;
+      }
+      case "favorite":
+      case "field":
+      case "comparison": {
+        // all activities in the group have same filterId
+        const { filterId } = preGroup.activities[0];
+        const filter = this.state.filters[filterId];
+        res.push({
+          filter,
+          filterQueryElements: preGroup.activities,
+        });
+        break;
+      }
+    }
+    // if (type === 'groupBy') {
+    //     res.forEach(activity => {
+    //         activity.filterQueryElements.sort(
+    //             (qe1, qe2) => rankInterval(qe1.optionId) - rankInterval(qe2.optionId)
+    //         );
+    //     });
+    // }
+    return {
+      id,
+      type,
+      activities: res,
+    };
   }
 }
