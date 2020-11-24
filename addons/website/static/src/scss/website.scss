@@ -445,9 +445,21 @@ table.table_desc tr td {
     min-height: 55vh !important;
 }
 
+<<<<<<< HEAD
 // TODO remove cover_full and cover_mid classes (kept for compatibility for now)
 .cover_full {
     @extend .o_full_screen_height;
+=======
+// Three columns
+
+.s_three_columns {
+    .card .media_iframe_video {
+        width: 100%;
+    }
+    .align-items-stretch .card {
+        height: 100%;
+    }
+>>>>>>> f21bc689e81... temp
 }
 .cover_mid {
     @extend .o_half_screen_height;
