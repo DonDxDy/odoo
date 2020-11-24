@@ -687,7 +687,10 @@ var ListController = BasicController.extend({
      */
     _onButtonClicked: function (ev) {
         ev.stopPropagation();
-        this._callButtonAction(ev.data.attrs, ev.data.record);
+        this._disableButtons();
+        this._callButtonAction(ev.data.attrs, ev.data.record).then(() => {
+            this._enableButtons();
+        });
     },
     /**
      * When the user clicks on the 'create' button, two things can happen. We

@@ -368,26 +368,6 @@ var FormController = BasicController.extend({
         }
     },
     /**
-     * Override to disable buttons in the renderer.
-     *
-     * @override
-     * @private
-     */
-    _disableButtons: function () {
-        this._super.apply(this, arguments);
-        this.renderer.disableButtons();
-    },
-    /**
-     * Override to enable buttons in the renderer.
-     *
-     * @override
-     * @private
-     */
-    _enableButtons: function () {
-        this._super.apply(this, arguments);
-        this.renderer.enableButtons();
-    },
-    /**
      * Hook method, called when record(s) has been deleted.
      *
      * @override

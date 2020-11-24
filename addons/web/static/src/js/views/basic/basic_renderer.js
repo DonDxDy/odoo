@@ -191,6 +191,16 @@ var BasicRenderer = AbstractRenderer.extend(WidgetAdapterMixin, {
         });
     },
     /**
+     * To be overridden in renderers to disable buttons so that they can't be clicked anymore
+     *
+     */
+    disableButtons() {},
+    /**
+     * To be overridden in renderers to enable buttons so that they can be clicked again
+     *
+     */
+    enableButtons() {},
+    /**
      * Activates the widget and move the cursor to the given offset
      *
      * @param {string} id

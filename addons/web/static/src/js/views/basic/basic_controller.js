@@ -358,6 +358,7 @@ var BasicController = AbstractController.extend(FieldManagerMixin, {
         if (this.$buttons) {
             this.$buttons.find('button').attr('disabled', true);
         }
+        this.renderer.disableButtons();
     },
     /**
      * Discards the changes made to the record whose ID is given, if necessary.
@@ -407,6 +408,7 @@ var BasicController = AbstractController.extend(FieldManagerMixin, {
         if (this.$buttons) {
             this.$buttons.find('button').removeAttr('disabled');
         }
+        this.renderer.enableButtons();
     },
     /**
      * Executes the action associated with a button

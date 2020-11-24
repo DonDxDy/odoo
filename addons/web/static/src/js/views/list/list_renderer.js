@@ -95,6 +95,12 @@ var ListRenderer = BasicRenderer.extend({
     // Public
     //--------------------------------------------------------------------------
 
+    disableButtons() {
+        this.$(".o_list_button button").attr('disabled', true);
+    },
+    enableButtons() {
+        this.$(".o_list_button button").removeAttr('disabled');
+    },
     /**
      * Order to focus to be given to the content of the current view
      *

@@ -611,6 +611,44 @@ QUnit.module('Views', {
         list.destroy();
     });
 
+    QUnit.test('list view: buttons on row are disabled and re-enabled after action is resolved', async function (assert) {
+        assert.expect(4);
+
+        const executeActionDef = testUtils.makeTestPromise();
+        const list = await createView({
+            View: ListView,
+            model: 'foo',
+            data: this.data,
+            arch: `
+            <tree>
+                <field name="foo" />
+                <button name="x" type="object" class="do_something" string="Do Something"/>
+                <button name="y" type="object" class="do_anything" string="Do Anything"/>
+            </tree>`,
+            intercepts: {
+                async execute_action(ev) {
+                    const { on_success } = ev.data;
+                    await executeActionDef;
+                    on_success();
+                }
+            }
+        });
+
+        await testUtils.dom.click(list.$('tbody .o_list_button:first > button:first'));
+        const cpButtons = cpHelpers.getButtons(list);
+        assert.ok(Array.from(cpButtons[0].querySelectorAll('button')).every(btn => btn.disabled));
+        assert.containsN(list, 'tbody .o_list_button button:disabled', 8,
+            "Other buttons of current row as well as other rows should be disabled");
+
+        executeActionDef.resolve();
+        await testUtils.nextTick();
+        assert.ok(Array.from(cpButtons[0].querySelectorAll('button')).every(btn => !btn.disabled));
+        assert.containsNone(list, 'tbody .o_list_button button:disabled',
+            "Other buttons should be disabled");
+
+        list.destroy();
+    });
+
     QUnit.test('list view: action button executes action on click: correct parameters', async function (assert) {
         assert.expect(4);
 
