@@ -15,7 +15,6 @@
                                     type="object"/>
                         </div>
                         <widget name="web_ribbon" title="Archived" bg_color="bg-danger" attrs="{'invisible': [('active', '=', True)]}"/>
-                        <label for="name" class="oe_edit_only"/>
                         <h1><field name="name"/></h1>
                         <group>
                             <group>

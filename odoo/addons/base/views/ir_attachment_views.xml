@@ -6,7 +6,6 @@
             <field name="arch" type="xml">
                 <form string="Attachments">
                    <sheet>
-                    <label for="name" class="oe_edit_only"/>
                     <h1>
                         <field name="name"/>
                     </h1>

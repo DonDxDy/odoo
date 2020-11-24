@@ -26,9 +26,7 @@
                                 icon="fa-cubes" name="%(location_open_quants)d" type="action"/>
                     </div>
                     <widget name="web_ribbon" title="Archived" bg_color="bg-danger" attrs="{'invisible': [('active', '=', True)]}"/>
-                    <label for="name" class="oe_edit_only"/>
                     <h1><field name="name"/></h1>
-                    <label for="location_id" class="oe_edit_only"/>
                     <h2><field name="location_id" options="{'no_create': True}"/></h2>
 
                     <group>
@@ -172,7 +170,6 @@
                     <sheet>
                         <widget name="web_ribbon" title="Archived" bg_color="bg-danger" attrs="{'invisible': [('active', '=', True)]}"/>
                         <div class="oe_title">
-                            <label for="name" class="oe_edit_only"/>
                             <h1><field name="name"/></h1>
                         </div>
                     <group>

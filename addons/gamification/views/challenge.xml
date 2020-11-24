@@ -54,11 +54,9 @@
                     </div>
 
                     <div class="oe_title">
-                        <label for="name" class="oe_edit_only"/>
                         <h1>
                             <field name="name" placeholder="e.g. Monthly Sales Objectives"/>
                         </h1>
-                        <label for="user_domain" class="oe_edit_only" string="Assign Challenge To"/>
                         <div>
                             <field name="user_domain" widget="domain" options="{'model': 'res.users'}" />
                             <field name="user_ids" widget="many2many_tags" />
