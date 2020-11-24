@@ -26,7 +26,7 @@ class ChooseDeliveryPackage(models.TransientModel):
         return defaults
 
     picking_id = fields.Many2one('stock.picking', 'Picking')
-    delivery_packaging_id = fields.Many2one('product.packaging.type', 'Delivery Packaging', check_company=True)
+    delivery_packaging_id = fields.Many2one('stock.package.type', 'Delivery Packaging', check_company=True)
     shipping_weight = fields.Float('Shipping Weight')
     weight_uom_name = fields.Char(string='Weight unit of measure label', compute='_compute_weight_uom_name')
     company_id = fields.Many2one(related='picking_id.company_id')
@@ -61,7 +61,7 @@ class ChooseDeliveryPackage(models.TransientModel):
                                  precision_rounding=ml.product_uom_id.rounding) == 0)
 
         delivery_package = self.picking_id._put_in_pack(move_line_ids)
-        # write shipping weight and product_packaging on 'stock_quant_package' if needed
+        # write shipping weight and package type on 'stock_quant_package' if needed
         if self.delivery_packaging_id:
             delivery_package.packaging_id = self.delivery_packaging_id
         if self.shipping_weight:

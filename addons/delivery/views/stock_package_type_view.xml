@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-<record model="ir.ui.view" id="product_packaging_type_form">
-    <field name="name">product.packaging.type.form</field>
-    <field name="model">product.packaging.type</field>
+<record model="ir.ui.view" id="stock_package_type_form">
+    <field name="name">stock.package.type.form</field>
+    <field name="model">stock.package.type</field>
     <field name="arch" type="xml">
-        <form string="Packaging Type">
+        <form string="Package Type">
             <sheet>
                 <label for="name"/>
                 <h1>
@@ -45,11 +45,11 @@
     </field>
 </record>
 
-<record model="ir.ui.view" id="product_packaging_type_tree">
-    <field name="name">product.packaging.type.tree</field>
-    <field name="model">product.packaging.type</field>
+<record model="ir.ui.view" id="stock_package_type_tree">
+    <field name="name">stock.package.type.tree</field>
+    <field name="model">stock.package.type</field>
     <field name="arch" type="xml">
-        <tree string="Packaging Types">
+        <tree string="Package Types">
             <field name="sequence" widget="handle"/>
             <field name="package_carrier_type"/>
             <field name="name"/>
