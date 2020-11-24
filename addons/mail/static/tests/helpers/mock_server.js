@@ -752,6 +752,12 @@ MockServer.include({
             });
             if (channel.channel_type === 'channel') {
                 delete res.members;
+            } else {
+                res['seen_partners_info'] = [{
+                    partner_id: this.currentPartnerId,
+                    seen_message_id: lastMessageId,
+                    fetched_message_id: lastMessageId,
+                }]
             }
             return res;
         });
