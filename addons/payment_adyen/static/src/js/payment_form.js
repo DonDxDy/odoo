@@ -143,7 +143,7 @@ odoo.define('payment_adyen.payment_form', require => {
                 },
             }).then(acquirerState => {
                 // Get the available payment methods
-                this._rpc({
+                return this._rpc({
                     route: '/payment/adyen/payment_methods',
                     params: {
                         'acquirer_id': paymentOptionId,
