@@ -12,7 +12,7 @@ class AccountMove(models.Model):
         comodel_name='account.edi.document',
         inverse_name='move_id')
     edi_state = fields.Selection(
-        selection=[('to_send', 'To Send'), ('sent', 'Sent'), ('to_cancel', 'To Cancel'), ('cancelled', 'Cancelled')],
+        selection=[('to_send', 'To Process'), ('sent', 'Sent'), ('to_cancel', 'To Cancel'), ('cancelled', 'Cancelled')],
         string="Electronic invoicing",
         store=True,
         compute='_compute_edi_state',
@@ -99,6 +99,7 @@ class AccountMove(models.Model):
         not the same as the invoice one. Indeed, the edi documents must be updated when the reconciliation with some
         invoices is changing.
         '''
+        account_edi_document = self.env['account.edi.document']
         edi_document_vals_list = []
         for payment in self:
             edi_formats = payment._get_reconciled_invoices().journal_id.edi_format_ids + payment.edi_document_ids.edi_format_id
@@ -108,10 +109,13 @@ class AccountMove(models.Model):
 
                 if edi_format._is_required_for_payment(payment):
                     if existing_edi_document:
-                        existing_edi_document.write({
+                        values = {
                             'state': 'to_send',
                             'error': False,
-                        })
+                        }
+                        if 'blocked_level' in account_edi_document._fields:
+                            values['blocked_level'] = False
+                        existing_edi_document.write(values)
                     else:
                         edi_document_vals_list.append({
                             'edi_format_id': edi_format.id,
@@ -119,12 +123,16 @@ class AccountMove(models.Model):
                             'state': 'to_send',
                         })
                 elif existing_edi_document:
-                    existing_edi_document.write({
+                    values = {
                         'state': False,
                         'error': False,
-                    })
+                    }
+                    if 'blocked_level' in account_edi_document._fields:
+                        values['blocked_level'] = False
+                    existing_edi_document.write(values)
 
         self.env['account.edi.document'].create(edi_document_vals_list)
+        self.edi_document_ids._check_move_configuration()
         self.edi_document_ids._process_documents_no_web_services()
 
     def _post(self, soft=True):
@@ -152,6 +160,7 @@ class AccountMove(models.Model):
                         })
 
         self.env['account.edi.document'].create(edi_document_vals_list)
+        posted.edi_document_ids._check_move_configuration()
         posted.edi_document_ids._process_documents_no_web_services()
         return posted
 
@@ -160,8 +169,14 @@ class AccountMove(models.Model):
         # Set the electronic document to be canceled and cancel immediately for synchronous formats.
         res = super().button_cancel()
 
-        self.edi_document_ids.filtered(lambda doc: doc.attachment_id).write({'state': 'to_cancel', 'error': False})
-        self.edi_document_ids.filtered(lambda doc: not doc.attachment_id).write({'state': 'cancelled', 'error': False})
+        values = {'state': 'to_cancel', 'error': False}
+        if 'blocked_level' in self.env['account.edi.document']._fields:
+            values['blocked_level'] = False
+        self.edi_document_ids.filtered(lambda doc: doc.attachment_id).write(values)
+        values = {'state': 'cancelled', 'error': False}
+        if 'blocked_level' in self.env['account.edi.document']._fields:
+            values['blocked_level'] = False
+        self.edi_document_ids.filtered(lambda doc: not doc.attachment_id).write(values)
         self.edi_document_ids._process_documents_no_web_services()
 
         return res
@@ -177,7 +192,10 @@ class AccountMove(models.Model):
 
         res = super().button_draft()
 
-        self.edi_document_ids.write({'state': False, 'error': False})
+        values = {'state': False, 'error': False}
+        if 'blocked_level' in self.env['account.edi.document']._fields:
+            values['blocked_level'] = False
+        self.edi_document_ids.write(values)
 
         return res
 
@@ -198,7 +216,16 @@ class AccountMove(models.Model):
             if is_move_marked:
                 move.message_post(body=_("A cancellation of the EDI has been requested."))
 
-        to_cancel_documents.write({'state': 'to_cancel', 'error': False})
+        values = {'state': 'to_cancel', 'error': False}
+        if 'blocked_level' in self.env['account.edi.document']._fields:
+            values['blocked_level'] = False
+        to_cancel_documents.write(values)
+
+    def _get_edi_document(self, edi_format):
+        return self.edi_document_ids.filtered(lambda d: d.edi_format_id == edi_format)
+
+    def _get_edi_attachment(self, edi_format):
+        return self._get_edi_document(edi_format).attachment_id
 
     ####################################################
     # Import Electronic Document
@@ -242,8 +269,13 @@ class AccountMove(models.Model):
     ####################################################
 
     def action_process_edi_web_services(self):
-        self.edi_document_ids.filtered(lambda d: d.state in ('to_send', 'to_cancel'))._process_documents_web_services()
-
+        self.ensure_one()
+        docs = self.edi_document_ids.filtered(lambda d: d.state in ('to_send', 'to_cancel'))
+        if 'blocked_level' in self.env['account.edi.document']._fields:
+            docs = docs.filtered(lambda d: d.blocked_level != 'error')
+        else:
+            docs = docs.filtered(lambda d: not d.error)
+        docs._process_documents_web_services()
 
 class AccountMoveLine(models.Model):
     _inherit = 'account.move.line'
