@@ -114,6 +114,20 @@
             <field name="hidden" eval="True"/>
             <field name="description">Invoice Created</field>
         </record>
+        <record id="mt_invoice_to_check_true" model="mail.message.subtype">
+            <field name="name">Set as to check</field>
+            <field name="res_model">account.move</field>
+            <field name="default" eval="False"/>
+            <field name="hidden" eval="True"/>
+            <field name="description">Set as to check</field>
+        </record>
+        <record id="mt_invoice_to_check_false" model="mail.message.subtype">
+            <field name="name">Set as checked</field>
+            <field name="res_model">account.move</field>
+            <field name="default" eval="False"/>
+            <field name="hidden" eval="True"/>
+            <field name="description">Set as checked</field>
+        </record>
 
         <!-- Payment methods -->
         <record id="account_payment_method_manual_in" model="account.payment.method">
