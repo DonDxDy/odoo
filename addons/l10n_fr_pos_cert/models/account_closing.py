@@ -142,10 +142,14 @@ class AccountClosing(models.Model):
                 'name_interval': name_interval}
 
     def write(self, vals):
-        raise UserError(_('Sale Closings are not meant to be written or deleted under any circumstances.'))
+        if self:
+            raise UserError(_('Sale Closings are not meant to be written or deleted under any circumstances.'))
+        return True
 
     def unlink(self):
-        raise UserError(_('Sale Closings are not meant to be written or deleted under any circumstances.'))
+        if self:
+            raise UserError(_('Sale Closings are not meant to be written or deleted under any circumstances.'))
+        return True
 
     @api.model
     def _automated_closing(self, frequency='daily'):
