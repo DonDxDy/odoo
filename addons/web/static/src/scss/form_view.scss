@@ -511,6 +511,10 @@
         width: 100%;
         margin: 10px 0;
 
+        .o_group {
+            margin: 0;
+        }
+
         // o_group contains nested groups
         @for $i from 1 through $o-form-group-cols {
             .o_group_col_#{$i} {
@@ -558,7 +562,7 @@
                                               // it does not really matter
             // Makes extra buttons (e.g. m2o external button) overflow on the
             // right padding of the parent element
-            > .o_input_dropdown {
+            .o_input_dropdown {
                 flex: 1 0 auto;
             }
         }

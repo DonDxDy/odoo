@@ -87,6 +87,21 @@
         }
     }
 
+    // Many2One
+    &.o_field_many2one {
+        flex-direction: column;
+
+        .o_field_many2one_selection {
+            display: flex;
+            width: 100%;
+        }
+
+        .o_external_button {
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+    }
+
     // Many2OneAvatar
     &.o_field_many2one_avatar {
         > img.o_m2o_avatar {

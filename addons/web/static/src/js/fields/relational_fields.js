@@ -515,6 +515,11 @@ var FieldMany2One = AbstractField.extend({
     _renderEdit: function () {
         var value = this.m2o_value;
 
+        const escapedValue = _.escape(`${value}`.trim());
+        const [, ...lines] = escapedValue.split('\n');
+        const extraText = lines.map((line) => `<span>${line}</span>`).join('<br/>');
+        this.$('.o_field_many2one_extra').html(extraText);
+
         // this is a stupid hack necessary to support the always_reload flag.
         // the field value has been reread by the basic model.  We use it to
         // display the full address of a partner, separated by \n.  This is
@@ -1895,6 +1900,20 @@ var FieldOne2Many = FieldX2Many.extend({
     //--------------------------------------------------------------------------
     // Public
     //--------------------------------------------------------------------------
+
+    /**
+     * @override
+     * @param {Object} extraInfo
+     * @param {boolean} [extraInfo.__addRecord]
+     * @param {Object} [extraInfo.data]
+     */
+    doQuickEdit: function (extraInfo) {
+        if (extraInfo.__addRecord) {
+            this._addCreateRecordRow(extraInfo.data);
+        } else {
+            this._super(...arguments);
+        }
+    },
     /**
      * @override
      * @param {Object} record
@@ -1921,6 +1940,46 @@ var FieldOne2Many = FieldX2Many.extend({
     // Private
     //--------------------------------------------------------------------------
 
+    /**
+     * @private
+     * @param {*} data 
+     */
+    _addCreateRecordRow(data) {
+        const self = this;
+        if (this.editable || data.forceEditable) {
+            if (!this.activeActions.create) {
+                if (data.onFail) {
+                    data.onFail();
+                }
+            } else if (!this.creatingRecord) {
+                this.creatingRecord = true;
+                this.trigger_up('edited_list', { id: this.value.id });
+                this._setValue({
+                    operation: 'CREATE',
+                    position: this.editable || data.forceEditable,
+                    context: data.context,
+                }, {
+                    allowWarning: data.allowWarning
+                }).then(function () {
+                    self.creatingRecord = false;
+                }).then(function (){
+                    if (data.onSuccess){
+                        data.onSuccess();
+                    }
+                }).guardedCatch(function() {
+                    self.creatingRecord = false;
+                })
+                ;
+            }
+        } else {
+            this._openFormDialog({
+                context: data.context && data.context[0],
+                on_saved: function (record) {
+                    self._setValue({ operation: 'ADD', id: record.id });
+                },
+            });
+        }
+    },
     /**
      * @override
      * @private
@@ -1997,44 +2056,16 @@ var FieldOne2Many = FieldX2Many.extend({
      *   to the list even if warnings are triggered (e.g: stock warning for product availability)
      */
     _onAddRecord: function (ev) {
-        var self = this;
-        var data = ev.data || {};
-
-        // we don't want interference with the components upstream.
-        ev.stopPropagation();
-
-        if (this.editable || data.forceEditable) {
-            if (!this.activeActions.create) {
-                if (data.onFail) {
-                    data.onFail();
-                }
-            } else if (!this.creatingRecord) {
-                this.creatingRecord = true;
-                this.trigger_up('edited_list', { id: this.value.id });
-                this._setValue({
-                    operation: 'CREATE',
-                    position: this.editable || data.forceEditable,
-                    context: data.context,
-                }, {
-                    allowWarning: data.allowWarning
-                }).then(function () {
-                    self.creatingRecord = false;
-                }).then(function (){
-                    if (data.onSuccess){
-                        data.onSuccess();
-                    }
-                }).guardedCatch(function() {
-                    self.creatingRecord = false;
-                })
-                ;
-            }
-        } else {
-            this._openFormDialog({
-                context: data.context && data.context[0],
-                on_saved: function (record) {
-                    self._setValue({ operation: 'ADD', id: record.id });
-                },
+        const data = ev.data || {};
+        if (this._canQuickEdit) {
+            this.trigger_up('quick_edit', {
+                fieldName: this.name,
+                extraInfo: { __addRecord: true, data },
             });
+        } else {
+            // we don't want interference with the components upstream.
+            ev.stopPropagation();
+            this._addCreateRecordRow(data);
         }
     },
     /**
@@ -2051,6 +2082,9 @@ var FieldOne2Many = FieldX2Many.extend({
         // we don't want interference with the components upstream.
         var self = this;
         ev.stopPropagation();
+        if (this.editable) {
+            return;
+        }
 
         var id = ev.data.id;
         var onSaved = function (record) {
@@ -3050,7 +3084,7 @@ var FieldSelection = AbstractField.extend({
         this._super.apply(this, arguments);
         if (!this.attrs.modifiersValue.invisible && this.mode !== 'readonly') {
             this._setValues();
-            this._renderEdit();
+            this._render();
         }
     },
 
@@ -3144,7 +3178,7 @@ var FieldRadio = FieldSelection.extend({
     description: _lt("Radio"),
     template: null,
     className: 'o_field_radio',
-    tagName: 'span',
+    tagName: 'div',
     specialData: "_fetchSpecialMany2ones",
     supportedFieldTypes: ['selection', 'many2one'],
     events: _.extend({}, AbstractField.prototype.events, {
@@ -3155,10 +3189,7 @@ var FieldRadio = FieldSelection.extend({
      */
     init: function () {
         this._super.apply(this, arguments);
-        if (this.mode === 'edit') {
-            this.tagName = 'div';
-            this.className += this.nodeOptions.horizontal ? ' o_horizontal' : ' o_vertical';
-        }
+        this.className += this.nodeOptions.horizontal ? ' o_horizontal' : ' o_vertical';
         this.unique_id = _.uniqueId("radio");
         this._setValues();
     },
@@ -3228,7 +3259,7 @@ var FieldRadio = FieldSelection.extend({
      * @private
      * @override
      */
-    _renderEdit: function () {
+    _render: function () {
         var self = this;
         var currentValue;
         if (this.field.type === 'many2one') {
@@ -3246,6 +3277,7 @@ var FieldRadio = FieldSelection.extend({
                 index: index,
                 name: self.unique_id,
                 value: value,
+                disabled: self.mode !== 'edit',
             }));
         });
     },
