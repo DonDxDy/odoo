@@ -113,8 +113,9 @@ If you have development competencies, we can propose you specific traineeships</
 
       <!-- Work Locations -->
 
-      <record id="work_location_1" model="work.location">
+      <record id="work_location_1" model="hr.work.location">
           <field name="name">Building 1, Second Floor</field>
+          <field name="address_id" ref="base.main_partner" />
       </record>
 
     <!-- Employee categories -->
