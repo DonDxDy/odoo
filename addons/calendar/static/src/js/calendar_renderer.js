@@ -28,10 +28,6 @@ const AttendeeCalendarPopover = CalendarPopover.extend({
         }
     },
 
-    _mobile_quick_create: function (event) {
-        return;
-    },
-
     //--------------------------------------------------------------------------
     // Public
     //--------------------------------------------------------------------------

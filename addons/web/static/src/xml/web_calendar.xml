@@ -9,17 +9,14 @@
                 <div class="o_calendar_mini"/>
             </div>
         </div>
-        <div class="d-md-none pl-2">
+        <div class="d-md-none">
             <button class="o_cp_today_button btn btn-sm btn-link">
                 <span class="fa-stack o_calendar_button_today">
-                    <i class="fa fa-calendar-o fa-stack-2x" role="img"/>
+                    <i class="fa fa-calendar-o fa-stack-2x"/>
                     <span class="o_calendar_text fa-stack-1x" t-esc="(new Date().getDate())"/>
                 </span>
             </button>
-            <button class="btn btn-primary my_class">Create
-                <span>
-                    <strong class="_input o_required_modifier"/>
-                </span>
+            <button class="btn btn-primary mobile_quick_create">Create
             </button>
         </div>
     </div>

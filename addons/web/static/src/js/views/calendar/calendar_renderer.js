@@ -171,10 +171,9 @@ return AbstractRenderer.extend({
         edit_event: '_onEditEvent',
         delete_event: '_onDeleteEvent',
     }),
-    events: {
-        'click .my_class': '_mobile_quick_create',
-    },
-
+    events: _.extend({}, Dialog.prototype.events, {
+        'click .mobile_quick_create': 'calendar_mobile_quick_create',
+    }),
     /**
      * @constructor
      * @param {Widget} parent
@@ -202,6 +201,9 @@ return AbstractRenderer.extend({
         this._initSidebar();
         this._initCalendar();
         return this._super();
+    },
+    calendar_mobile_quick_create: function (events) {
+        console.log('--- event is called. ---');
     },
     /**
      * @override
