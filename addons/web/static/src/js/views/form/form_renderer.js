@@ -19,10 +19,12 @@ var FormRenderer = BasicRenderer.extend({
         'click .o_notification_box .oe_field_translate': '_onTranslate',
         'click .o_notification_box .close': '_onTranslateNotificationClose',
         'shown.bs.tab a[data-toggle="tab"]': '_onNotebookTabChanged',
+        'click .o_form_label': '_onFieldLabelClicked',
     }),
     custom_events: _.extend({}, BasicRenderer.prototype.custom_events, {
         'navigation_move':'_onNavigationMove',
         'activate_next_widget' : '_onActivateNextWidget',
+        'quick_edit': '_onQuickEdit',
     }),
     // default col attributes for the rendering of groups
     INNER_GROUP_COL: 2,
@@ -44,6 +46,7 @@ var FormRenderer = BasicRenderer.extend({
         // display them (e.g. in Studio, in "show invisible" mode). This flag
         // allows to disable this optimization.
         this.renderInvisible = false;
+        this.quickEditInfo = null;
     },
     /**
      * @override
@@ -71,6 +74,14 @@ var FormRenderer = BasicRenderer.extend({
             if (firstPrimaryFormButton.length > 0) {
                 return firstPrimaryFormButton.focus();
             } else {
+                return;
+            }
+        }
+        if (this.quickEditInfo) {
+            const fieldWidget = this.allFieldWidgets[this.state.id]
+                .find(field => field[symbol] === this.quickEditInfo.fieldName);
+            if (fieldWidget) {
+                fieldWidget.doQuickEdit(this.quickEditInfo.extraInfo);
                 return;
             }
         }
@@ -1086,7 +1097,22 @@ var FormRenderer = BasicRenderer.extend({
                 // rendered
                 widget.renderWithLabel($label);
             }
+
+            const excludedAncestorQueries = [
+                '.o_form_statusbar',
+                '.oe_button_box',
+                '.oe_subtotal_footer',
+            ];
+            if (self.mode === 'readonly' &&
+                !excludedAncestorQueries.some(x => widget.el.closest(x))
+            ) {
+                widget.setQuickEdit();
+            }
         });
+
+        if (this.mode === 'readonly') {
+            this.quickEditInfo = null;
+        }
     },
     /**
      * Sets id attribute of given widget to idForLabel
@@ -1111,6 +1137,31 @@ var FormRenderer = BasicRenderer.extend({
         ev.stopPropagation();
         var index = this.allFieldWidgets[this.state.id].indexOf(ev.data.target);
         this._activateNextFieldWidget(this.state, index);
+    },
+    /**
+     * @private
+     * @param {MouseEvent} ev 
+     */
+    _onFieldLabelClicked: function (ev) {
+        if (this.mode === 'edit') {
+            return;
+        }
+        if (ev.currentTarget.closest('.oe_subtotal_footer')) {
+            return;
+        }
+
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        const idForLabel = ev.currentTarget.getAttribute('for');
+        const entry = Object.entries(this.idsForLabels)
+            .find(x => x[1] === idForLabel);
+        if (entry) {
+            this.trigger_up('quick_edit', {
+                fieldName: entry[0],
+                extraInfo: {},
+            });
+        }
     },
     /**
      * @override
@@ -1148,6 +1199,9 @@ var FormRenderer = BasicRenderer.extend({
      */
     _onNotebookTabChanged: function () {
         core.bus.trigger('DOM_updated');
+    },
+    _onQuickEdit: function (ev) {
+        this.quickEditInfo = ev.data;
     },
     /**
      * open the translation view for the current field

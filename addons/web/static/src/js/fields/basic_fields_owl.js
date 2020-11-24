@@ -73,6 +73,16 @@ odoo.define('web.basic_fields_owl', function (require) {
             return activated;
         }
         /**
+         * @override
+         */
+        doQuickEdit() {
+            const value = this.value;
+            super.doQuickEdit(...arguments);
+            if (this.mode !== 'readonly') {
+                this._setValue(!value);
+            }
+        }
+        /**
          * Associates the 'for' attribute of the internal label.
          *
          * @override

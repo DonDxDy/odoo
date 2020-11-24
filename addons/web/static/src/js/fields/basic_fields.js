@@ -873,6 +873,13 @@ var FieldDate = InputField.extend({
         }
         return false;
     },
+    /**
+     * @override
+     */
+    doQuickEdit: function () {
+        this._super(...arguments);
+        this.datewidget.$input.click();
+    },
 
     //--------------------------------------------------------------------------
     // Private
@@ -1517,6 +1524,7 @@ var FieldEmail = InputField.extend({
     events: _.extend({}, InputField.prototype.events, {
         'click': '_onClick',
     }),
+    isQuickEditable: false,
     prefix: 'mailto',
     supportedFieldTypes: ['char'],
 
@@ -1595,6 +1603,7 @@ var FieldEmail = InputField.extend({
 var FieldPhone = FieldEmail.extend({
     description: _lt("Phone"),
     className: 'o_field_phone',
+    isQuickEditable: false,
     prefix: 'tel',
 
     //--------------------------------------------------------------------------
@@ -1621,6 +1630,7 @@ var UrlWidget = InputField.extend({
     events: _.extend({}, InputField.prototype.events, {
         'click': '_onClick',
     }),
+    isQuickEditable: false,
     supportedFieldTypes: ['char'],
 
     /**
@@ -2287,6 +2297,7 @@ var PriorityWidget = AbstractField.extend({
         'click > a': '_onClick',
         'keydown > a': '_onKeydown',
     },
+    isQuickEditable: false,
     supportedFieldTypes: ['selection'],
 
     //--------------------------------------------------------------------------
@@ -2579,6 +2590,7 @@ var FavoriteWidget = AbstractField.extend({
     events: {
         'click': '_setFavorite'
     },
+    isQuickEditable: false,
     supportedFieldTypes: ['boolean'],
 
     //--------------------------------------------------------------------------
@@ -2979,6 +2991,7 @@ var FieldToggleBoolean = AbstractField.extend({
     events: {
         'click': '_onToggleButton'
     },
+    isQuickEditable: false,
     supportedFieldTypes: ['boolean'],
 
     //--------------------------------------------------------------------------
@@ -3345,6 +3358,7 @@ var FieldDomain = AbstractField.extend({
      */
     _onShowSelectionButtonClick: function (e) {
         e.preventDefault();
+        e.stopPropagation();
         new view_dialogs.SelectCreateDialog(this, {
             title: _t("Selected records"),
             res_model: this._domainModel,
@@ -3529,6 +3543,7 @@ var FieldColor = AbstractField.extend({
     custom_events: _.extend({}, AbstractField.prototype.custom_events, {
         'colorpicker:saved': '_onColorpickerSaved',
     }),
+    isQuickEditable: false,
 
     //--------------------------------------------------------------------------
     // Public

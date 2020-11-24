@@ -104,6 +104,9 @@ odoo.define('web.FieldWrapper', function (require) {
         commitChanges() {
             return this.componentRef.comp.commitChanges(...arguments);
         }
+        doQuickEdit() {
+            return this.componentRef.comp.doQuickEdit(...arguments);
+        }
         getFocusableElement() {
             return $(this.componentRef.comp.focusableElement);
         }
@@ -140,6 +143,9 @@ odoo.define('web.FieldWrapper', function (require) {
         }
         setInvalidClass() {
             return this.componentRef.comp.setInvalidClass(...arguments);
+        }
+        setQuickEdit() {
+            return this.componentRef.comp.setQuickEdit(...arguments);
         }
         updateModifiersValue(modifiers) {
             if (this.props.options.attrs) {

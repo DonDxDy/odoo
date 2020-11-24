@@ -62,11 +62,13 @@ odoo.define('web.AbstractFieldOwl', function (require) {
         constructor() {
             super(...arguments);
 
+            this._canQuickEdit = false;
             this._isValid = true;
             // this is the last value that was set by the user, unparsed. This is
             // used to avoid setting the value twice in a row with the exact value.
             this._lastSetValue = undefined;
 
+            useListener('click', this._onClick);
             useListener('keydown', this._onKeydown);
             useListener('navigation-move', this._onNavigationMove);
             onMounted(() => this._applyDecorations());
@@ -191,6 +193,18 @@ odoo.define('web.AbstractFieldOwl', function (require) {
             // check if element is visible
             return focusable && !!(focusable.offsetWidth ||
                 focusable.offsetHeight || focusable.getClientRects().length);
+        }
+        /**
+         * Determines if the field can be quick editable (@see setQuickEdit)
+         * which means that when the field is clicked and if it's quick
+         * editable, it will trigger an event (@see _triggerQuickEdit) to the
+         * form view to switch into edit mode and then it'll perform
+         * some action (@see doQuickEdit)
+         *
+         * @returns {boolean}
+         */
+        get isQuickEditable() {
+            return true;
         }
         /**
          * Determines if the field value is set to a meaningful
@@ -377,6 +391,17 @@ odoo.define('web.AbstractFieldOwl', function (require) {
          */
         commitChanges() {}
         /**
+         * This function is called when the form view auto focus a field for
+         * quick editing. Some fields has a special behaviour for the quick edit
+         * like the checkbox: when we click on checkbox to quick-edit it,
+         * it toggles its value as we've already been in edit mode.
+         *
+         * @param {*} extraInfo info to change the behaviour
+         */
+        doQuickEdit(extraInfo) {
+            this.activate({noAutomaticCreate: true});
+        }
+        /**
          * Remove the invalid class on a field
          *
          * This function should be removed when BasicRenderer will be rewritten in owl
@@ -406,6 +431,16 @@ odoo.define('web.AbstractFieldOwl', function (require) {
         setInvalidClass() {
             this.el.classList.add('o_field_invalid');
             this.el.setAttribute('aria-invalid', 'true');
+        }
+        /**
+         * Adds the quick edit class on a field and set the field as
+         * quick-editable only if the field can quick edit.
+         */
+        setQuickEdit() {
+            if (this.isQuickEditable) {
+                this._canQuickEdit = true;
+                this.el.classList.add('o_quick_editable');
+            }
         }
 
         //----------------------------------------------------------------------
@@ -542,10 +577,36 @@ odoo.define('web.AbstractFieldOwl', function (require) {
             });
         }
 
+        /**
+         * Triggers up a quick_edit event.
+         * This function is meant to be overridden to add extra info or trigger
+         * conditions.
+         *
+         * @private
+         * @param {MouseEvent} ev
+         */
+        _triggerQuickEdit() {
+            this.trigger('quick_edit', {
+                fieldName: this.name,
+                extraInfo: {},
+            });
+        }
+
         //----------------------------------------------------------------------
         // Handlers
         //----------------------------------------------------------------------
 
+        /**
+         * Triggers quick edit only if the field is authorized to do it.
+         *
+         * @private
+         * @param {MouseEvent} ev
+         */
+        _onClick(ev) {
+            if (this._canQuickEdit) {
+                this._triggerQuickEdit(ev);
+            }
+        }
         /**
          * Intercepts navigation keyboard events to prevent their default behavior
          * and notifies the view so that it can handle it its own way.

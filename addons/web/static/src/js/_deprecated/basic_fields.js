@@ -25,6 +25,7 @@ var FieldBoolean = AbstractField.extend({
     events: _.extend({}, AbstractField.prototype.events, {
         change: '_onChange',
     }),
+    isQuickEditable: false,
     supportedFieldTypes: ['boolean'],
 
     //--------------------------------------------------------------------------
@@ -47,7 +48,14 @@ var FieldBoolean = AbstractField.extend({
         }
         return activated;
     },
-
+    /**
+     * @override
+     */
+    doQuickEdit: function () {
+        const value = this.value;
+        this._super(...arguments);
+        this._setValue(!value);
+    },
     /**
      * @override
      * @returns {jQuery} the focusable checkbox input

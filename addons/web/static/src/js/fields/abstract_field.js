@@ -35,12 +35,21 @@ var Widget = require('web.Widget');
 
 var AbstractField = Widget.extend({
     events: {
+        'click': '_onClick',
         'keydown': '_onKeydown',
     },
     custom_events: {
         navigation_move: '_onNavigationMove',
     },
 
+    /**
+     * Determines if the field can be quick editable (@see setQuickEdit)
+     * which means that when the field is clicked and if it's quick
+     * editable, it will trigger an event (@see _triggerQuickEdit) to the
+     * form view to switch into edit mode and then it'll perform
+     * some action (@see doQuickEdit)
+     */
+    isQuickEditable: true,
     /**
     * An object representing fields to be fetched by the model eventhough not present in the view
     * This object contains "field name" as key and an object as value.
@@ -194,6 +203,7 @@ var AbstractField = Widget.extend({
         if (this.attrs.decorations) {
             this.resetOnAnyFieldChange = true;
         }
+        this._canQuickEdit = false;
     },
     /**
      * When a field widget is appended to the DOM, its start method is called,
@@ -254,6 +264,17 @@ var AbstractField = Widget.extend({
      * @returns {Promise|undefined}
      */
     commitChanges: function () {},
+    /**
+     * This function is called when the form view auto focus a field for
+     * quick editing. Some fields has a special behaviour for the quick edit
+     * like the checkbox: when we click on checkbox to quick-edit it,
+     * it toggles its value as we've already been in edit mode.
+     *
+     * @param {*} extraInfo info to change the behaviour
+     */
+    doQuickEdit: function (extraInfo) {
+        this.activate({noAutomaticCreate: true});
+    },
     /**
      * Returns the main field's DOM element (jQuery form) which can be focused
      * by the browser.
@@ -344,6 +365,16 @@ var AbstractField = Widget.extend({
     setInvalidClass: function () {
         this.$el.addClass('o_field_invalid');
         this.$el.attr('aria-invalid', 'true');
+    },
+    /**
+     * Adds the quick edit class on a field and set the field as
+     * quick-editable only if the field can quick edit.
+     */
+    setQuickEdit: function () {
+        if (this.isQuickEditable) {
+            this._canQuickEdit = true;
+            this.$el.addClass('o_quick_editable');
+        }
     },
     /**
      * Update the modifiers with the newest value.
@@ -543,11 +574,36 @@ var AbstractField = Widget.extend({
             });
         });
     },
+    /**
+     * Triggers up a quick_edit event.
+     * This function is meant to be overridden to add extra info or trigger
+     * conditions.
+     *
+     * @private
+     * @param {MouseEvent} ev
+     */
+    _triggerQuickEdit: function (ev) {
+        this.trigger_up('quick_edit', {
+            fieldName: this.name,
+            extraInfo: {},
+        });
+    },
 
     //--------------------------------------------------------------------------
     // Handlers
     //--------------------------------------------------------------------------
 
+    /**
+     * Triggers quick edit only if the field is authorized to do it.
+     *
+     * @private
+     * @param {MouseEvent} ev
+     */
+    _onClick: function (ev) {
+        if (this._canQuickEdit) {
+            this._triggerQuickEdit(ev);
+        }
+    },
     /**
      * Intercepts navigation keyboard events to prevent their default behavior
      * and notifies the view so that it can handle it its own way.
