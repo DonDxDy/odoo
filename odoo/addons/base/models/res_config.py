@@ -448,8 +448,13 @@ class ResConfigSettings(models.TransientModel, ResConfigModuleInstallationMixin)
                 }
         """
         IrModule = self.env['ir.module.module']
+        IrModelData = self.env['ir.model.data']
         Groups = self.env['res.groups']
-        ref = self.env.ref
+
+        def ref(xml_id):
+            model, id = IrModelData.xmlid_to_res_model_res_id(xml_id)
+            return self.env[model].browse(id)
+
         if fnames is None:
             fnames = self._fields.keys()
 
