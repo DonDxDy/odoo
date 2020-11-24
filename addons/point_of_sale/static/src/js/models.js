@@ -1922,6 +1922,7 @@ exports.Orderline = Backbone.Model.extend({
             tax:                this.get_tax(),
             product_description:      this.get_product().description,
             product_description_sale: this.get_product().description_sale,
+            product_type:       this.get_product().type,
         };
     },
     generate_wrapped_product_name: function() {
