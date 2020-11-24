@@ -219,6 +219,40 @@ class AccountReconcileModel(models.Model):
                                                     "  e.g: .*N°48748 abc123.*")
 
     past_months_limit = fields.Integer(string="Past Months Limit", default=18, help="Number of months in the past to consider entries from when applying this model.")
+    # ===== Write-Off =====
+    # First part fields.
+    account_id = fields.Many2one('account.account', string='Account', ondelete='cascade', domain="[('deprecated', '=', False), ('company_id', '=', company_id)]")
+    journal_id = fields.Many2one('account.journal', string='Journal', ondelete='cascade', help="This field is ignored in a bank statement reconciliation.", domain="[('company_id', '=', company_id)]")
+    label = fields.Char(string='Journal Item Label')
+    amount_type = fields.Selection([
+        ('fixed', 'Fixed'),
+        ('percentage', 'Percentage of balance')
+        ], required=True, default='percentage')
+    show_force_tax_included = fields.Boolean(store=False, help='Technical field used to show the force tax included button')
+    force_tax_included = fields.Boolean(string='Tax Included in Price',
+        help='Force the tax to be managed as a price included tax.')
+    amount = fields.Float(string='Write-off Amount', digits=0, required=True, default=100.0, help="Fixed amount will count as a debit if it is negative, as a credit if it is positive.")
+    tax_ids = fields.Many2many('account.tax', string='Taxes', ondelete='restrict')
+    analytic_account_id = fields.Many2one('account.analytic.account', string='Analytic Account', ondelete='set null')
+    analytic_tag_ids = fields.Many2many('account.analytic.tag', string='Analytic Tags', domain="[('company_id', '=', company_id)]",
+                                        relation='account_reconcile_model_analytic_tag_rel')
+    # Second part fields.
+    has_second_line = fields.Boolean(string='Add a second line', default=False)
+    second_account_id = fields.Many2one('account.account', string='Second Account', ondelete='cascade', domain="[('deprecated', '=', False), ('company_id', '=', company_id)]")
+    second_journal_id = fields.Many2one('account.journal', string='Second Journal', ondelete='cascade', help="This field is ignored in a bank statement reconciliation.", domain="[('company_id', '=', company_id)]")
+    second_label = fields.Char(string='Second Journal Item Label')
+    second_amount_type = fields.Selection([
+        ('fixed', 'Fixed'),
+        ('percentage', 'Percentage of amount')
+        ], string="Second Amount type",required=True, default='percentage')
+    show_second_force_tax_included = fields.Boolean(store=False, help='Technical field used to show the force tax included button')
+    force_second_tax_included = fields.Boolean(string='Second Tax Included in Price',
+        help='Force the second tax to be managed as a price included tax.')
+    second_amount = fields.Float(string='Second Write-off Amount', digits=0, required=True, default=100.0, help="Fixed amount will count as a debit if it is negative, as a credit if it is positive.")
+    second_tax_ids = fields.Many2many('account.tax', relation='account_reconcile_model_account_tax_bis_rel', string='Second Taxes', ondelete='restrict')
+    second_analytic_account_id = fields.Many2one('account.analytic.account', string='Second Analytic Account', ondelete='set null')
+    second_analytic_tag_ids = fields.Many2many('account.analytic.tag', string='Second Analytic Tags', domain="[('company_id', '=', company_id)]",
+                                               relation='account_reconcile_model_second_analytic_tag_rel')
 
     decimal_separator = fields.Char(default=lambda self: self.env['res.lang']._lang_get(self.env.user.lang).decimal_point, help="Every character that is nor a digit nor this separator will be removed from the matching string")
     show_decimal_separator = fields.Boolean(compute='_compute_show_decimal_separator', help="Technical field to decide if we should show the decimal separator for the regex matching field.")
