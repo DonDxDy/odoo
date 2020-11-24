@@ -183,7 +183,7 @@
                             </ul>
                         </t>
                         <t t-if="message.is_edited">
-                            <span class="text-muted o_Message_Edited">(edited)</span>
+                            <span class="text-muted o_Message_Edited" t-att-title="message.edit_date">(edited)</span>
                         </t>
                     </div>
                     <t t-if="message.subject and threadView and threadView.thread and (threadView.thread.mass_mailing or [env.messaging.inbox, env.messaging.history].includes(threadView.thread))">

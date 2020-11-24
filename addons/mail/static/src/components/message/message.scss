@@ -184,9 +184,10 @@
 .o_Message {
     background-color: white;
 
-    &:hover, &.o-clicked {
-
+    &:hover {
         background-color: whitesmoke;
+    }
+    &:hover, &.o-clicked {
 
         .o_Message_commands {
             background-color: white;

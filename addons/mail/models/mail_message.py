@@ -1101,7 +1101,7 @@ class Message(models.Model):
 
     def update_message(self, vals):
         self.write(vals)
-        return self._message_format(['body', 'attachment_ids'])
+        return self._message_format(['attachment_ids', 'body', 'is_edited', 'write_date'])
 
     def _get_message_format_fields(self):
         return [
@@ -1110,7 +1110,7 @@ class Message(models.Model):
             'model', 'res_id', 'record_name',  # document related
             'channel_ids', 'partner_ids',  # recipients
             'starred_partner_ids',  # list of partner ids for whom the message is starred
-            'moderation_status', 'is_edited'
+            'moderation_status', 'is_edited', 'write_date'
         ]
 
     def _message_notification_format(self):
