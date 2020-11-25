@@ -42,6 +42,9 @@
             <xpath expr="//field[@name='order_line']/form//field[@name='invoice_lines']" position="after">
                 <field name="move_ids"/>
             </xpath>
+            <xpath expr="//field[@name='invoice_status']" position="before">
+                <field name="receipt_status"/>
+            </xpath>
             <xpath expr="//field[@name='order_line']/form//field[@name='account_analytic_id']" position="before">
                 <field name="propagate_cancel" groups="base.group_no_one"/>
             </xpath>
@@ -69,4 +72,12 @@
         </field>
     </record>
 
+    <record id="purchase_order_view_tree_inherit" model="ir.ui.view">
+        <field name="name">purchase.order.tree.inherit</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='status']" position="after">
+                <field name="receipt_status"/>
+            </xpath>
 </odoo>
