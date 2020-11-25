@@ -529,7 +529,7 @@ class Environment(Mapping):
         """Return the current user (as an instance).
 
         :rtype: :class:`~odoo.addons.base.models.res_users`"""
-        return self(su=True)['res.users'].browse(self.uid)
+        return self(su=False)['res.users'].browse(self.uid)
 
     @lazy_property
     def company(self):
