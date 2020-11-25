@@ -413,9 +413,9 @@ class PaymentTransaction(models.Model):
         )
 
         # Render the html form for the redirect flow if available
-        if self.acquirer_id.redirect_template_view_id:
+        if self.acquirer_id.redirect_form_view_id:
             rendering_values = self._get_specific_rendering_values(processing_values)
-            redirect_form_html = self.acquirer_id.redirect_template_view_id._render(
+            redirect_form_html = self.acquirer_id.redirect_form_view_id._render(
                 rendering_values, engine='ir.qweb'
             )
             processing_values.update(redirect_form_html=redirect_form_html)

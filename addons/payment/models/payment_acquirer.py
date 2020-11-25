@@ -10,7 +10,7 @@ from odoo.osv import expression
 _logger = logging.getLogger(__name__)
 
 
-def create_missing_journals(cr, _registry):
+def create_missing_journals(cr, registry):
     """ Post-init hook responsible for the creation of a journal for all acquirers missing one. """
     env = api.Environment(cr, SUPERUSER_ID, {})
     env['payment.acquirer']._create_missing_journals()
