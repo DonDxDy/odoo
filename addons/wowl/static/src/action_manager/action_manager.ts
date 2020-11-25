@@ -1,8 +1,7 @@
 import { Component, hooks, tags } from "@odoo/owl";
 import { Dialog } from "../components/dialog/dialog";
 import type {
-  ActionContext,
-  OdooEnv,
+  ActionContext, Odoo, OdooEnv,
   Service,
   ComponentAction,
   FunctionAction,
@@ -11,15 +10,14 @@ import type {
   ViewId,
   ViewProps,
   ViewType,
-  Domain,
   ControllerProps,
-  Odoo,
 } from "../types";
 import { Route } from "../services/router";
 import { evaluateExpr } from "../py/index";
 import { makeContext } from "../core/context";
-declare const odoo: Odoo;
+import { DomainRepr } from "../core/domain";
 
+declare const odoo: Odoo;
 // -----------------------------------------------------------------------------
 // Types
 // -----------------------------------------------------------------------------
@@ -68,7 +66,7 @@ interface ActWindowAction extends ActionCommonInfo {
   res_model: string;
   views: [ViewId, ViewType][];
   context: Context;
-  domain: Domain;
+  domain: DomainRepr;
   search_view_id?: [ViewId, string]; // second member is the views's display_name, not the type
   target: ActionTarget;
   res_id?: number;
