@@ -194,6 +194,7 @@ var CalendarController = AbstractController.extend({
      */
     _onButtonNavigation(jsEvent) {
         const action = this._extractLastPartOfClassName('o_calendar_button_', jsEvent.currentTarget.classList);
+        debugger;
         if (action) {
             this._move(action);
         }

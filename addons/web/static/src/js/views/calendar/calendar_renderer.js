@@ -10,7 +10,6 @@ var FieldManagerMixin = require('web.FieldManagerMixin');
 var relational_fields = require('web.relational_fields');
 var session = require('web.session');
 var Widget = require('web.Widget');
-var CalendarQuickCreate = require('web.CalendarQuickCreate');
 const { createYearCalendarView } = require('/web/static/src/js/libs/fullcalendar.js');
 
 var _t = core._t;
@@ -171,9 +170,6 @@ return AbstractRenderer.extend({
         edit_event: '_onEditEvent',
         delete_event: '_onDeleteEvent',
     }),
-    events: _.extend({}, Dialog.prototype.events, {
-        'click .mobile_quick_create': 'calendar_mobile_quick_create',
-    }),
     /**
      * @constructor
      * @param {Widget} parent
@@ -201,9 +197,6 @@ return AbstractRenderer.extend({
         this._initSidebar();
         this._initCalendar();
         return this._super();
-    },
-    calendar_mobile_quick_create: function (events) {
-        console.log('--- event is called. ---');
     },
     /**
      * @override
@@ -659,6 +652,16 @@ return AbstractRenderer.extend({
         }
 
         this._unselectEvent();
+        // debugger;
+        $(".mobile_quick_create").click(function(){
+
+            self.trigger_up("");
+        });
+        $(".o_cp_today_button").click(function(ev){
+
+            self.trigger_up("today-button-click");
+        });
+
         // this._scrollToScrollTime();
     },
     /**
