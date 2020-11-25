@@ -693,8 +693,10 @@ function makeActionManager(env: OdooEnv): ActionManager {
     type: ReportType
   ): Promise<void> {
     const url = _getReportUrl(action, type);
+
     // TODO: download the report
     console.log(`download report ${url}`);
+
     if (action.close_on_report_download) {
       return doAction({ type: "ir.actions.act_window_close" });
     }

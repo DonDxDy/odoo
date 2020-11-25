@@ -1,4 +1,5 @@
 import { Component } from "@odoo/owl";
+import OdooError from "../crash_manager/odoo_error";
 import { Service, OdooEnv, Odoo } from "../types";
 declare const odoo: Odoo;
 
@@ -9,26 +10,19 @@ declare const odoo: Odoo;
 type Params = { [key: string]: any };
 
 export type RPC = (route: string, params?: Params, settings?: RPCSettings) => Promise<any>;
-
-export interface RPCServerError {
-  type: "server";
-
-  code: number;
-  message: string;
-
-  name?: string;
-  subType?: string;
-
-  data?: {
+export class RPCError extends OdooError {
+  public exceptionName?: string;
+  public type: string;
+  public code!: number;
+  public subType?: string;
+  public data?: {
     [key: string]: any;
   };
+  constructor() {
+    super("RPC_ERROR");
+    this.type = "server";
+  }
 }
-
-interface RPCNetworkError {
-  type: "network";
-}
-
-export type RPCError = RPCServerError | RPCNetworkError;
 
 // -----------------------------------------------------------------------------
 // Handling of lost connection
@@ -105,30 +99,28 @@ function jsonrpc(
       const { code, data: errorData, message, type: subType } = responseError;
       const { context: data_context, name: data_name } = errorData || {};
       const { exception_class } = data_context || {};
-      const name = exception_class || data_name;
+      const exception_class_name = exception_class || data_name;
 
-      const error: RPCServerError = {
-        type: "server",
-        code,
-        message,
-        data: errorData,
-        name,
-        subType,
-      };
+      const error = new RPCError();
+      if (name && env.registries.errorDialogs.contains(exception_class_name)) {
+        error.alternativeComponent = env.registries.errorDialogs.get(exception_class_name);
+      }
+      error.exceptionName = exception_class_name;
+      error.subType = subType;
+      error.data = errorData;
+      error.message = message;
+      error.code = code;
 
-      bus.trigger("RPC_ERROR", error);
       reject(error);
     });
 
     // handle failure
     request.addEventListener("error", () => {
       handleLostConnection(env);
-      const error: RPCError = {
-        type: "network",
-      };
-      bus.trigger("RPC_ERROR", error);
       bus.trigger("RPC:RESPONSE", data.id);
-      reject(error);
+      // We do not throw an error as it is handled in the handleLostConnection
+      // If we wanted to throw an error anyway but not display it with the crash manager,
+      // a "mute" argument had been proposed on the OdooError object. It is not implemented currently.
     });
 
     // configure and send request
