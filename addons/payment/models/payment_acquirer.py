@@ -358,12 +358,7 @@ class PaymentAcquirer(models.Model):
         :rtype: str
         """
         self.ensure_one()
-        url = ''
-        if request:  # Give priority to url_root to handle multi-website cases
-            url = request.httprequest.url_root
-        if not url:  # Fallback to web.base.url
-            url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        return url
+        return self.env['ir.config_parameter'].sudo().get_param('web.base.url')
 
     def _compute_fees(self, amount, currency_id, country_id):
         """ Compute the acquirer-specific fees given a transaction context.
