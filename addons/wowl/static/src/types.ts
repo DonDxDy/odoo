@@ -3,6 +3,7 @@ import { Env } from "@odoo/owl/dist/types/component/component";
 import { EventBus } from "@odoo/owl/dist/types/core/event_bus";
 import { Localization } from "./core/localization";
 import type { Registry } from "./core/registry";
+import type { DomainRepr } from "./core/domain";
 // add here each service type to have better typing for useService
 import type { actionManagerService } from "./action_manager/action_manager";
 import type { cookieService } from "./services/cookie";
@@ -23,11 +24,6 @@ interface CacheHashes {
   load_menus: string;
   translations: string;
 }
-
-// todo: check & improve Domain types
-type DomainOperator = "=";
-type DomainAtom = [string, DomainOperator, number | string | boolean] | "&" | "|";
-export type Domain = DomainAtom[];
 
 export interface Context {
   [key: string]: any;
@@ -186,7 +182,7 @@ export type ViewSwitcherEntries = ViewSwitcherEntry[];
 export interface ViewProps extends ActionProps {
   actionId?: number;
   context: Context;
-  domain: Domain;
+  domain: DomainRepr;
   model: string;
   type: ViewType;
   views: [ViewId, ViewType][];

@@ -1,10 +1,11 @@
 import { ActionDescription } from "../../src/action_manager/action_manager";
-import { Context, Domain, ModelData, Service, ViewId, ViewType } from "../../src/types";
+import { Context, ModelData, Service, ViewId, ViewType } from "../../src/types";
 import { MockRPC, makeFakeRPCService, makeMockFetch } from "./mocks";
 import { MenuData } from "../../src/services/menus";
 import { TestConfig } from "./utility";
 import { Registry } from "../../src/core/registry";
 import { evaluateExpr } from "../../src/py/index";
+import { Domain, DomainRepr } from "../../src/core/domain";
 import { DBRecord, ORMCommand } from "../../src/services/model";
 
 // Aims:
@@ -91,7 +92,7 @@ type ReadArgs = [number[] | number, string[]?];
 
 interface SearchReadControllerParams {
   model: string;
-  domain?: Domain;
+  domain?: DomainRepr;
   fields?: string[];
   offset?: number;
   limit?: number;
@@ -103,10 +104,10 @@ interface SearchReadControllerReturnType {
   records: DBRecord[];
 }
 
-type SearchReadArgs = [Domain, string[], number, number, string];
+type SearchReadArgs = [DomainRepr, string[], number, number, string];
 interface SearchReadKwargs {
   context: Context;
-  domain?: Domain;
+  domain?: DomainRepr;
   fields?: string[];
   offset?: number;
   limit?: number;
@@ -312,7 +313,7 @@ class MockServer {
         return false;
       }
       const modifiers: {
-        [name: string]: Domain | any;
+        [name: string]: DomainRepr | any;
       } = {};
 
       const isField = node.tagName === "field";
@@ -776,16 +777,15 @@ class MockServer {
   // Private
   //////////////////////////////////////////////////////////////////////////////
 
-  evaluateDomain(domain: Domain, record: DBRecord) {
-    console.warn("MOCK SERVER: cannot evaluate domain yet");
-    return true; // TODO
+  evaluateDomain(domain: DomainRepr, record: DBRecord) {
+    return new Domain(domain).contains(record);
   }
   /**
    * Get all records from a model matching a domain.  The only difficulty is
    * that if we have an 'active' field, we implicitely add active = true in
    * the domain.
    */
-  getRecords(modelName: string, domain: Domain, { active_test = true } = {}): DBRecord[] {
+  getRecords(modelName: string, domain: DomainRepr, { active_test = true } = {}): DBRecord[] {
     if (!Array.isArray(domain)) {
       throw new Error("MockServer._getRecords: given domain has to be an array.");
     }

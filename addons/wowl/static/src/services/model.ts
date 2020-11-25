@@ -1,5 +1,6 @@
 import { Component } from "@odoo/owl";
-import { Context, Domain, Service, OdooEnv } from "../types";
+import { Context, Service, OdooEnv } from "../types";
+import { DomainRepr } from "../core/domain";
 import { RPC } from "./rpc";
 
 export type ORMCommand = [0 | 1 | 2 | 3 | 4 | 5 | 6, false | number, Partial<DBRecord> | number[]];
@@ -41,14 +42,14 @@ export interface Model {
   create(state: Partial<DBRecord>, ctx?: Context): Promise<number>;
   read(ids: number[], fields: string[], ctx?: Context): Promise<DBRecord[]>;
   readGroup(
-    domain: Domain,
+    domain: DomainRepr,
     fields: string[],
     groupby: string[],
     options?: GroupByOptions,
     ctx?: Context
   ): Promise<ReadGroupResult>;
   searchRead(
-    domain: Domain,
+    domain: DomainRepr,
     fields: string[],
     options?: SearchReadOptions,
     ctx?: Context

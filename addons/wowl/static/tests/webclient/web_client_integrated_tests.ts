@@ -3477,8 +3477,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     // webClient.destroy();
   });
 
-  QUnit.skip("domain is kept when switching between views", async function (assert) {
-    // skipped because MockServer is not able yet to evaluate a domain
+  QUnit.test("domain is kept when switching between views", async function (assert) {
     assert.expect(5);
 
     baseConfig.serverData!.actions![3].search_view_id = [1, "a custom search view"];
