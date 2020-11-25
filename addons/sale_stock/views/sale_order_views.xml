@@ -37,6 +37,9 @@
                     </div>
                     <field name="effective_date" attrs="{'invisible': [('effective_date', '=', False)]}"/>
                 </xpath>
+                <xpath expr="//field[@name='effective_date']" position="after">
+                    <field name="delivery_status"/>
+                </xpath>
                 <xpath expr="//page[@name='other_information']//field[@name='expected_date']" position="after">
                     <field name="show_json_popover" invisible="1"/>
                     <field string=" " name="json_popover" widget="stock_rescheduling_popover" attrs="{'invisible': [('show_json_popover', '=', False)]}"/>
@@ -74,6 +77,9 @@
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='team_id']" position="after">
                     <field name="warehouse_id" options="{'no_create': True}" groups="stock.group_stock_multi_warehouses" optional="hide"/>
+                </xpath>
+                <xpath expr="//field[@name='state']" position="after">
+                    <field name="delivery_status"/>
                 </xpath>
             </field>
         </record>

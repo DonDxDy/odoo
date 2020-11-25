@@ -67,10 +67,11 @@ class PurchaseOrder(models.Model):
     @api.depends('picking_ids', 'picking_ids.state')
     def _get_receipt(self):
         for order in self:
-            if order.picking_ids and all(x.state == 'done' for x in order.picking_ids):
-                order.receipt_status = 'fully'
-            if order.picking_ids and any(x.state == 'done' for x in order.picking_ids):
-                order.receipt_status = 'partial'
+            if order.picking_ids:
+                if all(x.state == 'done' for x in order.picking_ids):
+                    order.receipt_status = 'fully'
+                elif order.picking_ids and any(x.state == 'done' for x in order.picking_ids):
+                    order.receipt_status = 'partially'
 
     @api.onchange('picking_type_id')
     def _onchange_picking_type_id(self):
