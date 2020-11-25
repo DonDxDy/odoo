@@ -55,13 +55,13 @@ class PaymentAcquirer(models.Model):
         help="Capture the amount from Odoo, when the delivery is completed.\n"
              "Use this if you want to charge your customers cards only when\n"
              "you are sure you can ship the goods to them.")
-    redirect_template_view_id = fields.Many2one(
+    redirect_form_view_id = fields.Many2one(
         name="Redirect Form Template", comodel_name='ir.ui.view',
-        help="The template rendered in the form when submitting a payment with redirection",
+        help="The template rendering a form submitted to redirect the user when making a payment",
         domain=[('type', '=', 'qweb')])
-    inline_template_view_id = fields.Many2one(
+    inline_form_view_id = fields.Many2one(
         string="Inline Form Template", comodel_name='ir.ui.view',
-        help="The template rendered inside the acquirer form when making a direct payment",
+        help="The template rendering the inline payment form when making a direct payment",
         domain=[('type', '=', 'qweb')])
     country_ids = fields.Many2many(
         string="Countries", comodel_name='res.country', relation='payment_country_rel',
