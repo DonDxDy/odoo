@@ -1402,6 +1402,17 @@ function factory(dependencies) {
         }
 
         /**
+         * Compute an url string that can be used inside a href attribute
+         *
+         * @private
+         * @returns {string}
+         */
+        _computeUrl() {
+            const baseHREF = this.env.session.url('/web');
+            return `${baseHREF}#model=${this.model}&id=${this.id}`;
+        }
+
+        /**
          * @private
          * @param {Object} param0
          * @param {boolean} param0.isTyping
@@ -2085,6 +2096,14 @@ function factory(dependencies) {
             compute: '_computeTypingStatusText',
             default: '',
             dependencies: ['orderedOtherTypingMembers'],
+        }),
+        url: attr({
+            compute: '_computeUrl',
+            default: '',
+            dependencies: [
+                'id',
+                'model',
+            ]
         }),
         uuid: attr(),
     };
