@@ -51,6 +51,7 @@
                     window.odoo = {
                         session_info: <t t-raw="json.dumps(session_info)"/>,
                         debug: "<t t-esc="debug"/>",
+                        csrf_token: "<t t-esc="request.csrf_token(None)"/>",
                     };
                 </script>
 

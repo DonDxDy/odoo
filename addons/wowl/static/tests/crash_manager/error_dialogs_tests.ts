@@ -11,7 +11,7 @@ import {
 } from "../../src/crash_manager/error_dialogs";
 import { Registry } from "../../src/core/registry";
 import { OdooBrowser, Service } from "../../src/types";
-import { OdooError } from "../../src/services/crash_manager";
+import OdooError from "../../src/crash_manager/odoo_error";
 
 let target: HTMLElement;
 let env: OdooEnv;

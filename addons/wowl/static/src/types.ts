@@ -68,6 +68,7 @@ export interface SessionInfo {
 export interface Odoo {
   browser: OdooBrowser;
   session_info: SessionInfo;
+  csrf_token?: string;
   debug: string;
 }
 

@@ -19,6 +19,7 @@ import { Route } from "../services/router";
 import { evaluateExpr } from "../py/index";
 import { makeContext } from "../core/context";
 declare const odoo: Odoo;
+import { downloadFile } from "../core/download";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -693,8 +694,18 @@ function makeActionManager(env: OdooEnv): ActionManager {
     type: ReportType
   ): Promise<void> {
     const url = _getReportUrl(action, type);
-    // TODO: download the report
-    console.log(`download report ${url}`);
+    env.services.ui.block();
+    try {
+      await downloadFile({
+        url: "report/download",
+        data: {
+          data: JSON.stringify([url, action.report_type]),
+          context: JSON.stringify(env.services.user.context),
+        },
+      });
+    } finally {
+      env.services.ui.unblock();
+    }
     if (action.close_on_report_download) {
       return doAction({ type: "ir.actions.act_window_close" });
     }
