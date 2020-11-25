@@ -62,12 +62,14 @@ class StockPutawayRule(models.Model):
         default=_default_location_id, required=True, ondelete='cascade')
     location_out_id = fields.Many2one(
         'stock.location', 'Store to', check_company=True,
-        domain="[('id', 'child_of', location_in_id), ('id', '!=', location_in_id), '|', ('company_id', '=', False), ('company_id', '=', company_id)]",
+        domain="[('id', 'child_of', location_in_id), '|', ('company_id', '=', False), ('company_id', '=', company_id)]",
         required=True, ondelete='cascade')
     sequence = fields.Integer('Priority', help="Give to the more specialized category, a higher priority to have them in top of the list.")
     company_id = fields.Many2one(
         'res.company', 'Company', required=True,
         default=lambda s: s.env.company.id, index=True)
+    package_type_id = fields.Many2one('stock.package.type', 'Package Type', ondelete='cascade', check_company=True)
+    storage_category_id = fields.Many2one('stock.storage.category', 'Storage Category', ondelete='cascade', check_company=True)
 
     @api.onchange('location_in_id')
     def _onchange_location_in(self):
@@ -86,3 +88,30 @@ class StockPutawayRule(models.Model):
                 if rule.company_id.id != vals['company_id']:
                     raise UserError(_("Changing the company of this record is forbidden at this point, you should rather archive it and create a new one."))
         return super(StockPutawayRule, self).write(vals)
+
+    def _get_putaway_location(self, product, quantity, package_type):
+        self.ensure_one()
+        if not self.storage_category_id:
+            if self.location_out_id._check_can_be_used(product, quantity):
+                return self.location_out_id
+
+        # loop to get the child locations instead of using search for better performance
+        child_locations = self.location_in_id
+        for location in child_locations:
+            child_locations |= location.child_ids.filtered(lambda l: l.usage == "internal")
+        child_locations = child_locations.sorted('name')
+
+        # check if already have the product stored
+        for location in child_locations:
+            if package_type:
+                if location.quant_ids.filtered(lambda q: q.product_id == product and q.package_id and q.package_id.packaging_id == package_type) and location._check_can_be_used(product, quantity):
+                    return location
+            elif location.quant_ids.filtered(lambda q: q.product_id == product) and location._check_can_be_used(product, quantity):
+                return location
+
+        # check locations with matched storage category
+        for location in child_locations.filtered(lambda l: l.storage_category_id == self.storage_category_id):
+            if location._check_can_be_used(product, quantity):
+                return location
+
+        return None

@@ -26,6 +26,7 @@ class PackageType(models.Model):
     weight_uom_name = fields.Char(string='Weight unit of measure label', compute='_compute_weight_uom_name', default=_get_default_weight_uom)
     length_uom_name = fields.Char(string='Length unit of measure label', compute='_compute_length_uom_name', default=_get_default_length_uom)
     company_id = fields.Many2one('res.company', 'Company', index=True)
+    storage_category_capacity_ids = fields.One2many('stock.storage.category.capacity', 'package_type_id', 'Storage Category Capacity')
 
     _sql_constraints = [
         ('positive_height', 'CHECK(height>=0)', 'Height must be positive'),

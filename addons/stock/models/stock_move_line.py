@@ -110,6 +110,12 @@ class StockMoveLine(models.Model):
         if any([ml.qty_done < 0 for ml in self]):
             raise ValidationError(_('You can not enter negative quantities.'))
 
+    # @api.onchange('result_package_id')
+    # def _onchange_result_package_id(self):
+    #     if self.result_package_id:
+    #         if not self.id and self.user_has_groups('stock.group_stock_multi_locations'):
+    #             self.location_dest_id = self.location_dest_id._get_putaway_strategy(self.product_id) or self.location_dest_id
+
     @api.onchange('product_id', 'product_uom_id')
     def _onchange_product_id(self):
         if self.product_id:

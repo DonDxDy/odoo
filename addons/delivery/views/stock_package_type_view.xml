@@ -12,33 +12,37 @@
                     <field name="name"/>
                 </h1>
                 <group name="delivery">
-                  <group>
-                    <field name="package_carrier_type"/>
-                    <label for="height"/>
-                    <div class="o_row" name="height">
-                      <field name="height"/>
-                      <span><field name="length_uom_name"/></span>
-                    </div>
-                    <label for="width"/>
-                    <div class="o_row" name="width">
-                      <field name="width"/>
-                      <span><field name="length_uom_name"/></span>
-                    </div>
-                    <label for="packaging_length"/>
-                    <div class="o_row" name="packaging_length">
-                      <field name="packaging_length"/>
-                      <span><field name="length_uom_name"/></span>
-                    </div>
-                  </group>
-                  <group>
-                    <label for="max_weight"/>
-                    <div class="o_row" name="max_weight">
-                      <field name="max_weight"/>
-                      <span><field name="weight_uom_name"/></span>
-                    </div>
-                    <field name="barcode"/>
-                    <field name="shipper_package_code"/>
-                  </group>
+                    <group>
+                        <label for="length_uom_name" string="Size"/>
+                        <div class="o_row" name="size">
+                            <field name="packaging_length" placeholder="Length"/>
+                            <span>&#215;</span>
+                            <field name="width" placeholder="Width"/>
+                            <span>&#215;</span>
+                            <field name="height" placeholder="Height"/>
+                            <span><field name="length_uom_name" help="Size: Length &#215; Width &#215; Height"/></span>
+                        </div>
+                        <label for="max_weight"/>
+                        <div class="o_row" name="max_weight">
+                            <field name="max_weight"/>
+                            <span><field name="weight_uom_name"/></span>
+                        </div>
+                        <field name="barcode"/>
+                    </group>
+                    <group>
+                        <field name="package_carrier_type"/>
+                        <field name="shipper_package_code"/>
+                    </group>
+                </group>
+                <group>
+                    <group>
+                        <field name="storage_category_capacity_ids" context="{'default_package_type_id': id}">
+                            <tree editable="bottom">
+                                <field name="storage_category_id"/>
+                                <field name="quantity"/>
+                            </tree>
+                        </field>
+                    </group>
                 </group>
             </sheet>
         </form>
