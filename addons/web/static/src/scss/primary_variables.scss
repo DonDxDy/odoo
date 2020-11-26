@@ -3,6 +3,9 @@
 /// They are available in every asset bundle.
 ///
 
+// Odoo mode (overridden by web_enterprise)
+$o-community: true;
+
 // Font sizes
 $o-root-font-size: 12px;
 $o-font-size-base: 13rem * (1px / $o-root-font-size);

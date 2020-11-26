@@ -1,3 +1,5 @@
+@if $o-community {
+
 //
 // This file regroups all the rules which apply to field widgets wherever they
 // are in the DOM, in the community version.
@@ -56,4 +58,6 @@
             }
         }
     }
+}
+
 }

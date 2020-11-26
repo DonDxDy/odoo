@@ -1,3 +1,5 @@
+@if $o-community {
+
 .ui-autocomplete .ui-menu-item {
     > a.ui-state-active {
         background-color: $o-brand-odoo;
@@ -57,4 +59,6 @@
             }
         }
     }
+}
+
 }

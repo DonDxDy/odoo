@@ -8,13 +8,12 @@
 Odoo Web tours.
 ========================
 
-""",
+    """,
     'version': '0.1',
     'depends': ['web'],
     'data': [
         'security/ir.model.access.csv',
         'security/ir.rule.csv',
-        'views/tour_templates.xml',
         'views/tour_views.xml'
     ],
     'assets': {

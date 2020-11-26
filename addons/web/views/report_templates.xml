@@ -3,10 +3,11 @@
     <!-- Assets for reports -->
 
     <template id="report_assets_common">
-        <t t-call="web._assets_helpers">
-          <link rel="stylesheet" type="text/scss" href="/web/static/src/scss/bootstrap_overridden_report.scss"/>
-        </t>
+        <t t-call="web._assets_helpers_primary"/>
 
+        <link rel="stylesheet" type="text/scss" href="/web/static/src/scss/bootstrap_overridden_report.scss"/>
+
+        <t t-call="web._assets_helpers_secondary"/>
         <t t-call="web._assets_bootstrap"/>
 
         <link href="/base/static/src/css/description.css" rel="stylesheet" type="text/css"/>

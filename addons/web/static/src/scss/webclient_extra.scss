@@ -1,3 +1,5 @@
+@if $o-community {
+
 //------------------------------------------------------------------------------
 // Inputs and selects (note: put the o_input class to have the style)
 //------------------------------------------------------------------------------
@@ -48,4 +50,6 @@ select {
 .btn-secondary {
     // Bootstrap variables do not control the color for btn-secondary border
     border-color: $border-color;
+}
+
 }
