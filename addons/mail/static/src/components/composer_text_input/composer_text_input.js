@@ -174,6 +174,9 @@ class ComposerTextInput extends Component {
      * @private
      */
     _onFocusinTextarea() {
+        // if the focus was the result of a click, the new cursor position
+        // should be saved to avoid restoring an obsolete position instead
+        this.saveStateInStore();
         this.composer.focus();
     }
 
