@@ -1,7 +1,7 @@
-import { MenuElement, MenuElementFactory, Odoo, OdooEnv } from "../../types";
-import { routeToUrl } from "../../services/router";
-import { Registry } from "../../core/registry";
-import { DomainListRepr as Domain } from "./core/domain";
+import { MenuElement, MenuElementFactory, Odoo, OdooEnv } from "../types";
+import { routeToUrl } from "../services/router";
+import { Registry } from "../core/registry";
+import { DomainListRepr as Domain } from "../core/domain";
 
 declare const odoo: Odoo;
 
