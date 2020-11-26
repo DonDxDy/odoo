@@ -312,6 +312,13 @@ exports.PosModel = Backbone.Model.extend({
             }
        },
     },{
+      model: 'stock.picking.type',
+      fields: ['use_create_lots', 'use_existing_lots'],
+      domain: function(self){ return [['id', '=', self.config.picking_type_id[0]]]; },
+      loaded: function(self, picking_type) {
+          self.picking_type = picking_type[0];
+      },
+    },{
         model:  'res.users',
         fields: ['name','company_id', 'id', 'groups_id', 'lang'],
         domain: function(self){ return [['company_ids', 'in', self.config.company_id[0]],'|', ['groups_id','=', self.config.group_pos_manager_id[0]],['groups_id','=', self.config.group_pos_user_id[0]]]; },
