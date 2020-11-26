@@ -637,6 +637,7 @@ return AbstractRenderer.extend({
      */
     _renderCalendar() {
         this.calendar.unselect();
+        var self = this; //added for development and will remove
 
         if (this.scalesInfo[this.state.scale] !== this.calendar.view.type) {
             this.calendar.changeView(this.scalesInfo[this.state.scale]);
@@ -652,14 +653,12 @@ return AbstractRenderer.extend({
         }
 
         this._unselectEvent();
-        // debugger;
         $(".mobile_quick_create").click(function(){
 
-            self.trigger_up("");
         });
         $(".o_cp_today_button").click(function(ev){
-
-            self.trigger_up("today-button-click");
+            self.model['today']();
+            return self.reload();
         });
 
         // this._scrollToScrollTime();
