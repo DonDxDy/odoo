@@ -4,6 +4,7 @@ odoo.define('mail/static/src/components/composer/composer_tests.js', function (r
 const components = {
     Composer: require('mail/static/src/components/composer/composer.js'),
 };
+const { makeDeferred } = require('mail/static/src/utils/deferred/deferred.js');
 const {
     afterEach,
     afterNextRender,
@@ -2096,6 +2097,45 @@ QUnit.test("mentioned partners should not be notified if they are not member of 
     );
     await afterNextRender(() => document.querySelector('.o_Composer_buttonSend').click());
     assert.verifySteps(['message_post'], "the message should be posted");
+});
+
+QUnit.test('composer text input cleared on message post', async function (assert) {
+    assert.expect(1);
+
+    const messagePostDef = makeDeferred();
+    // channel that is expected to be rendered
+    // with a random unique id that will be referenced in the test
+    this.data['mail.channel'].records.push({ id: 20 });
+    await this.start({
+        async mockRPC(route, args) {
+            const _super = this._super.bind(this);
+            if (args.method === 'message_post') {
+                await messagePostDef;
+            }
+            return _super(...arguments);
+        },
+    });
+    const thread = this.env.models['mail.thread'].find(thread =>
+        thread.id === 20 &&
+        thread.model === 'mail.channel'
+    );
+    await this.createComposerComponent(thread.composer);
+    // Type message
+    await afterNextRender(() => {
+        document.querySelector(`.o_ComposerTextInput_textarea`).focus();
+        document.execCommand('insertText', false, "test message");
+    });
+
+    // Send message
+    await afterNextRender(() =>
+        document.querySelector('.o_Composer_buttonSend').click()
+    );
+    assert.containsOnce(
+        document.body,
+        '.o_ComposerTextInput_textarea[readonly]',
+        "Composer readonly test"
+    );
+    messagePostDef.resolve();
 });
 
 });
