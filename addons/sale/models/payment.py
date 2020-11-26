@@ -43,7 +43,7 @@ class PaymentTransaction(models.Model):
             trans.sale_order_ids_nbr = len(trans.sale_order_ids)
 
     def _set_pending(self):
-        """ Override of payment to sent the quotations automatically. """
+        """ Override of payment to send the quotations automatically. """
         super(PaymentTransaction, self)._set_pending()
 
         for record in self:
@@ -86,16 +86,17 @@ class PaymentTransaction(models.Model):
         # send order confirmation mail
         sales_orders._send_order_confirmation_mail()
 
-    def _get_linked_documents(self):
-        """ Return the sale orders linked to the transaction.
+    def _log_message_on_linked_documents(self, message):
+        """ Log a message on the sales orders linked to the transaction.
 
         Note: self.ensure_one()
 
-        :return: The sale orders linked to the transaction
-        :rtype: recordset of `sale.order`
+        :param str message: The message to be logged
+        :return: None
         """
-        self.ensure_one()
-        return super()._get_linked_documents() or self.sale_order_ids
+        super()._log_message_on_linked_documents(message)
+        for order in self.sale_order_ids:
+            order.message_post(body=message)
 
     def _reconcile_after_transaction_done(self):
         """ Override of payment to automatically confirm quotations and generate invoices. """

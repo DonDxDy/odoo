@@ -4,16 +4,16 @@
 import binascii
 
 from odoo import fields, http, _
-from odoo.exceptions import AccessError, MissingError, UserError, ValidationError
+from odoo.exceptions import AccessError, MissingError, ValidationError
 from odoo.http import request
-from odoo.addons.payment.controllers.portal import PaymentPortal
-from odoo.addons.payment.controllers.post_processing import PaymentPostProcessing
+from odoo.addons.payment.controllers import portal as payment_portal
 from odoo.addons.payment import utils as payment_utils
 from odoo.addons.portal.controllers.mail import _message_post_helper
+from odoo.addons.portal.controllers import portal
 from odoo.addons.portal.controllers.portal import pager as portal_pager, get_records_pager
 
 
-class CustomerPortal(PaymentPortal):
+class CustomerPortal(portal.CustomerPortal):
 
     def _prepare_home_portal_values(self, counters):
         values = super()._prepare_home_portal_values(counters)
@@ -192,9 +192,11 @@ class CustomerPortal(PaymentPortal):
                 ('acquirer_id', 'in', acquirers_sudo.ids),
                 ('partner_id', '=', order_sudo.partner_id.id)
             ]) if logged_in else request.env['payment.token']
-            fees_by_acquirer = {acquirer: acquirer._compute_fees(
-                order_sudo.amount_total, order_sudo.currency_id, order_sudo.partner_id.country_id.id
-            ) for acquirer in acquirers_sudo.filtered('fees_active')}
+            fees_by_acquirer = {
+                acquirer: acquirer._compute_fees(
+                    order_sudo.amount_total, order_sudo.currency_id, order_sudo.partner_id.country_id
+                ) for acquirer in acquirers_sudo.filtered('fees_active')
+            }
             # Prevent public partner from saving payment methods but force it for logged in partners
             # buying subscription products
             show_tokenize_input = logged_in \
@@ -282,6 +284,9 @@ class CustomerPortal(PaymentPortal):
             query_string = "&message=cant_reject"
 
         return request.redirect(order_sudo.get_portal_url(query_string=query_string))
+
+
+class PaymentPortal(payment_portal.PaymentPortal):
 
     @http.route('/my/orders/<int:order_id>/transaction', type='json', auth='public')
     def portal_order_transaction(self, order_id, access_token, **kwargs):

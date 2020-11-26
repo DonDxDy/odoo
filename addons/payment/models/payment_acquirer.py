@@ -37,7 +37,7 @@ class PaymentAcquirer(models.Model):
         default='disabled', required=True, copy=False)
     company_id = fields.Many2one(  # Indexed to fasten ORM searches on c_id (from ir_rule or other)
         string="Company", comodel_name='res.company', default=lambda self: self.env.company.id,
-        required=True, store=True, index=True)
+        required=True, index=True)
     payment_icon_ids = fields.Many2many(
         string="Supported Payment Icons", comodel_name='payment.icon')
     allow_tokenization = fields.Boolean(
@@ -123,12 +123,9 @@ class PaymentAcquirer(models.Model):
         store=True)
 
     # Module-related fields
-    module_id = fields.Many2one(
-        string="Corresponding Module", comodel_name='ir.module.module')
-    module_state = fields.Selection(
-        string="Installation State", related='module_id.state', store=True)
-    module_to_buy = fields.Boolean(
-        string="Odoo Enterprise Module", related='module_id.to_buy', store=False)
+    module_id = fields.Many2one(string="Corresponding Module", comodel_name='ir.module.module')
+    module_state = fields.Selection(string="Installation State", related='module_id.state')
+    module_to_buy = fields.Boolean(string="Odoo Enterprise Module", related='module_id.to_buy')
 
     #=== COMPUTE METHODS ===#
 
@@ -374,7 +371,7 @@ class PaymentAcquirer(models.Model):
         self.ensure_one()
         return self.env['ir.config_parameter'].sudo().get_param('web.base.url')
 
-    def _compute_fees(self, amount, currency_id, country_id):
+    def _compute_fees(self, amount, currency, country):
         """ Compute the acquirer-specific fees given a transaction context.
 
         For an acquirer to implement fees computation, it must override this method and return the
@@ -383,8 +380,8 @@ class PaymentAcquirer(models.Model):
         Note: self.ensure_one()
 
         :param float amount: The amount to pay for the transaction
-        :param int currency_id: The currency of the transaction, as a `res.currency` id
-        :param int country_id|None: The customer country, as a `res.country` id
+        :param int currency: The currency of the transaction, as a `res.currency` record
+        :param int country|None: The customer country, as a `res.country` record
         :return: The computed fees
         :rtype: float
         """

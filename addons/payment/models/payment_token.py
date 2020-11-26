@@ -20,7 +20,7 @@ class PaymentToken(models.Model):
     acquirer_id = fields.Many2one(
         string="Acquirer Account", comodel_name='payment.acquirer', required=True)
     company_id = fields.Many2one(  # Indexed to fasten ORM searches on c_id (from ir_rule or other)
-        related='acquirer_id.company_id', store=True, index=True)
+        related='acquirer_id.company_id', index=True)
     acquirer_ref = fields.Char(
         string="Acquirer Reference", help="The acquirer reference of the token of the transaction",
         required=True)  # This is not the same thing as the acquirer reference of the transaction
@@ -72,10 +72,10 @@ class PaymentToken(models.Model):
         # Let acquirers handle activation/deactivation requests
         if 'active' in values:
             for token in self:
-                # Call handlers in sudo mode because a RPC can be the caller of `write`
-                if values['active']:
+                # Call handlers in sudo mode because this method might have been called by RPC
+                if values['active'] and not token.active:
                     token.sudo()._handle_activation_request()
-                else:
+                elif not values['active'] and token.active:
                     token.sudo()._handle_deactivation_request()
 
         # Proceed with the toggling of the active state

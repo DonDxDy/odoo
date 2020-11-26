@@ -25,14 +25,16 @@ class PaymentPortal(portal.CustomerPortal):
 
     The following routes are exposed:
     - `/payment/pay` allows for arbitrary payments.
-    - `/my/payment_method` allows the user to create and delete tokens.
-    - `/payment/transaction` is the `init_tx_route` for the standard payment flow.
-      It creates a draft transaction, and return the processing values necessary for the completion
-      of the transaction.
-    - `/payment/confirmation` is the `landing_route` for the standard payment flow.
-      It displays the payment confirmation page to the user when the transaction is validated.
-    - `/payment/validation` is the `landing_route` for the standard payment method validation flow.
-      It redirects the user to `/my/payment_method` to display the result and start the flow over.
+    - `/my/payment_method` allows the user to create and delete tokens. It's its own `landing_route`
+    # TODO ANV rename init_tx_route to transaction route
+    - `/payment/transaction` is the `init_tx_route` for the standard payment flow. It creates a
+      draft transaction, and return the processing values necessary for the completion of the
+      transaction.
+    - `/payment/confirmation` is the `landing_route` for the standard payment flow. It displays the
+      payment confirmation page to the user when the transaction is validated.
+    - `/payment/validation` is the `validation_route` for the standard payment method validation
+      flow. It redirects the user to `/my/payment_method` in order to display the result and allow
+      to start the flow over.
     """
 
     @http.route(
@@ -100,7 +102,8 @@ class PaymentPortal(portal.CustomerPortal):
         # Instantiate transaction values to their default if not set in parameters
         reference = reference or payment_utils.singularize_reference_prefix(prefix='tx')
         amount = amount or 0.0  # If the amount is invalid, set it to 0 to stop the payment flow
-        currency_id = currency_id or user.company_id.currency_id.id  # TODO TBE check if a foreign user should pay in his company's currency or his own
+        # TODO TBE check if a foreign user should pay in his company's currency or his own
+        currency_id = currency_id or user.company_id.currency_id.id
         company_id = company_id or user.company_id.id
 
         # Make sure that the currency exists and is active
@@ -117,9 +120,10 @@ class PaymentPortal(portal.CustomerPortal):
         ) if logged_in else request.env['payment.token']  #
 
         # Compute the fees taken by acquirers supporting the feature
-        country_id = user.partner_id.country_id.id
-        fees_by_acquirer = {acq_sudo: acq_sudo._compute_fees(amount, currency.id, country_id)
-                            for acq_sudo in acquirers_sudo.filtered('fees_active')}
+        fees_by_acquirer = {
+            acq_sudo: acq_sudo._compute_fees(amount, currency, user.partner_id.country_id)
+            for acq_sudo in acquirers_sudo.filtered('fees_active')
+        }
 
         # Generate a new access token in case the partner id or the currency id was updated
         access_token = payment_utils.generate_access_token(
@@ -242,7 +246,7 @@ class PaymentPortal(portal.CustomerPortal):
         :param str landing_route: The route the user is redirected to after the transaction
         :param dict custom_create_values: Additional create values overwriting the default ones
         :param dict kwargs: Optional data. This parameter is not used here
-        :return: The created transaction
+        :return: The sudoed transaction that was created
         :rtype: recordset of `payment.transaction`
         :raise: UserError if the flow is invalid
         """
@@ -373,16 +377,16 @@ class PaymentPortal(portal.CustomerPortal):
         ):
             raise werkzeug.exceptions.NotFound  # Don't leak info about existence of an id
 
-        landing_route = self._refund_validation_transaction(tx_id=tx_id, **kwargs)
-        return request.redirect(landing_route)
+        self._refund_validation_transaction(tx_id=tx_id, **kwargs)
+        return request.redirect(tx.landing_route)
 
     def _refund_validation_transaction(self, tx_id, **kwargs):
         """ Refund a validation transaction and remove it from post-processing.
 
         :param str tx_id: The validation transaction to refund, as a `payment.transaction` id
         :param dict kwargs: Optional data. This parameter is not used here
-        :return: The landing route of the transaction
-        :rtype: str
+        :return: The refunded transaction
+        :rtype: recordset of `payment.transaction`
         :raise: ValidationError if the transaction id is invalid
         """
         tx_id, = self.cast_as_numeric([tx_id], numeric_type='int')
@@ -395,7 +399,7 @@ class PaymentPortal(portal.CustomerPortal):
 
         PaymentPostProcessing.remove_transactions(tx)
 
-        return tx.landing_route
+        return tx
 
     @staticmethod
     def cast_as_numeric(str_values, numeric_type='int'):

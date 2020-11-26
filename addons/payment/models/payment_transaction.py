@@ -35,7 +35,7 @@ class PaymentTransaction(models.Model):
         string="Acquirer", comodel_name='payment.acquirer', readonly=True, required=True)
     provider = fields.Selection(related='acquirer_id.provider')
     company_id = fields.Many2one(  # Indexed to fasten ORM searches on c_id (from ir_rule or other)
-        related='acquirer_id.company_id', store=True, index=True)
+        related='acquirer_id.company_id', index=True)
     reference = fields.Char(
         string="Reference", help="The internal reference of the transaction", readonly=True,
         required=True, index=True)
@@ -75,13 +75,13 @@ class PaymentTransaction(models.Model):
     payment_id = fields.Many2one(string="Payment", comodel_name='account.payment', readonly=True)
     invoice_ids = fields.Many2many(
         string="Invoices", comodel_name='account.move', relation='account_invoice_transaction_rel',
-        column1='transaction_id', column2='invoice_id', readonly=True, copy=False,
+        column1='transaction_id', column2='invoice_id', readonly=True, copy=False,  # TODO TBE Shouldn't we completely forbid duplicating transactions?
         domain=[('move_type', 'in', ('out_invoice', 'out_refund', 'in_invoice', 'in_refund'))])
     invoice_ids_nbr = fields.Integer(string="Invoices count", compute='_compute_invoice_ids_nbr')
 
     # Fields used for user redirection & payment post-processing
     is_post_processed = fields.Boolean(
-        string="Is Post-processed", help="Has the payment been post-processed", default=False)
+        string="Is Post-processed", help="Has the payment been post-processed")
     tokenize = fields.Boolean(
         string="Create Token",
         help="Whether a payment token should be created when post-processing the transaction")
@@ -160,9 +160,9 @@ class PaymentTransaction(models.Model):
                 values['reference'] = self._compute_reference(acquirer.provider, **values)
 
             # Compute fees
-            values['fees'] = acquirer._compute_fees(
-                values.get('amount'), values.get('currency_id'), values.get('partner_country_id')
-            )
+            currency = self.env['res.currency'].browse(values.get('currency_id')).exists()
+            country = self.env['res.country'].browse(values.get('partner_country_id')).exists()
+            values['fees'] = acquirer._compute_fees(values.get('amount', 0), currency, country)
 
             # Duplicate partner values
             partner = self.env['res.partner'].browse(values['partner_id'])
@@ -820,30 +820,6 @@ class PaymentTransaction(models.Model):
 
         return payment
 
-    #=== BUSINESS METHODS - GETTERS ===#
-
-    def _get_linked_documents(self):
-        """ Return the invoices linked to the transaction.
-
-        For a module to implement payments and link documents to a transaction, it must override
-        this method and return the recordset of linked documents, if any, or the result of super.
-
-        Note: self.ensure_one()
-
-        :return: The invoices linked to the transaction
-        :rtype: recordset of `account.move`
-        """
-        self.ensure_one()
-        return self.invoice_ids
-
-    def _get_last(self):
-        """ Return the last transaction of the recordset.
-
-        :return: The last transaction of the recordset, sorted by id
-        :rtype: recordset of `payment.transaction`
-        """
-        return self.filtered(lambda t: t.state != 'draft').sorted()[:1]
-
     #=== BUSINESS METHODS - LOGGING ===#
 
     def _log_sent_message(self):
@@ -852,10 +828,38 @@ class PaymentTransaction(models.Model):
         :return: None
         """
         for tx in self:
-            linked_documents = tx._get_linked_documents()
             message = tx._get_sent_message()
-            for document in linked_documents:
-                document.message_post(body=message)
+            tx._log_message_on_linked_documents(message)
+
+    def _log_received_message(self):
+        """ Log in the chatter of relevant documents that the transactions have been received.
+
+        A transaction is 'received' when a response is received from the provider of the acquirer
+        handling the transaction.
+
+        :return: None
+        """
+        for tx in self:
+            message = tx._get_received_message()
+            tx._log_message_on_linked_documents(message)
+
+    def _log_message_on_linked_documents(self, message):
+        """ Log a message on the invoices linked to the transaction.
+
+        For a module to implement payments and link documents to a transaction, it must override
+        this method and call super, then log the message on documents linked to the transaction.
+
+        Note: self.ensure_one()
+
+        :param str message: The message to be logged
+        :return: None
+        """
+        self.ensure_one()
+
+        for invoice in self.invoice_ids:
+            invoice.message_post(body=message)
+
+    #=== BUSINESS METHODS - GETTERS ===#
 
     def _get_sent_message(self):
         """ Return the message stating that the transaction has been requested.
@@ -880,20 +884,6 @@ class PaymentTransaction(models.Model):
                 ref=self.reference, token_name=self.token_id.name, acq_name=self.acquirer_id.name
             )
         return message
-
-    def _log_received_message(self):
-        """ Log in the chatter of relevant documents that the transactions have been received.
-
-        A transaction is 'received' when a response is received from the provider of the acquirer
-        handling the transaction.
-
-        :return: None
-        """
-        for tx in self:
-            linked_documents = tx._get_linked_documents()
-            message = tx._get_received_message()
-            for document in linked_documents:
-                document.message_post(body=message)
 
     def _get_received_message(self):
         """ Return the message stating that the transaction has been received by the provider.
@@ -941,3 +931,11 @@ class PaymentTransaction(models.Model):
             if self.state_message:
                 message += _("\nReason: %s", self.state_message)
         return message
+
+    def _get_last(self):
+        """ Return the last transaction of the recordset.
+
+        :return: The last transaction of the recordset, sorted by id
+        :rtype: recordset of `payment.transaction`
+        """
+        return self.filtered(lambda t: t.state != 'draft').sorted()[:1]

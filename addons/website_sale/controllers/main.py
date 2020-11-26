@@ -8,7 +8,7 @@ from odoo import fields, http, SUPERUSER_ID, tools, _
 from odoo.http import request
 from odoo.addons.base.models.ir_qweb_fields import nl2br
 from odoo.addons.http_routing.models.ir_http import slug
-from odoo.addons.payment.controllers.portal import PaymentPortal
+from odoo.addons.payment.controllers import portal as payment_portal
 from odoo.addons.payment.controllers.post_processing import PaymentPostProcessing
 from odoo.addons.website.controllers.main import QueryURL
 from odoo.addons.website.models.ir_http import sitemap_qs2dom
@@ -135,7 +135,7 @@ class Website(main.Website):
             request.session.pop('website_sale_shop_layout_mode', None)
 
 
-class WebsiteSale(PaymentPortal):
+class WebsiteSale(http.Controller):
 
     def _get_pricelist_context(self):
         pricelist_context = dict(request.env.context)
@@ -829,9 +829,11 @@ class WebsiteSale(PaymentPortal):
         tokens = request.env['payment.token'].search(
             [('acquirer_id', 'in', acquirers_sudo.ids), ('partner_id', '=', order.partner_id.id)]
         ) if logged_in else request.env['payment.token']
-        fees_by_acquirer = {acq_sudo: acq_sudo._compute_fees(
-            order.amount_total, order.currency_id, order.partner_id.country_id.id
-        ) for acq_sudo in acquirers_sudo.filtered('fees_active')}
+        fees_by_acquirer = {
+            acq_sudo: acq_sudo._compute_fees(
+                order.amount_total, order.currency_id, order.partner_id.country_id
+            ) for acq_sudo in acquirers_sudo.filtered('fees_active')
+        }
         # Prevent public partner from saving payment methods but force it for logged in partners
         # buying subscription products
         show_tokenize_input = logged_in \
@@ -881,43 +883,6 @@ class WebsiteSale(PaymentPortal):
             render_values.pop('tokens', '')
 
         return request.render("website_sale.payment", render_values)
-
-    @http.route('/shop/payment/transaction/<int:order_id>', type='json', auth='public')
-    def shop_payment_transaction(self, order_id, access_token, **kwargs):
-        """ Create a draft transaction and return its processing values.
-
-        :param int order_id: The sales order to pay, as a `sale.order` id
-        :param str access_token: The access token used to authenticate the request
-        :param dict kwargs: Locally unused data passed to `_create_transaction`
-        :return: The mandatory values for the processing of the transaction
-        :rtype: dict
-        :raise: ValidationError if the invoice id or the access token is invalid
-        """
-        # Check the order id and the access token
-        try:
-            self._document_check_access('sale.order', order_id, access_token)
-        except MissingError as error:
-            raise error
-        except AccessError:
-            raise ValidationError("The access token is invalid.")
-
-        kwargs.update({
-            'reference_prefix': None,  # Allow the reference to be computed based on the order
-            'sale_order_id': order_id,  # Include the SO to allow Subscriptions tokenizing the tx
-        })
-        tx_sudo = self._create_transaction(
-            custom_create_values={'sale_order_ids': [(6, 0, [order_id])]}, **kwargs,
-        )
-
-        # Store the new transaction into the transaction list and if there's an old one, we remove
-        # it until the day the ecommerce supports multiple orders at the same time.
-        last_tx_id = request.session.get('__website_sale_last_tx_id')
-        last_tx = request.env['payment.transaction'].browse(last_tx_id).sudo().exists()
-        if last_tx:
-            PaymentPostProcessing.remove_transactions(last_tx)
-        request.session['__website_sale_last_tx_id'] = tx_sudo.id
-
-        return tx_sudo._get_processing_values()
 
     @http.route('/shop/payment/get_status/<int:sale_order_id>', type='json', auth="public", website=True)
     def shop_payment_get_status(self, sale_order_id, **post):
@@ -1213,3 +1178,43 @@ class WebsiteSale(PaymentPortal):
         if visitor_sudo:
             request.env['website.track'].sudo().search([('visitor_id', '=', visitor_sudo.id), ('product_id', '=', product_id)]).unlink()
         return self._get_products_recently_viewed()
+
+
+class PaymentPortal(payment_portal.PaymentPortal):
+
+    @http.route('/shop/payment/transaction/<int:order_id>', type='json', auth='public')
+    def shop_payment_transaction(self, order_id, access_token, **kwargs):
+        """ Create a draft transaction and return its processing values.
+
+        :param int order_id: The sales order to pay, as a `sale.order` id
+        :param str access_token: The access token used to authenticate the request
+        :param dict kwargs: Locally unused data passed to `_create_transaction`
+        :return: The mandatory values for the processing of the transaction
+        :rtype: dict
+        :raise: ValidationError if the invoice id or the access token is invalid
+        """
+        # Check the order id and the access token
+        try:
+            self._document_check_access('sale.order', order_id, access_token)
+        except MissingError as error:
+            raise error
+        except AccessError:
+            raise ValidationError("The access token is invalid.")
+
+        kwargs.update({
+            'reference_prefix': None,  # Allow the reference to be computed based on the order
+            'sale_order_id': order_id,  # Include the SO to allow Subscriptions tokenizing the tx
+        })
+        tx_sudo = self._create_transaction(
+            custom_create_values={'sale_order_ids': [(6, 0, [order_id])]}, **kwargs,
+        )
+
+        # Store the new transaction into the transaction list and if there's an old one, we remove
+        # it until the day the ecommerce supports multiple orders at the same time.
+        last_tx_id = request.session.get('__website_sale_last_tx_id')
+        last_tx = request.env['payment.transaction'].browse(last_tx_id).sudo().exists()
+        if last_tx:
+            PaymentPostProcessing.remove_transactions(last_tx)
+        request.session['__website_sale_last_tx_id'] = tx_sudo.id
+
+        return tx_sudo._get_processing_values()

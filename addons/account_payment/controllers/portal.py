@@ -26,7 +26,7 @@ class PortalAccount(portal.PortalAccount):
         )  # Tokens are cleared at the end if the user is not logged in
         fees_by_acquirer = {
             acq_sudo: acq_sudo._compute_fees(
-                invoice.amount_total, invoice.currency_id.id, invoice.company_id.country_id.id
+                invoice.amount_total, invoice.currency_id, invoice.company_id.country_id
             ) for acq_sudo in acquirers_sudo.filtered('fees_active')
         }
         values.update({
@@ -41,8 +41,11 @@ class PortalAccount(portal.PortalAccount):
             'init_tx_route': f'/invoice/transaction/{invoice.id}/',
             'landing_route': _build_url_w_params(invoice.access_url, {'access_token': access_token})
         })
+        # TODO TBE This whole behavior of fetching the logged in partner/invoice partner tokens and
+        # TODO TBE then clearing them if the partner was actually logged out looks a bit odd to me
+        # TODO TBE Shouldn't be do something similar to what is done in other controllers?
         if not logged_in:
-            # Don't display payment tokens of the invoice partner if the user is not logged but
+            # Don't display payment tokens of the invoice partner if the user is not logged in, but
             # inform that logging in will make them available.
             values.update({
                 'existing_token': bool(tokens),

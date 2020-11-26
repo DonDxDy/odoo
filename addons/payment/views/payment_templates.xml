@@ -1,14 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    
-    <!-- Assets -->
-    <template id="assets_backend" name="Payment Assets Backend" inherit_id="web.assets_backend">
-        <xpath expr="." position="inside">
-            <link rel="stylesheet"
-                  type="text/scss"
-                  href="/payment/static/src/scss/payment_acquirer.scss"/>
-        </xpath>
-    </template>
 
     <!-- Checkout form -->
     <template id="checkout" name="Payment Checkout">
@@ -66,7 +57,7 @@
                                    data-payment-option-type="acquirer"/>
                             <!-- === Acquirer name === -->
                             <span class="payment_option_name">
-                                <b><t t-esc="acquirer.display_as or acquirer.name"/></b>
+                                <b t-esc="acquirer.display_as or acquirer.name"/>
                             </span>
                             <!-- === "Test Mode" badge === -->
                             <span t-if="acquirer.state == 'test'"
@@ -98,7 +89,7 @@
                         <!-- === Inline form content (filled by acquirer) === -->
                         <t t-set="inline_form_xml_id"
                            t-value="acquirer.sudo().inline_form_view_id.xml_id"/>
-                        <t t-if="inline_form_xml_id">
+                        <t >
                             <div class="clearfix">
                                 <t t-call="{{inline_form_xml_id}}">
                                     <t t-set="acquirer_id" t-value="acquirer.id"/>
@@ -127,18 +118,14 @@
                             <!-- === Token name === -->
                             <span class="payment_option_name" t-esc="token.name"/>
                             <!-- === "V" check mark === -->
-                            <t t-if="token.verified">
-                                <i class="fa fa-check text-success"
-                                   title="This payment method has been verified by our system."
-                                   role="img"
-                                   aria-label="Ok"/>
-                            </t>
-                            <t t-else="">
-                                <i class="fa fa-check text-muted"
-                                   title="This payment method has not been verified by our system."
-                                   role="img"
-                                   aria-label="Not verified"/>
-                            </t>
+                            <i t-if="token.verified" class="fa fa-check text-success"
+                               title="This payment method has been verified by our system."
+                               role="img"
+                               aria-label="Ok"/>
+                            <i t-else="" class="fa fa-check text-muted"
+                               title="This payment method has not been verified by our system."
+                               role="img"
+                               aria-label="Not verified"/>
                         </label>
                     </div>
                     <!-- === Token inline form === -->
@@ -229,10 +216,10 @@
                          name="o_payment_inline_form"
                          class="card-footer d-none">
                         <!-- === Inline form content (filled by acquirer) === -->
-                        <div class="clearfix">
-                            <t t-set="inline_form_xml_id"
-                               t-value="acquirer.sudo().inline_form_view_id.xml_id"/>
-                            <t t-if="inline_form_xml_id" t-call="{{inline_form_xml_id}}">
+                        <t t-set="inline_form_xml_id"
+                           t-value="acquirer.sudo().inline_form_view_id.xml_id"/>
+                        <div t-if="inline_form_xml_id" class="clearfix">
+                            <t t-call="{{inline_form_xml_id}}">
                                 <t t-set="acquirer_id" t-value="acquirer.id"/>
                             </t>
                         </div>
@@ -254,18 +241,14 @@
                             <!-- === Token name === -->
                             <span class="payment_option_name" t-esc="token.name"/>
                             <!-- === "V" check mark === -->
-                            <t t-if="token.verified">
-                                <i class="fa fa-check text-success"
-                                   title="This payment method has been verified by our system."
-                                   role="img"
-                                   aria-label="Ok"/>
-                            </t>
-                            <t t-else="">
-                                <i class="fa fa-check text-muted"
-                                   title="This payment method has not been verified by our system."
-                                   role="img"
-                                   aria-label="Not verified"/>
-                            </t>
+                            <i t-if="token.verified" class="fa fa-check text-success"
+                               title="This payment method has been verified by our system."
+                               role="img"
+                               aria-label="Ok"/>
+                            <i t-else="" class="fa fa-check text-muted"
+                               title="This payment method has not been verified by our system."
+                               role="img"
+                               aria-label="Not verified"/>
                         </label>
                         <!-- === "Delete" token button === -->
                         <button name="o_payment_delete_token"

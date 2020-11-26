@@ -9,11 +9,10 @@
                t-value="request.env['payment.acquirer'].sudo()._get_compatible_acquirers(request.env.company.id, partner.id, allow_tokenization=True)"/>
             <t t-set="existing_tokens" t-value="partner.payment_token_ids + partner.commercial_partner_id.sudo().payment_token_ids"/>
             <!-- Only show the link if a token can be created or if one already exists -->
-            <t t-if="acquirers_allowing_tokenization or existing_tokens">
-                <div class='manage_payment_method mt16'>
-                    <a href="/my/payment_method">Manage payment methods</a>
-                </div>
-            </t>
+            <div t-if="acquirers_allowing_tokenization or existing_tokens"
+                 class='manage_payment_method mt16'>
+                <a href="/my/payment_method">Manage payment methods</a>
+            </div>
         </xpath>
     </template>
     
