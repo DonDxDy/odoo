@@ -77,3 +77,38 @@ function useUpdate({ func, priority }) {
 return useUpdate;
 
 });
+
+odoo.define('mail/static/src/component/popover/popover.js', function (require) {
+'use strict';
+
+const components = {
+    Popover: require('web.Popover'),
+};
+const { patch } = require('web.utils');
+
+patch(components.Popover, 'mail/static/src/component/popover/popover.js', {
+
+    //----------------------------------------------------------------------
+    // Handlers
+    //----------------------------------------------------------------------
+
+    /**
+     * @override
+     * @private
+     */
+    _onClick(ev) {
+        if (
+            ev.currentTarget.classList.contains('o_Emojis_popover') &&
+            this.__owl__.pvnode.elm.offsetParent.className !== 'o_Chatter' &&
+            this.env.device.isMobile &&
+            !this.state.displayed
+        ) {
+            return setTimeout(() => {
+                this.state.displayed = !this.state.displayed;
+            }, 200);
+        }
+        return this._super(ev);
+    }
+});
+
+});
