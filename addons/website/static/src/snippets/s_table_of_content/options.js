@@ -68,7 +68,7 @@ snippetOptions.registry.TableOfContent = snippetOptions.SnippetOptionWidget.exte
             $nav.empty();
             await this.editorHelpers.replace(context, $nav[0], html);
         };
-        await this.wysiwyg.editor.execCommand(tableOfContentGenerateNav);
+        await this.wysiwyg.execCommand(tableOfContentGenerateNav);
     },
 });
 

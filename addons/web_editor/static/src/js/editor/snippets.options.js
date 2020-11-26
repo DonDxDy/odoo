@@ -4233,7 +4233,7 @@ registry.BackgroundPosition = SnippetOptionWidget.extend({
             await this.editorHelpers.setStyle(context, this.$target[0], 'background-position', '');
             await this.editorHelpers.setStyle(context, this.$target[0], 'background-size', '');
         }
-        await this.wysiwyg.editor.execCommand(backgroundType);
+        await this.wysiwyg.execCommand(backgroundType);
     },
     /**
      * Saves current background position and enables overlay.

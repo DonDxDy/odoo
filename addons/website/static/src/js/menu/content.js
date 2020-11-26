@@ -812,7 +812,7 @@ var ContentMenu = websiteNavbarData.WebsiteNavbarActionWidget.extend({
                 await wysiwyg.editorHelpers.removeClass(context, $wrapwrap.find('>header')[0], this.value);
                 await wysiwyg.editorHelpers.addClass(context, $wrapwrap.find('>header')[0], value);
             };
-            await wysiwyg.editor.execCommand(ContentMenuHeaderColor);
+            await wysiwyg.execCommand(ContentMenuHeaderColor);
         },
         header_visible: function (value) {
             $('#wrapwrap > header').toggleClass('d-none o_snippet_invisible', !value);

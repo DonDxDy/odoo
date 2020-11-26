@@ -417,7 +417,7 @@ var SnippetEditor = Widget.extend({
                     && !$el.hasClass('oe_structure') && (!editor || editor.isTargetParentEditable);
             }
         };
-        await this.wysiwyg.editor.execCommand(removeSnippet);
+        await this.wysiwyg.execCommand(removeSnippet);
     },
     /**
      * Displays/Hides the editor overlay.
@@ -782,8 +782,7 @@ var SnippetEditor = Widget.extend({
                 $parent.prepend(this.$snippetBlock);
             }
 
-            const jwEditor = this.wysiwyg.editor;
-            const moveSnippet = async (context) => {
+            const moveSnippet = async () => {
                 const node = this.editorHelpers.getNodes(this.$snippetBlock[0])[0];
                 const prevNodes = this.editorHelpers.getNodes(prev);
                 if (prevNodes.length) {
@@ -801,7 +800,7 @@ var SnippetEditor = Widget.extend({
                     return;
                 }
             };
-            await jwEditor.execCommand(moveSnippet);
+            await this.wysiwyg.execCommand(moveSnippet);
 
             for (var i in this.snippetOptionInstances) {
                 await this.snippetOptionInstances[i].onMove();
@@ -1193,7 +1192,7 @@ var SnippetsMenu = Widget.extend({
                 const nodes = this.editorHelpers.getNodes($target[0]);
                 this.wysiwyg.editor.selection.select(nodes[0], nodes[nodes.length - 1]);
             };
-            this.wysiwyg.editor.execCommand(autoSelectDefaultText);
+            this.wysiwyg.execCommand(autoSelectDefaultText);
         });
 
         const $autoFocusEls = $('.o_we_snippet_autofocus');
@@ -2292,7 +2291,7 @@ var SnippetsMenu = Widget.extend({
                 title: 'Clear Formatting',
             })
             $removeFormatButton.on('click', () => {
-                this.wysiwyg.editor.execCommand('removeFormat');
+                this.wysiwyg.execCommand('removeFormat');
             });
             const $group = $('<we-top-button-group>');
             $group.append($removeFormatButton);
@@ -2915,10 +2914,9 @@ var SnippetsMenu = Widget.extend({
      */
 
     _insertSnippet: async function ($snippet) {
-        const jwEditor = this.wysiwyg.editor;
         let result;
         const insertSnippet = async (context) => {
-            const layout = jwEditor.plugins.get(this.JWEditorLib.Layout);
+            const layout = this.wysiwyg.editor.plugins.get(this.JWEditorLib.Layout);
             const domLayout = layout.engines.dom;
             domLayout.markForRedraw(new Set($snippet.find('*').contents().addBack().add($snippet).get()));
             const position = this._getRelativePosition($snippet[0]);
@@ -2927,7 +2925,7 @@ var SnippetsMenu = Widget.extend({
             }
             result = await this.editorHelpers.insertHtml(context, $snippet[0].outerHTML, position[0], position[1]);
         };
-        await jwEditor.execCommand(insertSnippet);
+        await this.wysiwyg.execCommand(insertSnippet);
         return result;
     },
     /**
@@ -2946,7 +2944,7 @@ var SnippetsMenu = Widget.extend({
      * On click on discard button.
      */
     _onMobilePreviewClick: async function() {
-        await this.wysiwyg.editor.execCommand('toggleDevicePreview', { device: 'mobile' });
+        await this.wysiwyg.execCommand('toggleDevicePreview', { device: 'mobile' });
         await new Promise(r => setTimeout(r)); // Wait browser redrawing (because the commands use microtask and not setTimeout)
         const $iframe = this.$el.closest('.wrap_editor').find('iframe[name="jw-iframe"]');
         if ($iframe.length) {
@@ -2979,7 +2977,7 @@ var SnippetsMenu = Widget.extend({
                     await this.editorHelpers.removeClass(context, lastSnippet, classesToRemove);
                 }
             }
-            await this.wysiwyg.editor.execCommand(removeLastSnippetActivated);
+            await this.wysiwyg.execCommand(removeLastSnippetActivated);
         }
     },
 });

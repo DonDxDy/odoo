@@ -44,6 +44,7 @@ var Wysiwyg = Widget.extend({
         this.value = options.value || '';
         this.options = options;
         this.colorPickers = [];
+        this._execCommandContext = undefined;
         this.JWEditorLib = JWEditorLib;
         if (this.options.enableTranslation) {
             this._modeConfig = {
@@ -707,7 +708,7 @@ var Wysiwyg = Widget.extend({
                     link.modifiers.get(JWEditorLib.Attributes).set('class', params.classes);
                 }
             };
-            await this.editor.execCommand(onSaveLinkDialog);
+            await this.execCommand(onSaveLinkDialog);
         });
     },
     openMediaDialog(params) {
@@ -740,7 +741,7 @@ var Wysiwyg = Widget.extend({
                 if (params.htmlClass) {
                     element.className += " " + params.htmlClass;
                 }
-                await this.editor.execCommand('insertMedia', { element: element });
+                await this.execCommand('insertMedia', { element: element });
             }
         });
     },
@@ -812,7 +813,7 @@ var Wysiwyg = Widget.extend({
             this._transform($node);
         }
     },
-    async updateChanges($target, context = this.editor) {
+    async updateChanges($target) {
         const updateChanges = async (context) => {
             const html = $target.html();
             $target.html('');
@@ -824,7 +825,34 @@ var Wysiwyg = Widget.extend({
             await this.editorHelpers.empty(context, $target[0]);
             await this.editorHelpers.insertHtml(context, html, $target[0], 'INSIDE');
         };
-        await context.execCommand(updateChanges);
+        await this.execCommand(updateChanges);
+    },
+    /**
+     * Execute a command within the editor. If a command is still running within
+     * a Promise, the execution of the callback will be in the same "step" as
+     * the running command.
+     *
+     * @param {string} commandName The command name or the callback
+     * @param {Array} [args] Arguments provided to the command
+     *//**
+     * Execute a command within the editor. If a command is still running within
+     * a Promise, the execution of the callback will be in the same "step" as
+     * the running command.
+     *
+     * @param {Function} callback The custom command callback
+     */
+    async execCommand(...args) {
+        if (!this._execCommandContext) {
+            const result = await this.editor.execCommand(async (context) => {
+                this._execCommandContext = context;
+                return await this._execCommandContext.execCommand(...args);
+            });
+            this._execCommandContext = undefined;
+            return result;
+        } else {
+            const result = await this._execCommandContext.execCommand(...args);
+            return result;
+        }
     },
     withDomMutationsObserver ($target, callback) {
         callback();
@@ -948,8 +976,7 @@ var Wysiwyg = Widget.extend({
             }
 
             new AttributeTranslateDialog(self, {
-                editor: self.editor,
-                editorHelpers: self.editorHelpers,
+                wysiwyg: self,
             }, ev.target).open();
         });
     },
@@ -1184,7 +1211,7 @@ var Wysiwyg = Widget.extend({
                 }
             }
         };
-        await this.editor.execCommand(wysiwygSaveNewsletterBlocks);
+        await this.execCommand(wysiwygSaveNewsletterBlocks);
         return Promise.all(defs);
     },
     /**
@@ -1282,13 +1309,13 @@ var Wysiwyg = Widget.extend({
     },
     _setColor(colorpicker, setCommandId, unsetCommandId, color, $dropDownToToggle, closeColorPicker = false) {
         if(color === "") {
-            this.editor.execCommand(unsetCommandId);
+            this.execCommand(unsetCommandId);
         } else {
             if (colorpicker.colorNames.indexOf(color) !== -1) {
                 // todo : find a better way to detect and send css variable
                 color = "var(--" + color + ")";
             }
-            this.editor.execCommand(setCommandId, {color: color});
+            this.execCommand(setCommandId, {color: color});
         }
         const $jwButton = $dropDownToToggle.find(".dropdown-toggle")
         // Only adapt the color preview in the toolbar for the web_editor.
@@ -1441,7 +1468,7 @@ Wysiwyg.setRange = async function (wysiwyg, startNode, startOffset, endNode, end
         const endVNode = wysiwyg.editorHelpers.getNodes(endNode);
         wysiwyg.editor.selection.select(startVNode[startOffset], endVNode[endOffset]);
     };
-    await wysiwyg.editor.execCommand(wysiwygSetRange);
+    await wysiwyg.execCommand(wysiwygSetRange);
 };
 
 return Wysiwyg;

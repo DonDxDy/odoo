@@ -1330,7 +1330,7 @@ snippetOptions.registry.CarouselItem = snippetOptions.SnippetOptionWidget.extend
                     await this.editorHelpers.remove(context, this.$indicators.find('li:last')[0]);
                     await this.editorHelpers.remove(context, $toDelete[0]);
                 };
-                await this.wysiwyg.editor.execCommand(carouselItemRemoveSlide);
+                await this.wysiwyg.execCommand(carouselItemRemoveSlide);
                 this.$controls.toggleClass('d-none', newLength === 1);
                 this.$carousel.trigger('content_changed');
                 this.removing = false;
@@ -2380,7 +2380,7 @@ snippetOptions.registry.CoverProperties = snippetOptions.SnippetOptionWidget.ext
                     class: 'oe_black',
                 });
             };
-            await this.wysiwyg.editor.execCommand(coverPropertiesFilterValue);
+            await this.wysiwyg.execCommand(coverPropertiesFilterValue);
         } else {
             this.$filter.css('opacity', widgetValue || 0);
             this.$filter.toggleClass('oe_black', parseFloat(widgetValue) !== 0);
@@ -2525,7 +2525,7 @@ snippetOptions.registry.SnippetMove = snippetOptions.SnippetOptionWidget.extend(
                         await this.editorHelpers.moveBefore(context, $tabPane.prev()[0], $tabPane[0]);
                     }
                 };
-                await this.wysiwyg.editor.execCommand(snippetMoveMoveSnippetBefore);
+                await this.wysiwyg.execCommand(snippetMoveMoveSnippetBefore);
                 break;
             case 'next':
                 const snippetMoveMoveSnippetAfter = async (context) => {
@@ -2536,7 +2536,7 @@ snippetOptions.registry.SnippetMove = snippetOptions.SnippetOptionWidget.extend(
                         await this.editorHelpers.moveAfter(context, $tabPane.next()[0], $tabPane[0]);
                     }
                 };
-                await this.wysiwyg.editor.execCommand(snippetMoveMoveSnippetAfter);
+                await this.wysiwyg.execCommand(snippetMoveMoveSnippetAfter);
                 break;
         }
         if (params.name === 'move_up_opt' || params.name === 'move_down_opt') {
