@@ -2,8 +2,8 @@ import { Component } from "@odoo/owl";
 import { OwlEvent } from "@odoo/owl/dist/types/core/owl_event";
 import { useService } from "../../core/hooks";
 import { MenuElement, MenuItemEventPayload, Odoo, OdooEnv, SystrayItem } from "../../types";
-import { DropdownItem } from '../../components/dropdown/dropdown_item';
-import { Dropdown } from '../../components/dropdown/dropdown';
+import { DropdownItem } from "../../components/dropdown/dropdown_item";
+import { Dropdown } from "../../components/dropdown/dropdown";
 
 declare const odoo: Odoo;
 
