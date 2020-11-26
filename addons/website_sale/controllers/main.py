@@ -823,7 +823,7 @@ class WebsiteSale(PaymentPortal):
             order.company_id.id,
             order.partner_id.id,
             currency_id=order.currency_id.id,
-            sale_order=order,
+            sale_order_id=order.id,
             website_id=request.website.id,
         )  # In sudo mode to read the fields of acquirers, order and partner (if not logged in)
         tokens = request.env['payment.token'].search(
@@ -832,6 +832,12 @@ class WebsiteSale(PaymentPortal):
         fees_by_acquirer = {acq_sudo: acq_sudo._compute_fees(
             order.amount_total, order.currency_id, order.partner_id.country_id.id
         ) for acq_sudo in acquirers_sudo.filtered('fees_active')}
+        # Prevent public partner from saving payment methods but force it for logged in partners
+        # buying subscription products
+        show_tokenize_input = logged_in \
+            and not request.env['payment.acquirer'].sudo()._is_tokenization_required(
+                sale_order_id=order.id
+            )
         return {
             'website_sale_order': order,
             'errors': [],
@@ -842,7 +848,7 @@ class WebsiteSale(PaymentPortal):
             'acquirers': acquirers_sudo,
             'tokens': tokens,
             'fees_by_acquirer': fees_by_acquirer,
-            'show_tokenize_input': logged_in,  # Prevent public partner from saving payment methods
+            'show_tokenize_input': show_tokenize_input,
             'amount': order.amount_total,
             'currency': order.currency_id,
             'partner_id': order.partner_id.id,
@@ -852,7 +858,6 @@ class WebsiteSale(PaymentPortal):
         }
 
     @http.route('/shop/payment', type='http', auth='public', website=True)
-    # TODO ANV don't show tokenization option if Subs product in cart
     def shop_payment(self, **post):
         """ Payment step. This page proposes several payment means based on available
         payment.acquirer. State at this point :
@@ -896,7 +901,10 @@ class WebsiteSale(PaymentPortal):
         except AccessError:
             raise ValidationError("The access token is invalid.")
 
-        kwargs['reference_prefix'] = None  # Allow the reference to be computed based on the order
+        kwargs.update({
+            'reference_prefix': None,  # Allow the reference to be computed based on the order
+            'sale_order_id': order_id,  # Include the SO to allow Subscriptions tokenizing the tx
+        })
         tx_sudo = self._create_transaction(
             custom_create_values={'sale_order_ids': [(6, 0, [order_id])]}, **kwargs,
         )

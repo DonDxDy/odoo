@@ -335,7 +335,7 @@ class PaymentAcquirer(models.Model):
             ])
 
         # Handle tokenization support requirements
-        if force_tokenization:
+        if force_tokenization or self._is_tokenization_required(**kwargs):
             domain = expression.AND([domain, [('allow_tokenization', '=', True)]])
 
         # Handle preferred acquirer
@@ -348,6 +348,20 @@ class PaymentAcquirer(models.Model):
             compatible_acquirers = self.env['payment.acquirer'].search(domain)
 
         return compatible_acquirers
+
+    @api.model
+    def _is_tokenization_required(self, **kwargs):
+        """ Return True if tokenizing the transaction is required given its context.
+
+        For a module to make the tokenization required based on the transaction context, it must
+        override this method and return whether it is required.
+
+        :param dict kwargs: The transaction context. This parameter is not used here
+        :return: Whether tokenizing the transaction is required
+        :rtype: bool
+        """
+        return False
+
 
     def _get_base_url(self):
         """ Get the base url of the website on which the payment is made.

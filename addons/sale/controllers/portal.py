@@ -186,7 +186,7 @@ class CustomerPortal(PaymentPortal):
                 order_sudo.company_id.id,
                 order_sudo.partner_id.id,
                 order_sudo.currency_id.id,
-                sale_order=order_sudo,
+                sale_order_id=order_sudo.id,
             )  # In sudo mode to read the fields of acquirers and partner (if not logged in)
             tokens = request.env['payment.token'].search([
                 ('acquirer_id', 'in', acquirers_sudo.ids),
@@ -195,11 +195,17 @@ class CustomerPortal(PaymentPortal):
             fees_by_acquirer = {acquirer: acquirer._compute_fees(
                 order_sudo.amount_total, order_sudo.currency_id, order_sudo.partner_id.country_id.id
             ) for acquirer in acquirers_sudo.filtered('fees_active')}
+            # Prevent public partner from saving payment methods but force it for logged in partners
+            # buying subscription products
+            show_tokenize_input = logged_in \
+                and not request.env['payment.acquirer'].sudo()._is_tokenization_required(
+                    sale_order_id=order_sudo.id
+                )
             values.update({
                 'acquirers': acquirers_sudo,
                 'tokens': tokens,
                 'fees_by_acquirer': fees_by_acquirer,
-                'show_tokenize_input': logged_in,  # Prevent public partner from saving pay. methods
+                'show_tokenize_input': show_tokenize_input,
                 'amount': order_sudo.amount_total,
                 'currency': order_sudo.pricelist_id.currency_id,
                 'partner_id': order_sudo.partner_id.id,
@@ -296,7 +302,10 @@ class CustomerPortal(PaymentPortal):
         except AccessError:
             raise ValidationError("The access token is invalid.")
 
-        kwargs['reference_prefix'] = None  # Allow the reference to be computed based on the order
+        kwargs.update({
+            'reference_prefix': None,  # Allow the reference to be computed based on the order
+            'sale_order_id': order_id,  # Include the SO to allow Subscriptions tokenizing the tx
+        })
         tx_sudo = self._create_transaction(
             custom_create_values={'sale_order_ids': [(6, 0, [order_id])]}, **kwargs,
         )
@@ -373,8 +382,11 @@ class CustomerPortal(PaymentPortal):
         if sale_order_id:
             if custom_create_values is None:
                 custom_create_values = {}
-            custom_create_values['sale_order_ids'] = [(6, 0, [int(sale_order_id)])]
+            # As this override is also called if the flow is initiated from sale or website_sale, we
+            # need not the override whatever value these modules could have already set
+            if 'sale_order_ids' not in custom_create_values:  # We are in the payment module flow
+                custom_create_values['sale_order_ids'] = [(6, 0, [int(sale_order_id)])]
 
         return super()._create_transaction(
-            *args, custom_create_values=custom_create_values, **kwargs
+            *args, sale_order_id=sale_order_id, custom_create_values=custom_create_values, **kwargs
         )

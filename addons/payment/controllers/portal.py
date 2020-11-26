@@ -252,9 +252,11 @@ class PaymentPortal(portal.CustomerPortal):
             token_id = None
             tokenize = bool(
                 # Public users are not allowed to save tokens as their partner is unknown
-                not request.env.user.sudo()._is_public()
-                # Token is only saved if requested by the user and allowed by the acquirer
-                and tokenization_requested and acquirer_sudo.allow_tokenization
+                not request.env.user._is_public()
+                # Token is only created if requested by either the user or the flow
+                and (tokenization_requested or acquirer_sudo._is_tokenization_required(**kwargs))
+                # Don't tokenize if the user tried to force it through the browser's developer tools
+                and acquirer_sudo.allow_tokenization
             )
         elif flow == 'token':  # Payment by token
             token_sudo = request.env['payment.token'].sudo().browse(payment_option_id)

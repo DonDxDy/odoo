@@ -41,7 +41,7 @@ class PortalAccount(portal.PortalAccount):
             'init_tx_route': f'/invoice/transaction/{invoice.id}/',
             'landing_route': _build_url_w_params(invoice.access_url, {'access_token': access_token})
         })
-        if not logged_in:  # TODO ANV check with TBE if managers should have access to customers' tokens
+        if not logged_in:
             # Don't display payment tokens of the invoice partner if the user is not logged but
             # inform that logging in will make them available.
             values.update({
