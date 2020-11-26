@@ -114,15 +114,10 @@ class TestStaticInheritanceCommon(BaseCase):
         return ','.join([glob[2] for glob in self.modules])
 
     def _set_patchers(self):
-        def _patched_for_manifest_glob(*args, **kwargs):
-            # Ordered by module
-            return self.modules
-
         def _patch_for_read_addon_file(*args, **kwargs):
             return self.template_files[args[1]]
 
         self.patchers = [
-            patch.object(HomeStaticTemplateHelpers, '_manifest_glob', _patched_for_manifest_glob),
             patch.object(HomeStaticTemplateHelpers, '_read_addon_file', _patch_for_read_addon_file),
         ]
 
