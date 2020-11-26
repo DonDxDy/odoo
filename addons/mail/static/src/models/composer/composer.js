@@ -335,7 +335,6 @@ function factory(dependencies) {
         async updateMessage() {
             const message = this.env.models["mail.message"].get(this.messageLocalId);
             const attachment_ids = this.attachments.map(attachment => attachment.id);
-            attachment_ids.concat(message.attachments.map(attachment => attachment.id));
             const vals = {
                 body: this.getBody(),
                 attachment_ids: attachment_ids,

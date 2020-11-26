@@ -184,7 +184,7 @@
 .o_Message {
     background-color: white;
 
-    &:hover {
+    &:hover:not(.dropdown-menu) {
         background-color: whitesmoke;
     }
     &:hover, &.o-clicked {

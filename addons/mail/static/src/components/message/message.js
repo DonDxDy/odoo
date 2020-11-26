@@ -479,6 +479,7 @@ class Message extends Component {
     async _onClickEditMessage(ev) {
         const composer = this.env.models["mail.composer"].create({
             textInputContent: htmlToTextContentInline(this.message.body),
+            attachments: [['link', this.message.attachments]],
             messageLocalId: this.message.localId
         });
         const Composer = new components.Composer(this, {
