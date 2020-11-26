@@ -349,6 +349,9 @@ class Picking(models.Model):
     show_validate = fields.Boolean(
         compute='_compute_show_validate',
         help='Technical field used to decide whether the button "Validate" should be displayed.')
+    show_set_all_done = fields.Boolean(
+        compute='_compute_show_set_all_done',
+        help='Technical field used to decide whether the button "Set All Done" should be displayed.')
     use_create_lots = fields.Boolean(related='picking_type_id.use_create_lots')
     owner_id = fields.Many2one(
         'res.partner', 'Assign Owner',
@@ -560,6 +563,17 @@ class Picking(models.Model):
                 picking.show_validate = False
             else:
                 picking.show_validate = True
+
+    @api.depends('state', 'immediate_transfer', 'move_lines', 'move_lines.product_id.tracking', 'move_lines.quantity_done')
+    def _compute_show_set_all_done(self):
+        precision_digits = self.env['decimal.precision'].precision_get('Product Unit of Measure')
+        for picking in self:
+            if (picking.state == 'draft' and picking.immediate_transfer) or picking.state in ('waiting', 'confirmed', 'assigned'):
+                untracked_products_count = sum(1 for move in picking.move_lines.filtered(lambda move: move.product_id.tracking == 'none'))
+                done_quantities = sum(picking.move_lines.filtered(lambda move: move.product_id.tracking == 'none').mapped('quantity_done'))
+                picking.show_set_all_done = untracked_products_count > 0 and float_is_zero(done_quantities, precision_digits=precision_digits)
+            else:
+                picking.show_set_all_done = False
 
     @api.model
     def _search_delay_alert_date(self, operator, value):
@@ -923,6 +937,11 @@ class Picking(models.Model):
         pickings_not_to_backorder.with_context(cancel_backorder=True)._action_done()
         pickings_to_backorder.with_context(cancel_backorder=False)._action_done()
         return True
+
+    def button_set_done_quantities(self):
+        for move in self.move_lines:
+            if move.product_id.tracking == 'none':
+                move.quantity_done = move.product_uom_qty
 
     def _pre_action_done_hook(self):
         if not self.env.context.get('skip_immediate'):
