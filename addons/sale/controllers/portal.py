@@ -186,7 +186,7 @@ class CustomerPortal(PaymentPortal):
                 order_sudo.company_id.id,
                 order_sudo.partner_id.id,
                 order_sudo.currency_id.id,
-                allow_tokenization=True
+                sale_order=order_sudo,
             )  # In sudo mode to read the fields of acquirers and partner (if not logged in)
             tokens = request.env['payment.token'].search([
                 ('acquirer_id', 'in', acquirers_sudo.ids),

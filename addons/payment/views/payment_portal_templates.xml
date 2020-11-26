@@ -41,8 +41,8 @@
                             <div t-elif="not partner_id" class="alert alert-warning">
                                 <strong>Warning</strong> You must be logged in to pay.
                             </div>
-                            <div t-elif="not acquirers" class="alert alert-warning">
-                                <strong>No suitable payment acquirer could be found.</strong><br/>
+                            <div t-elif="not acquirers and not tokens" class="alert alert-warning">
+                                <strong>No suitable payment option could be found.</strong><br/>
                                 If you believe that it is an error, please contact the website administrator.
                             </div>
                             <t t-else="">

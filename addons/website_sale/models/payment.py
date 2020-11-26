@@ -21,7 +21,7 @@ class PaymentAcquirer(models.Model):
         """
         acquirers = super()._get_compatible_acquirers(*args, **kwargs)
         if 'website_id' in kwargs:
-            return acquirers.filtered(
+            acquirers = acquirers.filtered(
                 lambda a: not a.website_id or a.website_id.id == kwargs['website_id']
             )
         return acquirers

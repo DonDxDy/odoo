@@ -823,8 +823,8 @@ class WebsiteSale(PaymentPortal):
             order.company_id.id,
             order.partner_id.id,
             currency_id=order.currency_id.id,
+            sale_order=order,
             website_id=request.website.id,
-            order=order
         )  # In sudo mode to read the fields of acquirers, order and partner (if not logged in)
         tokens = request.env['payment.token'].search(
             [('acquirer_id', 'in', acquirers_sudo.ids), ('partner_id', '=', order.partner_id.id)]

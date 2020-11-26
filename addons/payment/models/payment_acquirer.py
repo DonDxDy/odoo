@@ -302,7 +302,7 @@ class PaymentAcquirer(models.Model):
 
     @api.model
     def _get_compatible_acquirers(
-        self, company_id, partner_id, currency_id=None, allow_tokenization=False,
+        self, company_id, partner_id, currency_id=None, force_tokenization=False,
         preferred_acquirer_id=None, **kwargs
     ):
         """ Select and return the acquirers matching the criteria.
@@ -317,7 +317,7 @@ class PaymentAcquirer(models.Model):
         :param int company_id: The company to which acquirers must belong, as a `res.company` id
         :param int partner_id: The partner making the payment, as a `res.partner` id
         :param int currency_id: The payment currency if known beforehand, as a `res.currency` id
-        :param bool allow_tokenization: Whether matching acquirers must allow tokenization
+        :param bool force_tokenization: Whether only acquirers allowing tokenization can be matched
         :param int preferred_acquirer_id: The preferred acquirer, as a `payment.acquirer` id
         :param dict kwargs: Optional data. This parameter is not used here
         :return: The compatible acquirers
@@ -334,8 +334,8 @@ class PaymentAcquirer(models.Model):
                 ['|', ('country_ids', '=', False), ('country_ids', 'in', [partner.country_id.id])]
             ])
 
-        # Handle tokenization support
-        if allow_tokenization:
+        # Handle tokenization support requirements
+        if force_tokenization:
             domain = expression.AND([domain, [('allow_tokenization', '=', True)]])
 
         # Handle preferred acquirer
