@@ -45,6 +45,7 @@ var CalendarController = AbstractController.extend({
         'click button.o_calendar_button_week': '_onButtonScale',
         'click button.o_calendar_button_month': '_onButtonScale',
         'click button.o_calendar_button_year': '_onButtonScale',
+        'click button.mobile_quick_creat': '_mobileQuickCreate', //mir's code for mobile view improvement :)
     }),
     /**
      * @override
@@ -93,6 +94,14 @@ var CalendarController = AbstractController.extend({
         } else {
             this.$('.o_calendar_buttons').replaceWith(this.$buttons);
         }
+        //mir's code for mobile view improvement :)
+        this.mobilebutton = $(QWeb.render('CalendarMobileView.mobile_view_button'));
+        this.mobilebutton.appendTo(this.el.querySelector('.o_content'));
+    },
+    //mir's code for mobile view improvement :)
+    _mobileQuickCreate: function () {
+        var self = this;
+        self.trigger_up('openCreate', dataCalendar);
     },
 
     //--------------------------------------------------------------------------

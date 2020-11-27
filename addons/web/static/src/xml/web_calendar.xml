@@ -9,17 +9,20 @@
                 <div class="o_calendar_mini"/>
             </div>
         </div>
-        <div class="d-md-none text-center">
-            <button class="o_cp_today_button btn btn-sm btn-link" t-on-click="trigger('mobile-today-button-click')">
+    </div>
+
+    <!-- //mir's code for mobile view improvement -->
+    <t t-name="CalendarMobileView.mobile_view_button">
+        <div class="d-md-none mobile_view w-100 text-center">
+            <button class="o_calendar_button_today btn btn-sm btn-link" t-on-click="trigger('mobile-today-button-click')">
                 <span class="fa-stack o_calendar_button_today">
                     <i class="fa fa-calendar-o fa-stack-2x"/>
                     <span class="o_calendar_text fa-stack-1x" t-esc="(new Date().getDate())"/>
                 </span>
             </button>
-            <button class="btn btn-primary mobile_quick_create" t-on-click="trigger('mobile-quick-create')">Create
-            </button>
+            <button class="btn btn-primary mobile_quick_creat">Create</button>
         </div>
-    </div>
+    </t>
 
     <t t-name="calendar-box">
         <div t-att-style="typeof color === 'string' ? ('background-color:' + color) + ';' : ''" t-attf-class="#{record.is_highlighted ? 'o_event_hightlight' : ''} #{typeof color === 'number' ? _.str.sprintf('o_calendar_color_%s', color) : 'o_calendar_color_1'}">

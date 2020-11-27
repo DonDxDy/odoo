@@ -653,13 +653,6 @@ return AbstractRenderer.extend({
         }
 
         this._unselectEvent();
-        $(".mobile_quick_create").click(function(){
-
-        });
-        $(".o_cp_today_button").click(function(ev){
-            self.model['today']();
-            return self.reload();
-        });
 
         // this._scrollToScrollTime();
     },

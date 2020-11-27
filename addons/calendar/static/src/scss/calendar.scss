@@ -68,3 +68,14 @@
         font-weight: bold;
     }
 }
+
+// //mir's code for mobile view improvement :)
+.o_content {
+    .mobile_view {
+        @include media-breakpoint-down(sm) {
+            position: absolute;
+            bottom: 0;
+            z-index: 2;
+        }
+    }
+}
