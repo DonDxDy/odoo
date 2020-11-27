@@ -176,7 +176,10 @@ export interface ActionManager {
 
 interface useSetupActionParams {
   export?: () => any;
+  beforeLeave?: beforeLeaveCallback;
 }
+
+type beforeLeaveCallback = () => Promise<void>;
 
 // -----------------------------------------------------------------------------
 // Action hook
@@ -193,6 +196,9 @@ export function useSetupAction(params: useSetupActionParams) {
     hooks.onWillUnmount(() => {
       component.props.__exportState__(params.export!());
     });
+  }
+  if (params.beforeLeave && component.props.__beforeLeave__) {
+    component.props.__beforeLeave__(params.beforeLeave);
   }
 }
 
@@ -254,6 +260,8 @@ function makeActionManager(env: OdooEnv): ActionManager {
   // regex that matches context keys not to forward from an action to another
   const CTX_KEY_REGEX = /^(?:(?:default_|search_default_|show_).+|.+_view_ref|group_by|group_by_no_leaf|active_id|active_ids|orderedBy)$/;
 
+
+  let clearUncommittedChanges: (() => Promise<void|void[]> )| null = null;
   // ---------------------------------------------------------------------------
   // misc
   // ---------------------------------------------------------------------------
@@ -397,6 +405,7 @@ function makeActionManager(env: OdooEnv): ActionManager {
     controller: Controller,
     options: UpdateStackOptions = {}
   ): Promise<void> {
+    let localClearUncommittedChanges: typeof clearUncommittedChanges;
     let resolve: (v?: any) => any;
     let reject: (v?: any) => any;
     let dialogCloseResolve: (v?: any) => any;
@@ -405,18 +414,27 @@ function makeActionManager(env: OdooEnv): ActionManager {
       reject = _rej;
     });
     const action = controller.action;
+
+    const beforeLeaveFns:beforeLeaveCallback[] = [];
     class ControllerComponent extends Component {
-      static template = tags.xml`<t t-component="Component" t-props="props" __exportState__="exportState" t-ref="component"/>`;
+      static template = tags.xml`<t t-component="Component" t-props="props"
+        __exportState__="exportState"
+        __beforeLeave__="beforeLeave"
+          t-ref="component"/>`;
       Component = controller.Component;
       componentProps = this.props;
       componentRef = hooks.useRef("component");
       exportState: ((state: any) => void) | null = null;
+      beforeLeave:((state: any) => void) | null = null;
 
       constructor() {
         super(...arguments);
         if (action.target !== "new") {
           this.exportState = (state) => {
             controller.exportedState = state;
+          };
+          this.beforeLeave = (callback: beforeLeaveCallback) => {
+            beforeLeaveFns.push(callback);
           };
         }
       }
@@ -457,6 +475,9 @@ function makeActionManager(env: OdooEnv): ActionManager {
           if (controllerStack.some((c) => c.action.target === "fullscreen")) {
             mode = "fullscreen";
           }
+          clearUncommittedChanges = localClearUncommittedChanges = () => {
+            return Promise.all(beforeLeaveFns.map(fn => fn()));
+          };
         } else {
           dialogCloseProm = new Promise((_r) => {
             dialogCloseResolve = _r;
@@ -472,6 +493,9 @@ function makeActionManager(env: OdooEnv): ActionManager {
       willUnmount() {
         if (action.target === "new" && dialogCloseResolve) {
           dialogCloseResolve();
+        }
+        if (clearUncommittedChanges === localClearUncommittedChanges) {
+          clearUncommittedChanges = null;
         }
       }
     }
@@ -1053,10 +1077,25 @@ function makeActionManager(env: OdooEnv): ActionManager {
   }
 
   return {
-    doAction,
+    async doAction(...args) {
+      if (clearUncommittedChanges) {
+        await clearUncommittedChanges();
+      }
+      return doAction(...args);
+    },
     doActionButton,
-    switchView,
-    restore,
+    async switchView(...args) {
+      if (clearUncommittedChanges) {
+        await clearUncommittedChanges();
+      }
+      return switchView(...args);
+    },
+    async restore(...args) {
+      if (clearUncommittedChanges) {
+        await clearUncommittedChanges();
+      }
+      return restore(...args);
+    },
     loadState,
   };
 }
