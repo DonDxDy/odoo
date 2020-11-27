@@ -1,7 +1,9 @@
 import { Component, hooks, tags } from "@odoo/owl";
 import { Dialog } from "../components/dialog/dialog";
 import type {
-  ActionContext, Odoo, OdooEnv,
+  ActionContext,
+  Odoo,
+  OdooEnv,
   Service,
   ComponentAction,
   FunctionAction,
@@ -396,9 +398,11 @@ function makeActionManager(env: OdooEnv): ActionManager {
     options: UpdateStackOptions = {}
   ): Promise<void> {
     let resolve: (v?: any) => any;
+    let reject: (v?: any) => any;
     let dialogCloseResolve: (v?: any) => any;
-    const currentActionProm: Promise<void> = new Promise((_r) => {
-      resolve = _r;
+    const currentActionProm: Promise<void> = new Promise((_res, _rej) => {
+      resolve = _res;
+      reject = _rej;
     });
     const action = controller.action;
     class ControllerComponent extends Component {
@@ -415,6 +419,10 @@ function makeActionManager(env: OdooEnv): ActionManager {
             controller.exportedState = state;
           };
         }
+      }
+      catchError(error: any) {
+        // The above component should truely handle the error
+        reject(error);
       }
       mounted() {
         let mode: "new" | "current" | "fullscreen";
