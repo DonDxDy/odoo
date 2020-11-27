@@ -641,14 +641,14 @@ QUnit.module("web client integrated tests", (hooks) => {
     assert.expect(1);
 
     baseConfig.serverData!.actions![1001].target = "new";
-    baseConfig.services!.remove("router");
     baseConfig.services!.add(
       "router",
       makeFakeRouterService({
         onPushState(mode, newState) {
           throw new Error("should not push state");
         },
-      })
+      }),
+      true
     );
     const env = await makeTestEnv(baseConfig);
     const webClient = await mount(WebClient, { env });
@@ -935,22 +935,21 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
   QUnit.skip("document's title is updated when an action is executed", async function (assert) {
     assert.expect(3);
 
-    // TODO: this is a new test to write, because before it was tied to the push state stuff
-    /*
-    const stateDescriptions = [
-      { action: 4, model: "partner", title: "Partners Action 4", view_type: "kanban" },
-      { action: 8, model: "pony", title: "Favorite Ponies", view_type: "list" },
-      { action: 8, id: 4, model: "pony", title: "Twilight Sparkle", view_type: "form" },
-    ];
-
-    baseConfig.services!.remove("router");
-    baseConfig.services!.add("router", makeFakeRouterService({
-      onPushState(mode, newState) {
-        debugger
-          const expectedState = stateDescriptions.shift() as any;
-          assert.deepEqual(newState, expectedState);
+    const mockedTitleService = {
+      name: "title",
+      deploy() {
+        return {
+          get current() { return '' },
+          getParts() { return {} },
+          setParts(parts: { [key: string]: string }) {
+            assert.step(JSON.stringify(parts));
+          },
+        };
       },
-    }));
+    };
+    baseConfig.services!.add("title", mockedTitleService, true);
+
+
     const webClient = await createWebClient({ baseConfig, legacyEnv });
 
     await doAction(webClient, 4);
@@ -958,8 +957,15 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     await testUtils.dom.click($(webClient.el!).find("tr.o_data_row:first"));
     await legacyExtraNextTick();
 
+    // TODO: fill verifySteps: should set the title of each action as document title
+    assert.verifySteps([]);
+    // const stateDescriptions = [
+    //   { action: 4, model: "partner", title: "Partners Action 4", view_type: "kanban" },
+    //   { action: 8, model: "pony", title: "Favorite Ponies", view_type: "list" },
+    //   { action: 8, id: 4, model: "pony", title: "Twilight Sparkle", view_type: "form" },
+    // ];
+
     webClient.destroy();
-    */
   });
 
   QUnit.skip("on_reverse_breadcrumb handler is correctly called", async function (assert) {
@@ -3712,13 +3718,12 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
   QUnit.skip("requests for execute_action of type object are handled", async function (assert) {
     assert.expect(10);
 
-    // FIXME: better way to mock user_context?
-    baseConfig.services!.remove("user");
     baseConfig.services!.add(
       "user",
       makeFakeUserService({
         context: Object.assign({}, { some_key: 2 } as any),
-      })
+      }),
+      true
     );
 
     const mockRPC: RPC = async (route, args) => {
