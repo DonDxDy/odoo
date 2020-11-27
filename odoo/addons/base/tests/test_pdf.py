@@ -43,6 +43,25 @@ class TestPdf(TransactionCase):
         attachments = list(self.minimal_pdf_reader.getAttachments())
         self.assertEqual(len(attachments), 2)
 
+    def test_odoo_pdf_file_reader_with_owner_encryption(self):
+        pdf_writer = pdf.OdooPdfFileWriter()
+        pdf_writer.cloneReaderDocumentRoot(self.minimal_pdf_reader)
+
+        pdf_writer.addAttachment('test_attachment.txt', b'My awesome attachment')
+        pdf_writer.addAttachment('another_attachment.txt', b'My awesome OTHER attachment')
+
+        pdf_writer.encrypt("", "foo")
+
+        writer_buffer = io.BytesIO()
+        pdf_writer.write(writer_buffer)
+        encrypted_content = writer_buffer.getvalue()
+        writer_buffer.close
+
+        reader_buffer = io.BytesIO(encrypted_content)
+        pdf_reader = pdf.OdooPdfFileReader(reader_buffer)
+        attachments = list(pdf_reader.getAttachments())
+        self.assertEqual(len(attachments), 2)
+
     def test_merge_pdf(self):
         self.assertEqual(self.minimal_pdf_reader.getNumPages(), 1)
         page = self.minimal_pdf_reader.getPage(0)

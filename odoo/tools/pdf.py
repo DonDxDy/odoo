@@ -7,6 +7,9 @@ from datetime import datetime
 
 import io
 import hashlib
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 DEFAULT_PDF_DATETIME_FORMAT = "D:%Y%m%d%H%M%S+00'00'"
@@ -78,6 +81,14 @@ class OdooPdfFileReader(PdfFileReader):
     # OVERRIDE of PdfFileReader to add the management of multiple embedded files.
 
     def getAttachments(self):
+        if self.isEncrypted:
+            try:
+                # If the PDF is owner-encrypted, try to unwrap it by giving it an empty user password
+                self.decrypt('')
+            except NotImplementedError as e:
+                _logger.warning("Unable to access the PDF attachments. Tried to decrypt it, but %s." % e)
+                return []
+
         if not self.trailer["/Root"].get("/Names", {}).get("/EmbeddedFiles", {}).get("/Names"):
             return []
         for i in range(0, len(self.trailer["/Root"]["/Names"]["/EmbeddedFiles"]["/Names"]), 2):
