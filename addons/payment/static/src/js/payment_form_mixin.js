@@ -334,7 +334,7 @@ odoo.define('payment.payment_form_mixin', require => {
         _processPayment: function (provider, paymentOptionId, flow) {
             // Call the init route to create the transaction and retrieve processing values
             return this._rpc({
-                route: this.txContext.initTxRoute,
+                route: this.txContext.transactionRoute,
                 params: this._prepareInitTxParams(provider, paymentOptionId, flow),
             }).then(result => {
                 if (flow === 'redirect') {

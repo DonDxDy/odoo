@@ -855,7 +855,7 @@ class WebsiteSale(http.Controller):
             'currency': order.currency_id,
             'partner_id': order.partner_id.id,
             'access_token': order._portal_ensure_token(),
-            'init_tx_route': f'/shop/payment/transaction/{order.id}',
+            'transaction_route': f'/shop/payment/transaction/{order.id}',
             'landing_route': '/shop/payment/validate',
         }
 

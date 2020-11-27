@@ -26,8 +26,7 @@ class PaymentPortal(portal.CustomerPortal):
     The following routes are exposed:
     - `/payment/pay` allows for arbitrary payments.
     - `/my/payment_method` allows the user to create and delete tokens. It's its own `landing_route`
-    # TODO ANV rename init_tx_route to transaction route
-    - `/payment/transaction` is the `init_tx_route` for the standard payment flow. It creates a
+    - `/payment/transaction` is the `transaction_route` for the standard payment flow. It creates a
       draft transaction, and return the processing values necessary for the completion of the
       transaction.
     - `/payment/confirmation` is the `landing_route` for the standard payment flow. It displays the
@@ -140,7 +139,7 @@ class PaymentPortal(portal.CustomerPortal):
             'currency': currency,
             'partner_id': partner_id,
             'access_token': access_token,
-            'init_tx_route': '/payment/transaction',
+            'transaction_route': '/payment/transaction',
             'landing_route': '/payment/confirmation',
             'partner_is_different': partner_is_different,
             **self._get_custom_rendering_context_values(**kwargs),
@@ -170,7 +169,7 @@ class PaymentPortal(portal.CustomerPortal):
             'reference_prefix': payment_utils.singularize_reference_prefix(prefix='validation'),
             'partner_id': partner.id,
             'access_token': access_token,
-            'init_tx_route': '/payment/transaction',
+            'transaction_route': '/payment/transaction',
             'validation_route': '/payment/validation',
             'landing_route': '/my/payment_method',
         }

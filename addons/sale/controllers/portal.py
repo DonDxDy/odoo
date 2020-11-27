@@ -214,7 +214,7 @@ class CustomerPortal(portal.CustomerPortal):
                 'currency': order_sudo.pricelist_id.currency_id,
                 'partner_id': order_sudo.partner_id.id,
                 'access_token': order_sudo.access_token,
-                'init_tx_route': order_sudo.get_portal_url(suffix='/transaction'),
+                'transaction_route': order_sudo.get_portal_url(suffix='/transaction'),
                 'landing_route': order_sudo.get_portal_url(),
             })
 

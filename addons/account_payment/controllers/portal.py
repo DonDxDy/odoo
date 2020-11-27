@@ -38,7 +38,7 @@ class PortalAccount(portal.PortalAccount):
             'currency': invoice.currency_id,
             'partner_id': partner_id,
             'access_token': access_token,
-            'init_tx_route': f'/invoice/transaction/{invoice.id}/',
+            'transaction_route': f'/invoice/transaction/{invoice.id}/',
             'landing_route': _build_url_w_params(invoice.access_url, {'access_token': access_token})
         })
         # TODO TBE This whole behavior of fetching the logged in partner/invoice partner tokens and

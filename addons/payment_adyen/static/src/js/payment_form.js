@@ -72,7 +72,7 @@ odoo.define('payment_adyen.payment_form', require => {
         _dropinOnSubmit: function (state, dropin) {
             // Call the init route to create the transaction and retrieve processing values
             this._rpc({
-                route: this.txContext.initTxRoute,
+                route: this.txContext.transactionRoute,
                 params: this._prepareInitTxParams('adyen', dropin.acquirerId, 'direct'),
             }).then(processingValues => {
                 this.adyenDropin.reference = processingValues.reference; // Store final reference
