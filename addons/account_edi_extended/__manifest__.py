@@ -15,5 +15,5 @@
     'installable': True,
     'application': False,
     'auto_install': False,
-    'post_init_hook': '_document_blocked_level_post_init',
+    'post_init_hook': 'account_edi_block_level',
 }

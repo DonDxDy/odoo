@@ -32,7 +32,7 @@ class AccountEdiTestCommon(AccountTestInvoicingCommon):
     ####################################################
 
     def edi_cron(self):
-        self.env['account.edi.document'].sudo().with_context(edi_test_mode=True).search([('state', 'in', ('to_send', 'to_cancel'))])._process_documents_web_services()
+        self.env['account.edi.document'].sudo().with_context(edi_test_mode=True).search([('state', 'in', ('to_send', 'to_cancel'))])._process_documents_web_services(with_commit=False)
 
     def update_invoice_from_file(self, module_name, subfolder, filename, invoice):
         file_path = get_module_resource(module_name, subfolder, filename)
@@ -62,7 +62,7 @@ class AccountEdiTestCommon(AccountTestInvoicingCommon):
 
     def assert_generated_file_equal(self, invoice, expected_values, applied_xpath=None):
         invoice.action_post()
-        invoice.edi_document_ids._process_documents_web_services()  # synchronous are called in post, but there's no CRON in tests for asynchronous
+        invoice.edi_document_ids._process_documents_web_services(with_commit=False)  # synchronous are called in post, but there's no CRON in tests for asynchronous
         attachment = invoice._get_edi_attachment(self.edi_format)
         if not attachment:
             raise ValueError('No attachment was generated after posting EDI')
@@ -79,7 +79,7 @@ class AccountEdiTestCommon(AccountTestInvoicingCommon):
         the formats we want to return the files for (in case we want to test specific formats).
         Other formats will still generate documents, they simply won't be returned.
         """
-        moves.edi_document_ids.with_context(edi_test_mode=True)._process_documents_web_services()
+        moves.edi_document_ids.with_context(edi_test_mode=True)._process_documents_web_services(with_commit=False)
 
         documents_to_return = moves.edi_document_ids
         if formats_to_return != None:
