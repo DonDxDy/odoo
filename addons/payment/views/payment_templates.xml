@@ -87,13 +87,15 @@
                          name="o_payment_inline_form"
                          class="card-footer d-none">
                         <!-- === Inline form content (filled by acquirer) === -->
-                        <t t-set="inline_form_xml_id"
-                           t-value="acquirer.sudo().inline_form_view_id.xml_id"/>
-                        <div t-if="inline_form_xml_id" class="clearfix">
-                            <t t-call="{{inline_form_xml_id}}">
-                                <t t-set="acquirer_id" t-value="acquirer.id"/>
-                            </t>
-                        </div>
+                        <t t-if="acquirer.sudo()._should_build_inline_form(is_validation=False)">
+                            <t t-set="inline_form_xml_id"
+                               t-value="acquirer.sudo().inline_form_view_id.xml_id"/>
+                            <div t-if="inline_form_xml_id" class="clearfix">
+                                <t t-call="{{inline_form_xml_id}}">
+                                    <t t-set="acquirer_id" t-value="acquirer.id"/>
+                                </t>
+                            </div>
+                        </t>
                         <!-- === "Save my payment details" checkbox === -->
                         <!-- Only included if partner is known and if the choice is given -->
                         <label t-if="show_tokenize_input and acquirer.allow_tokenization">
@@ -210,18 +212,20 @@
                              class="text-muted ml-3"/>
                     </div>
                     <!-- === Acquirer inline form === -->
-                    <div t-attf-id="o_payment_acquirer_inline_form_{{acquirer.id}}"
-                         name="o_payment_inline_form"
-                         class="card-footer d-none">
-                        <!-- === Inline form content (filled by acquirer) === -->
-                        <t t-set="inline_form_xml_id"
-                           t-value="acquirer.sudo().inline_form_view_id.xml_id"/>
-                        <div t-if="inline_form_xml_id" class="clearfix">
-                            <t t-call="{{inline_form_xml_id}}">
-                                <t t-set="acquirer_id" t-value="acquirer.id"/>
-                            </t>
+                    <t t-if="acquirer.sudo()._should_build_inline_form(is_validation=True)">
+                        <div t-attf-id="o_payment_acquirer_inline_form_{{acquirer.id}}"
+                             name="o_payment_inline_form"
+                             class="card-footer d-none">
+                            <!-- === Inline form content (filled by acquirer) === -->
+                            <t t-set="inline_form_xml_id"
+                               t-value="acquirer.sudo().inline_form_view_id.xml_id"/>
+                            <div t-if="inline_form_xml_id" class="clearfix">
+                                <t t-call="{{inline_form_xml_id}}">
+                                    <t t-set="acquirer_id" t-value="acquirer.id"/>
+                                </t>
+                            </div>
                         </div>
-                    </div>
+                    </t>
                 </t>
                 <!-- === Tokens === -->
                 <t t-foreach="tokens" t-as="token">

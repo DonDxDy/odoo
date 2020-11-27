@@ -348,7 +348,7 @@ class PaymentAcquirer(models.Model):
 
     @api.model
     def _is_tokenization_required(self, **kwargs):
-        """ Return True if tokenizing the transaction is required given its context.
+        """ Return whether tokenizing the transaction is required given its context.
 
         For a module to make the tokenization required based on the transaction context, it must
         override this method and return whether it is required.
@@ -358,6 +358,19 @@ class PaymentAcquirer(models.Model):
         :rtype: bool
         """
         return False
+
+    def _should_build_inline_form(self, is_validation=False):
+        """ Return whether the inline form should be instantiated if it exists.
+
+        For an acquirer to handle both direct payments and payment with redirection, it should
+        override this method and return whether the inline form should be instantiated (i.e. if the
+        payment should be direct) based on the operation (validation or online payment).
+
+        :param bool is_validation: Whether the operation is a validation
+        :return: Whether the inline form should be instantiated
+        :rtype: bool
+        """
+        return True
 
     def _get_base_url(self):
         """ Get the base url of the website on which the payment is made.
