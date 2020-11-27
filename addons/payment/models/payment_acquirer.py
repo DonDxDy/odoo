@@ -359,7 +359,6 @@ class PaymentAcquirer(models.Model):
         """
         return False
 
-
     def _get_base_url(self):
         """ Get the base url of the website on which the payment is made.
 
@@ -380,8 +379,8 @@ class PaymentAcquirer(models.Model):
         Note: self.ensure_one()
 
         :param float amount: The amount to pay for the transaction
-        :param int currency: The currency of the transaction, as a `res.currency` record
-        :param int country|None: The customer country, as a `res.country` record
+        :param recordset currency: The currency of the transaction, as a `res.currency` record
+        :param recordset country: The customer country, as a `res.country` record
         :return: The computed fees
         :rtype: float
         """

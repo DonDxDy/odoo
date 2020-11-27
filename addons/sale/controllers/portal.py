@@ -194,7 +194,9 @@ class CustomerPortal(portal.CustomerPortal):
             ]) if logged_in else request.env['payment.token']
             fees_by_acquirer = {
                 acquirer: acquirer._compute_fees(
-                    order_sudo.amount_total, order_sudo.currency_id, order_sudo.partner_id.country_id
+                    order_sudo.amount_total,
+                    order_sudo.currency_id,
+                    order_sudo.partner_id.country_id,
                 ) for acquirer in acquirers_sudo.filtered('fees_active')
             }
             # Prevent public partner from saving payment methods but force it for logged in partners

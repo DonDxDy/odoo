@@ -89,13 +89,11 @@
                         <!-- === Inline form content (filled by acquirer) === -->
                         <t t-set="inline_form_xml_id"
                            t-value="acquirer.sudo().inline_form_view_id.xml_id"/>
-                        <t >
-                            <div class="clearfix">
-                                <t t-call="{{inline_form_xml_id}}">
-                                    <t t-set="acquirer_id" t-value="acquirer.id"/>
-                                </t>
-                            </div>
-                        </t>
+                        <div t-if="inline_form_xml_id" class="clearfix">
+                            <t t-call="{{inline_form_xml_id}}">
+                                <t t-set="acquirer_id" t-value="acquirer.id"/>
+                            </t>
+                        </div>
                         <!-- === "Save my payment details" checkbox === -->
                         <!-- Only included if partner is known and if the choice is given -->
                         <label t-if="show_tokenize_input and acquirer.allow_tokenization">
