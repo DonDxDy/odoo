@@ -29,11 +29,20 @@ export interface ServerData {
 interface Actions {
   [key: string]: ActionDescription;
 }
+interface Filter {
+  id: number;
+  name: string;
+  domain: string;
+  context: string;
+  sort: string;
+  is_default: boolean;
+}
 interface ToolbarInfo {
   print?: any[];
   action?: any[];
 }
 interface MockedModelData extends ModelData {
+  filters?: Filter[];
   toolbar?: ToolbarInfo;
 }
 interface Models {
@@ -86,6 +95,7 @@ interface LoadViewsReturnType {
       fields: FVG["fields"];
     };
   };
+  filters?: Filter[];
 }
 
 type ReadArgs = [number[] | number, string[]?];
@@ -629,10 +639,14 @@ class MockServer {
     kwargs.views.forEach(([viewId, viewType]) => {
       fieldsViews[viewType] = this.fieldsViewGet(modelName, [viewId, viewType], kwargs);
     });
-    return {
+    const result: LoadViewsReturnType = {
       fields: this.mockFieldsGet(modelName),
       fields_views: fieldsViews,
     };
+    if (kwargs.options.load_filters) {
+      result.filters = this.models[modelName].filters || [];
+    }
+    return result;
   }
 
   mockOnchange(modelName: string, args: OnchangeArgs, kwargs: any) {

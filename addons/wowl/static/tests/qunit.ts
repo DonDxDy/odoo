@@ -359,7 +359,7 @@ const validElements = [
   }
 
   // remove unwanted elements if not in debug
-  if (!document.body.classList.contains("debug")) {
+  if (!QUnit.config.debug) {
     for (const el of toRemove) {
       el.remove();
     }

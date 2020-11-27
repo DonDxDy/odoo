@@ -235,6 +235,7 @@ export interface FieldDefinition {
   string: string;
   type: FieldType;
   default?: any;
+  sortable?: boolean;
 }
 
 export interface ModelFields {
