@@ -1,6 +1,7 @@
 odoo.define('mail/static/src/components/composer_text_input/composer_text_input.js', function (require) {
 'use strict';
 
+const useShouldUpdateBasedOnProps = require('mail/static/src/component_hooks/use_should_update_based_on_props/use_should_update_based_on_props.js');
 const useStore = require('mail/static/src/component_hooks/use_store/use_store.js');
 const useUpdate = require('mail/static/src/component_hooks/use_update/use_update.js');
 
@@ -22,11 +23,19 @@ class ComposerTextInput extends Component {
      */
     constructor(...args) {
         super(...args);
+        useShouldUpdateBasedOnProps();
         useStore(props => {
             const composer = this.env.models['mail.composer'].get(props.composerLocalId);
+            const thread = composer && composer.thread;
             return {
-                composer: composer ? composer.__state : undefined,
+                composerHasSuggestions: composer && composer.hasSuggestions,
+                composerIsLog: composer && composer.isLog,
+                composerTextInputContent: composer && composer.textInputContent,
+                composerTextInputCursorEnd: composer && composer.textInputCursorEnd,
+                composerTextInputCursorStart: composer && composer.textInputCursorStart,
+                composerTextInputSelectionDirection: composer && composer.textInputSelectionDirection,
                 isDeviceMobile: this.env.messaging.device.isMobile,
+                threadModel: thread && thread.model,
             };
         });
         /**
@@ -34,6 +43,7 @@ class ComposerTextInput extends Component {
          * as textarea content can't be changed from the DOM.
          */
         useUpdate({ func: () => this._update() });
+        useShouldUpdateBasedOnProps();
         /**
          * Last content of textarea from input event. Useful to determine
          * whether the current partner is typing something.

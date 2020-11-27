@@ -5,6 +5,7 @@ const components = {
     AutocompleteInput: require('mail/static/src/components/autocomplete_input/autocomplete_input.js'),
     DiscussSidebarItem: require('mail/static/src/components/discuss_sidebar_item/discuss_sidebar_item.js'),
 };
+const useShouldUpdateBasedOnProps = require('mail/static/src/component_hooks/use_should_update_based_on_props/use_should_update_based_on_props.js');
 const useStore = require('mail/static/src/component_hooks/use_store/use_store.js');
 const useUpdate = require('mail/static/src/component_hooks/use_update/use_update.js');
 
@@ -18,6 +19,7 @@ class DiscussSidebar extends Component {
      */
     constructor(...args) {
         super(...args);
+        useShouldUpdateBasedOnProps();
         useStore(
             (...args) => this._useStoreSelector(...args),
             { compareDepth: () => this._useStoreCompareDepth() }

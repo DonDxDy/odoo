@@ -18,6 +18,13 @@ class FileUploader extends Component {
         this._onAttachmentUploaded = this._onAttachmentUploaded.bind(this);
     }
 
+    /**
+     * The render of this component does not depend on any of its props.
+     */
+    shouldUpdate() {
+        return false;
+    }
+
     mounted() {
         $(window).on(this._fileUploadId, this._onAttachmentUploaded);
     }

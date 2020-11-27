@@ -6,6 +6,7 @@ const components = {
     ChatWindowHeader: require('mail/static/src/components/chat_window_header/chat_window_header.js'),
     ThreadView: require('mail/static/src/components/thread_view/thread_view.js'),
 };
+const useShouldUpdateBasedOnProps = require('mail/static/src/component_hooks/use_should_update_based_on_props/use_should_update_based_on_props.js');
 const useStore = require('mail/static/src/component_hooks/use_store/use_store.js');
 const useUpdate = require('mail/static/src/component_hooks/use_update/use_update.js');
 const { isEventHandled } = require('mail/static/src/utils/utils.js');
@@ -20,6 +21,7 @@ class ChatWindow extends Component {
      */
     constructor(...args) {
         super(...args);
+        useShouldUpdateBasedOnProps();
         useStore(props => {
             const chatWindow = this.env.models['mail.chat_window'].get(props.chatWindowLocalId);
             const thread = chatWindow ? chatWindow.thread : undefined;

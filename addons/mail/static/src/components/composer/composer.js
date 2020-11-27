@@ -11,8 +11,9 @@ const components = {
     ThreadTextualTypingStatus: require('mail/static/src/components/thread_textual_typing_status/thread_textual_typing_status.js'),
 };
 const useDragVisibleDropZone = require('mail/static/src/component_hooks/use_drag_visible_dropzone/use_drag_visible_dropzone.js');
-const useUpdate = require('mail/static/src/component_hooks/use_update/use_update.js');
+const useShouldUpdateBasedOnProps = require('mail/static/src/component_hooks/use_should_update_based_on_props/use_should_update_based_on_props.js');
 const useStore = require('mail/static/src/component_hooks/use_store/use_store.js');
+const useUpdate = require('mail/static/src/component_hooks/use_update/use_update.js');
 const {
     isEventHandled,
     markEventHandled,
@@ -29,6 +30,11 @@ class Composer extends Component {
     constructor(...args) {
         super(...args);
         this.isDropZoneVisible = useDragVisibleDropZone();
+        useShouldUpdateBasedOnProps({
+            compareDepth: {
+                textInputSendShortcuts: 1,
+            },
+        });
         useStore(props => {
             const composer = this.env.models['mail.composer'].get(props.composerLocalId);
             return {
@@ -364,7 +370,6 @@ class Composer extends Component {
 Object.assign(Composer, {
     components,
     defaultProps: {
-        attachmentLocalIds: [],
         hasCurrentPartnerAvatar: true,
         hasDiscardButton: false,
         hasFollowers: false,
@@ -375,10 +380,6 @@ Object.assign(Composer, {
         isExpandable: false,
     },
     props: {
-        attachmentLocalIds: {
-            type: Array,
-            element: String,
-        },
         attachmentsDetailsMode: {
             type: String,
             optional: true,
@@ -400,15 +401,6 @@ Object.assign(Composer, {
         },
         showAttachmentsFilenames: {
             type: Boolean,
-            optional: true,
-        },
-        initialAttachmentLocalIds: {
-            type: Array,
-            element: String,
-            optional: true,
-        },
-        initialTextInputHtmlContent: {
-            type: String,
             optional: true,
         },
         isCompact: Boolean,

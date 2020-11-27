@@ -5,9 +5,9 @@ const components = {
     Message: require('mail/static/src/components/message/message.js'),
 };
 const useRefs = require('mail/static/src/component_hooks/use_refs/use_refs.js');
+const useShouldUpdateBasedOnProps = require('mail/static/src/component_hooks/use_should_update_based_on_props/use_should_update_based_on_props.js');
 const useStore = require('mail/static/src/component_hooks/use_store/use_store.js');
 const useUpdate = require('mail/static/src/component_hooks/use_update/use_update.js');
-
 const { Component } = owl;
 const { useRef } = owl.hooks;
 
@@ -18,22 +18,30 @@ class MessageList extends Component {
      */
     constructor(...args) {
         super(...args);
+        useShouldUpdateBasedOnProps();
         useStore(props => {
             const threadView = this.env.models['mail.thread_view'].get(props.threadViewLocalId);
             const thread = threadView ? threadView.thread : undefined;
             const threadCache = threadView ? threadView.threadCache : undefined;
             return {
                 isDeviceMobile: this.env.messaging.device.isMobile,
-                messages: threadCache
-                    ? threadCache.orderedMessages.map(message => message.__state)
-                    : [],
-                thread: thread ? thread.__state : undefined,
-                threadCache: threadCache ? threadCache.__state : undefined,
-                threadView: threadView ? threadView.__state : undefined,
+                thread,
+                threadCache,
+                threadCacheIsAllHistoryLoaded: threadCache && threadCache.isAllHistoryLoaded,
+                threadCacheIsLoaded: threadCache && threadCache.isLoaded,
+                threadCacheIsLoadingMore: threadCache && threadCache.isLoadingMore,
+                threadCacheLastMessage: threadCache && threadCache.lastMessage,
+                threadCacheOrderedMessages: threadCache && threadCache.orderedMessages,
+                threadIsTemporary: thread && thread.isTemporary,
+                threadMainCache: thread && thread.mainCache,
+                threadMessageAfterNewMessageSeparator: thread && thread.messageAfterNewMessageSeparator,
+                threadViewComponentHintList: threadView && threadView.componentHintList,
+                threadViewNonEmptyMessagesLength: threadView && threadView.nonEmptyMessages.length,
             };
         }, {
             compareDepth: {
-                messages: 1,
+                threadCacheOrderedMessages: 1,
+                threadViewComponentHintList: 1,
             },
         });
         this._getRefs = useRefs();
@@ -324,7 +332,7 @@ class MessageList extends Component {
             return;
         }
         let isProcessed = false;
-        if (threadCache.messages.length > 0) {
+        if (threadCache.orderedMessages.length > 0) {
             if (this.threadView.threadCacheInitialScrollPosition !== undefined) {
                 if (this.props.hasScrollAdjust) {
                     if (this.el.scrollHeight === this.threadView.threadCacheInitialScrollHeight) {
@@ -391,7 +399,7 @@ class MessageList extends Component {
             return;
         }
         const { message } = hint.data;
-        if (!threadCache.messages.includes(message)) {
+        if (!threadCache.orderedMessages.includes(message)) {
             return;
         }
         if (!this.messageRefFromId(message.id)) {
@@ -462,7 +470,7 @@ class MessageList extends Component {
         const threadCache = this.threadView.threadCache;
         const lastMessageIsVisible =
             threadCache &&
-            threadCache.messages.length > 0 &&
+            threadCache.orderedMessages.length > 0 &&
             this.mostRecentMessageRef &&
             threadCache === thread.mainCache &&
             this.mostRecentMessageRef.isPartiallyVisible();

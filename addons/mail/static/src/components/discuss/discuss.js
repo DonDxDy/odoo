@@ -12,6 +12,7 @@ const components = {
     NotificationList: require('mail/static/src/components/notification_list/notification_list.js'),
     ThreadView: require('mail/static/src/components/thread_view/thread_view.js'),
 };
+const useShouldUpdateBasedOnProps = require('mail/static/src/component_hooks/use_should_update_based_on_props/use_should_update_based_on_props.js');
 const useStore = require('mail/static/src/component_hooks/use_store/use_store.js');
 const useUpdate = require('mail/static/src/component_hooks/use_update/use_update.js');
 
@@ -25,6 +26,7 @@ class Discuss extends Component {
      */
     constructor(...args) {
         super(...args);
+        useShouldUpdateBasedOnProps();
         useStore(props => {
             const discuss = this.env.messaging && this.env.messaging.discuss;
             const threadView = discuss && discuss.threadView;

@@ -997,6 +997,7 @@ class ModelManager {
      * @param {ModelField} field
      */
     _registerComputeOfDependents(record, field) {
+        console.log('value changed for', record.localId, field.fieldName);
         const Model = record.constructor;
         for (const dependent of field.dependents) {
             const [hash, fieldName1, fieldName2] = dependent.split(

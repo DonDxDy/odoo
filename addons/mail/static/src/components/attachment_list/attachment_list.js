@@ -4,10 +4,18 @@ odoo.define('mail/static/src/components/attachment_list/attachment_list.js', fun
 const components = {
     Attachment: require('mail/static/src/components/attachment/attachment.js'),
 };
+const useShouldUpdateBasedOnProps = require('mail/static/src/component_hooks/use_should_update_based_on_props/use_should_update_based_on_props.js');
 
 const { Component } = owl;
 
-class AttachmentList extends Component {}
+class AttachmentList extends Component {
+
+    constructor(...args) {
+        super(...args);
+        useShouldUpdateBasedOnProps();
+    }
+
+}
 
 Object.assign(AttachmentList, {
     components,

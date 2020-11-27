@@ -47,6 +47,20 @@ odoo.define('web.Popover', function () {
             this._compute();
         }
 
+        /**
+         * Avoid rendering the popover again (and recomputing it's position,
+         * which is costly) if the props don't change.
+         **/
+        shouldUpdate(nextProps) {
+            const allNewProps = Object.assign({}, this.defaultProps, nextProps);
+            for (const key of Object.keys(this.props)) {
+                if (this.props[key] !== allNewProps[key]) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         patched() {
             this._compute();
         }

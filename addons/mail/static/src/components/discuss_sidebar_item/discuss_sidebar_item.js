@@ -5,6 +5,7 @@ const components = {
     EditableText: require('mail/static/src/components/editable_text/editable_text.js'),
     ThreadIcon: require('mail/static/src/components/thread_icon/thread_icon.js'),
 };
+const useShouldUpdateBasedOnProps = require('mail/static/src/component_hooks/use_should_update_based_on_props/use_should_update_based_on_props.js');
 const useStore = require('mail/static/src/component_hooks/use_store/use_store.js');
 
 const Dialog = require('web.Dialog');
@@ -18,6 +19,7 @@ class DiscussSidebarItem extends Component {
      */
     constructor(...args) {
         super(...args);
+        useShouldUpdateBasedOnProps();
         useStore(props => {
             const thread = this.env.models['mail.thread'].get(props.threadLocalId);
             const correspondent = thread ? thread.correspondent : undefined;
