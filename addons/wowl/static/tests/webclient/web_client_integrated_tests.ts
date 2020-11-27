@@ -1199,7 +1199,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     webClient.destroy();
   });
 
-  QUnit.skip("do not push state when action fails", async function (assert) {
+  QUnit.test("do not push state when action fails", async function (assert) {
     assert.expect(3);
 
     const mockRPC: RPC = async function (route, args) {
@@ -5424,9 +5424,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
 
   QUnit.module("Search View Action");
 
-  QUnit.skip("search view should keep focus during do_search", async function (assert) {
-    // FIXME: to unskip this one, need to reimplement something like in main_test.js to catch
-    // unhandled rejection errors, probably
+  QUnit.test("search view should keep focus during do_search", async function (assert) {
     assert.expect(5);
 
     // One should be able to type something in the search view, press on enter to
