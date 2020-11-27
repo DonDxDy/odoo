@@ -26,10 +26,6 @@ class AccountMove(models.Model):
     edi_show_cancel_button = fields.Boolean(
         compute='_compute_edi_show_cancel_button')
 
-    ####################################################
-    # Compute
-    ####################################################
-
     @api.depends('edi_document_ids.state')
     def _compute_edi_state(self):
         for move in self:
@@ -92,18 +88,6 @@ class AccountMove(models.Model):
                                                and move.is_invoice(include_receipts=True)
                                                and doc.edi_format_id._is_required_for_invoice(move)
                                               for doc in move.edi_document_ids])
-
-    ####################################################
-    # Low-level methods
-    ####################################################
-
-    def write(self, vals):
-        ''' If account_edi_extended is not installed, a default behaviour is used instead.
-        '''
-        if 'blocked_level' in vals and 'blocked_level' not in self.env['account.edi.document']._fields:
-            vals.pop('blocked_level')
-
-        return super().write(vals)
 
     ####################################################
     # Export Electronic Document
@@ -268,7 +252,6 @@ class AccountMove(models.Model):
     ####################################################
 
     def action_process_edi_web_services(self):
-        self.ensure_one()
         docs = self.edi_document_ids.filtered(lambda d: d.state in ('to_send', 'to_cancel'))
         if 'blocked_level' in self.env['account.edi.document']._fields:
             docs = docs.filtered(lambda d: d.blocked_level != 'error')

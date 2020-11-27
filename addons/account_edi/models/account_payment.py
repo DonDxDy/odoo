@@ -8,5 +8,4 @@ class AccountPayment(models.Model):
     _inherit = 'account.payment'
 
     def action_process_edi_web_services(self):
-        self.ensure_one()
         return self.move_id.action_process_edi_web_services()

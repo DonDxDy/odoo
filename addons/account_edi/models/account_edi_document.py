@@ -32,6 +32,14 @@ class AccountEdiDocument(models.Model):
         ),
     ]
 
+    def write(self, vals):
+        ''' If account_edi_extended is not installed, a default behaviour is used instead.
+        '''
+        if 'blocked_level' in vals and 'blocked_level' not in self.env['account.edi.document']._fields:
+            vals.pop('blocked_level')
+
+        return super().write(vals)
+
     def _check_move_configuration(self):
         # TO OVERRIDE in account_edi_extended. We don't want to block an edi here, so blocked_level is required.
         pass
@@ -42,22 +50,18 @@ class AccountEdiDocument(models.Model):
         doc_type (invoice or payment) and company_id AND the edi_format_id supports batching, they are grouped
         into a single job.
 
-        :returns:         A list of tuples (key, documents)
-        * key:            A tuple (edi_format_id, state, doc_type, company_id)
-        ** edi_format_id: The format to perform the operation with
-        ** state:         The state of the documents of this job
-        ** doc_type:      Are the moves of this job invoice or payments ?
-        ** company_id:    The company the moves belong to
+        :returns:         A list of tuples (documents, doc_type)
         * documents:      The documents related to this job. If edi_format_id does not support batch, length is one
+        * doc_type:       Are the moves of this job invoice or payments ?
         """
 
         # Classify jobs by (edi_format, edi_doc.state, doc_type, move.company_id)
         to_process = {}
         if 'blocked_level' in self.env['account.edi.document']._fields:
-            docs = self.filtered(lambda d: d.state in ('to_send', 'to_cancel') and d.blocked_level != 'error')
+            documents = self.filtered(lambda d: d.state in ('to_send', 'to_cancel') and d.blocked_level != 'error')
         else:
-            docs = self.filtered(lambda d: d.state in ('to_send', 'to_cancel'))
-        for edi_doc in docs:
+            documents = self.filtered(lambda d: d.state in ('to_send', 'to_cancel'))
+        for edi_doc in documents:
             move = edi_doc.move_id
             edi_format = edi_doc.edi_format_id
             if move.is_invoice(include_receipts=True):
@@ -75,20 +79,53 @@ class AccountEdiDocument(models.Model):
         # Order payments/invoice and create batches.
         result = []
         payments = []
-        for key, docs in to_process.items():
-            edi_format, edi_doc.state, doc_type, move.company_id = key
+        for key, documents in to_process.items():
+            edi_format, state, doc_type, company_id = key
             target = result if doc_type == 'invoice' else payments
             if edi_format._support_batching():
-                target.append((key, docs))
+                target.append((documents, doc_type))
             else:
-                target.extend((key, doc) for doc in docs)
+                target.extend((doc, doc_type) for doc in documents)
         result.extend(payments)
         return result
+
+    @api.model
+    def _convert_to_old_jobs_format(self, jobs):
+        """ See '_prepare_jobs' :
+        Old format : ((edi_format, state, doc_type, company_id), documents)
+        Since edi_format, state and company_id can be deduced from documents, this is redundant and more prone to unexpected behaviours.
+        New format : (doc_type, documents).
+
+        However, for backward compatibility of 'process_jobs', we need a way to convert back to the old format.
+        """
+        return [(
+            (documents.edi_format_id, documents[0].state, doc_type, documents.move_id.company_id),
+            documents
+        ) for documents, doc_type in jobs]
+
+    @api.model
+    def _process_jobs(self, to_process):
+        """ Deprecated, use _process_job instead.
+
+        :param to_process: A list of tuples (key, documents)
+        * key:             A tuple (edi_format_id, state, doc_type, company_id)
+        ** edi_format_id:  The format to perform the operation with
+        ** state:          The state of the documents of this job
+        ** doc_type:       Are the moves of this job invoice or payments ?
+        ** company_id:     The company the moves belong to
+        * documents:       The documents related to this job. If edi_format_id does not support batch, length is one
+        """
+        for key, documents in to_process:
+            edi_format, state, doc_type, company_id = key
+            self._process_job(documents, doc_type)
 
     @api.model
     def _process_job(self, documents, doc_type):
         """Post or cancel move_id (invoice or payment) by calling the related methods on edi_format_id.
         Invoices are processed before payments.
+
+        :param documents: The documents related to this job. If edi_format_id does not support batch, length is one
+        :param doc_type:  Are the moves of this job invoice or payments ?
         """
         def _postprocess_post_edi_results(documents, edi_result):
             attachments_to_unlink = self.env['ir.attachment']
@@ -118,7 +155,6 @@ class AccountEdiDocument(models.Model):
             attachments_to_unlink.unlink()
 
         def _postprocess_cancel_edi_results(documents, edi_result):
-            account_edi_document = self.env['account.edi.document']
             invoice_ids_to_cancel = set()  # Avoid duplicates
             attachments_to_unlink = self.env['ir.attachment']
             for document in documents:
@@ -158,13 +194,13 @@ class AccountEdiDocument(models.Model):
 
         test_mode = self._context.get('edi_test_mode', False)
 
-        # documents must have the same edi_format_id and state
-        edi_format = documents.edi_format_id
-        edi_format.ensure_one()
+        documents.edi_format_id.ensure_one()  # All account.edi.document of a job should have the same edi_format_id
+        documents.move_id.company_id.ensure_one()  # All account.edi.document of a job should be from the same company
         if len(set(doc.state for doc in documents)) != 1:
-            raise ValueError('Expected one edi.document state to process at a time')
-        state = documents[0].state
+            raise ValueError('All account.edi.document of a job should have the same state')
 
+        edi_format = documents.edi_format_id
+        state = documents[0].state
         if doc_type == 'invoice':
             if state == 'to_send':
                 edi_result = edi_format._post_invoice_edi(documents.move_id, test_mode=test_mode)
@@ -185,8 +221,7 @@ class AccountEdiDocument(models.Model):
         """ Post and cancel all the documents that don't need a web service.
         """
         jobs = self.filtered(lambda d: not d.edi_format_id._needs_web_services())._prepare_jobs()
-        for docs, doc_type in jobs:
-            self._process_job(docs, doc_type)
+        self._process_jobs(self._convert_to_old_jobs_format(jobs))
 
     def _process_documents_web_services(self, job_count=None, with_commit=True):
         """ Post and cancel all the documents that need a web service. This is called by CRON.
@@ -195,16 +230,16 @@ class AccountEdiDocument(models.Model):
         """
         jobs = self.filtered(lambda d: d.edi_format_id._needs_web_services())._prepare_jobs()
         jobs = jobs[0:job_count or len(jobs)]
-        for docs, doc_type in jobs:
+        for documents, doc_type in jobs:
             try:
                 with self.env.cr.savepoint():
                     self._cr.execute('SELECT * FROM account_edi_document WHERE id IN %s FOR UPDATE NOWAIT', [tuple(self.ids)])
-                    self._process_job(docs, doc_type)
+                    self._process_job(documents, doc_type)
             except OperationalError as e:
                 if e.pgcode == '55P03':
                     _logger.debug('Another transaction already locked documents rows. Cannot process documents.')
                 else:
                     raise e
             else:
-                if with_commit:
+                if with_commit and len(jobs) > 1:
                     self.env.cr.commit()
