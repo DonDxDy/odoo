@@ -108,31 +108,33 @@ odoo.define('payment.manage_form', require => {
                 method: 'get_linked_records_info',
                 args: [tokenId],
             }).then(result => {
-                if (result.length > 0) { // There are documents linked to the token, show dialog
-                    let documentsInfoMessage = '';
+                let dialogContentMessage = `<span>${_(
+                    "Are you sure you want to delete this payment method?"
+                )}</span>`;
+                if (result.length > 0) { // There are documents linked to the token, list them
+                    dialogContentMessage += `<br/><span>${_t(
+                        "It is currently linked to the following documents:"
+                    )}</span><ul>`;
                     result.forEach(documentInfo => {
-                        documentsInfoMessage += `<p><a href="${documentInfo.url}" 
-                            title="${documentInfo.description}">${documentInfo.name}</a><p/>`;
+                        dialogContentMessage += `<li><a href="${documentInfo.url}" target="_blank"`
+                            + ` title="${documentInfo.description}">${documentInfo.name}</a></li>`;
                     });
-                    const $content = $('<div>').html(`<p>${_t("This payment method is currently " +
-                        "linked to the following records:")}<p/>${documentsInfoMessage}`);
-                    new Dialog(this, {
-                        title: _t("Warning!"),
-                        size: 'medium',
-                        $content: $content,
-                        buttons: [
-                            {
-                                text: _t("Confirm Deletion"), classes: 'btn-primary', close: true,
-                                click: execute
-                            },
-                            {
-                                text: _t("Cancel"), close: true
-                            },
-                        ],
-                    }).open();
-                } else { // No document linked to the token, delete without warning
-                    execute();
+                    dialogContentMessage += '</ul>';
                 }
+                new Dialog(this, {
+                    title: _t("Warning!"),
+                    size: 'medium',
+                    $content: $('<div>').html(dialogContentMessage),
+                    buttons: [
+                        {
+                            text: _t("Confirm Deletion"), classes: 'btn-primary', close: true,
+                            click: execute
+                        },
+                        {
+                            text: _t("Cancel"), close: true
+                        },
+                    ],
+                }).open();
             }).guardedCatch(error => {
                 this._displayError(
                     _t("Server Error"),
