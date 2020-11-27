@@ -108,7 +108,9 @@ class TestAccountEdiFacturx(AccountEdiTestCommon):
                             <DefinedTradeContact>
                                 <PersonName>company_1_data</PersonName>
                             </DefinedTradeContact>
-                            <PostalTradeAddress/>
+                            <PostalTradeAddress>
+                                <CountryID>US</CountryID>
+                            </PostalTradeAddress>
                         </SellerTradeParty>
                         <BuyerTradeParty>
                             <Name>partner_b</Name>

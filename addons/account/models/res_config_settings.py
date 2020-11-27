@@ -109,7 +109,9 @@ class ResConfigSettings(models.TransientModel):
         config_parameter='account.use_invoice_terms')
 
     # Technical field to hide country specific fields from accounting configuration
-    country_code = fields.Char(related='company_id.country_id.code', readonly=True)
+    company_country_id = fields.Many2one(related='company_id.country_id', readonly=True, string="Company country",
+                                         help="Internal field used to filter tax groups of the current country")
+    country_code = fields.Char(related='company_country_id.code', readonly=True)
 
     def set_values(self):
         super(ResConfigSettings, self).set_values()

@@ -204,6 +204,10 @@ class AccountTestInvoicingCommon(TransactionCase):
         if kwargs.get('currency_id'):
             company.write({'currency_id': kwargs['currency_id']})
 
+        # Make sure the company has a country_id to avoid issues when setting up taxes.
+        if not kwargs.get('country_id'):
+            company.write({'country_id': cls.env.ref('base.us').id})
+
         return {
             'company': company,
             'currency': company.currency_id,
