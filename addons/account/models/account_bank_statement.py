@@ -422,6 +422,7 @@ class AccountBankStatement(models.Model):
                     'res_id': statement.id
                 })
 
+        self._check_balance_end_real_same_as_computed()
         self.write({'state': 'confirm', 'date_done': fields.Datetime.now()})
 
     def button_validate_or_action(self):
@@ -444,6 +445,7 @@ class AccountBankStatement(models.Model):
         if any(statement.state != 'confirm' for statement in self):
             raise UserError(_("Only Validated statements can be reset to new."))
 
+        self._check_balance_end_real_same_as_computed()
         self.write({'state': 'posted', 'date_done': False})
 
     def button_journal_entries(self):
