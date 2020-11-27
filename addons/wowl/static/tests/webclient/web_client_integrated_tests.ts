@@ -1253,7 +1253,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     };
     const webClient = await createWebClient({ baseConfig, legacyEnv, mockRPC });
 
-    webClient.env.bus.trigger("test:hashchange", {
+    await loadState(webClient, {
       res_model: "partner", // the valid key for the model is 'model', not 'res_model'
     });
 
@@ -4118,23 +4118,18 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     */
   });
 
-  QUnit.skip('ask for confirmation when leaving a "dirty" view', async function (assert) {
-    /*
+  QUnit.debug('ask for confirmation when leaving a "dirty" view', async function (assert) {
     assert.expect(4);
 
-    var actionManager = await createActionManager({
-      actions: this.actions,
-      archs: this.archs,
-      data: this.data,
-    });
-    await actionManager.doAction(4);
+    const webClient = await createWebClient({ baseConfig, legacyEnv });
+    await doAction(webClient, 4);
 
     // open record in form view
-    await testUtils.dom.click(actionManager.$(".o_kanban_record:first"));
+    await testUtils.dom.click($(webClient.el!).find(".o_kanban_record:first")[0]);
 
     // edit record
     await testUtils.dom.click($(".o_control_panel button.o_form_button_edit"));
-    await testUtils.fields.editInput(actionManager.$('input[name="foo"]'), "pinkypie");
+    await testUtils.fields.editInput($(webClient.el!).find('input[name="foo"]'), "pinkypie");
 
     // go back to kanban view
     await testUtils.dom.click($(".o_control_panel .breadcrumb-item:first a"));
@@ -4148,7 +4143,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     // cancel
     await testUtils.dom.click($(".modal .modal-footer button.btn-secondary"));
 
-    assert.containsOnce(actionManager, ".o_form_view", "should still be in form view");
+    assert.containsOnce(webClient.el!, ".o_form_view", "should still be in form view");
 
     // go back again to kanban view
     await testUtils.dom.click($(".o_control_panel .breadcrumb-item:first a"));
@@ -4156,11 +4151,11 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     // confirm discard
     await testUtils.dom.click($(".modal .modal-footer button.btn-primary"));
 
-    assert.containsNone(actionManager, ".o_form_view", "should no longer be in form view");
-    assert.containsOnce(actionManager, ".o_kanban_view", "should be in kanban view");
+    assert.containsNone(webClient.el!, ".o_form_view", "should no longer be in form view");
+    assert.containsOnce(webClient.el!, ".o_kanban_view", "should be in kanban view");
 
-    actionManager.destroy();
-    */
+    webClient.destroy();
+    
   });
 
   QUnit.skip("limit set in action is passed to each created controller", async function (assert) {

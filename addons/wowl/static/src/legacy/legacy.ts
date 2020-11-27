@@ -1,8 +1,7 @@
 import { Component, hooks, tags } from "@odoo/owl";
 import {
   ClientActionProps,
-  OdooEnv,
-  ViewProps,
+  OdooEnv, Type, ViewProps,
   Context,
   Service,
   ViewId,
@@ -87,8 +86,18 @@ export function mapLegacyEnvToWowlEnv(legacyEnv: any, wowlEnv: OdooEnv) {
   });
 }
 
+interface ComponentAdapter extends Component {
+  widget: any;
+  _trigger_up(ev: any): void;
+}
+
+interface ActionAdapter extends ComponentAdapter {
+  exportState(): any;
+  canBeRemoved(): Promise<void>;
+}
+
 odoo.define("wowl.ActionAdapters", function (require: any) {
-  const { ComponentAdapter } = require("web.OwlCompatibility");
+  const { ComponentAdapter }:   { ComponentAdapter: Type<ComponentAdapter> } = require("web.OwlCompatibility");
 
   class ActionAdapter extends ComponentAdapter {
     am = useService("action_manager");
@@ -118,6 +127,9 @@ odoo.define("wowl.ActionAdapters", function (require: any) {
       const widget = this.widget;
       this.widget = null;
       return { __legacy_widget__: widget };
+    }
+    canBeRemoved() {
+      return this.widget.canBeRemoved();
     }
   }
 
@@ -264,7 +276,7 @@ odoo.define("wowl.legacyViews", async function (require: any) {
       static type = LegacyView.prototype.viewType;
 
       vm = useService("view_manager");
-      controllerRef = hooks.useRef("controller");
+      controllerRef = hooks.useRef<ActionAdapter>("controller");
 
       Widget = Widget; // fool the ComponentAdapter with a simple Widget
       View = LegacyView;
@@ -291,7 +303,10 @@ odoo.define("wowl.legacyViews", async function (require: any) {
       constructor() {
         super(...arguments);
         useSetupAction({
-          export: () => (this.controllerRef.comp! as any).exportState(),
+          export: () => this.controllerRef.comp!.exportState(),
+          beforeLeave: () => {
+            return this.controllerRef.comp!.widget!.canBeRemoved();
+          }
         });
       }
 
