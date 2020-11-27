@@ -939,8 +939,12 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
       name: "title",
       deploy() {
         return {
-          get current() { return '' },
-          getParts() { return {} },
+          get current() {
+            return "";
+          },
+          getParts() {
+            return {};
+          },
           setParts(parts: { [key: string]: string }) {
             assert.step(JSON.stringify(parts));
           },
@@ -948,7 +952,6 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
       },
     };
     baseConfig.services!.add("title", mockedTitleService, true);
-
 
     const webClient = await createWebClient({ baseConfig, legacyEnv });
 
@@ -1498,6 +1501,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
       id: "2",
       view_type: "form",
     });
+
     assert.containsNone(webClient.el!, ".o_form_view");
     assert.containsNone(webClient.el!, ".o_list_view");
 
@@ -3131,65 +3135,64 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     webClient.destroy();
   });
 
-  QUnit.skip(
+  QUnit.test(
     "orderedBy in context is not propagated when executing another action",
     async function (assert) {
-      /*
       assert.expect(6);
 
-      this.data.partner.fields.foo.sortable = true;
-
-      this.archs["partner,false,form"] =
-        "<header>" + '<button name="8" string="Execute action" type="action"/>' + "</header>";
-
-      var searchReadCount = 1;
-      var actionManager = await createActionManager({
-        actions: this.actions,
-        archs: this.archs,
-        data: this.data,
-        mockRPC: function (route, args) {
-          if (route === "/web/dataset/search_read") {
-            if (searchReadCount === 1) {
-              assert.strictEqual(args.model, "partner");
-              assert.notOk(args.sort);
-            }
-            if (searchReadCount === 2) {
-              assert.strictEqual(args.model, "partner");
-              assert.strictEqual(args.sort, "foo ASC");
-            }
-            if (searchReadCount === 3) {
-              assert.strictEqual(args.model, "pony");
-              assert.notOk(args.sort);
-            }
-            searchReadCount += 1;
-          }
-          return this._super.apply(this, arguments);
+      baseConfig.serverData!.models!.partner.fields.foo.sortable = true;
+      baseConfig.serverData!.views!["partner,false,form"] = `
+        <form>
+          <header>
+            <button name="8" string="Execute action" type="action"/>
+          </header>
+        </form>`;
+      baseConfig.serverData!.models!.partner.filters = [
+        {
+          id: 1,
+          context: "{}",
+          domain: "[]",
+          sort: "[]",
+          is_default: true,
+          name: "My filter",
         },
-      });
-      await actionManager.doAction(3);
+      ];
 
-      // Simulate the activation of a filter
-      var searchData = {
-        domains: [[["foo", "=", "yop"]]],
-        contexts: [
-          {
-            orderedBy: [],
-          },
-        ],
+      let searchReadCount = 1;
+      const mockRPC: RPC = async (route, args) => {
+        if (route === "/web/dataset/search_read") {
+          args = args || {};
+          if (searchReadCount === 1) {
+            assert.strictEqual(args.model, "partner");
+            assert.notOk(args.sort);
+          }
+          if (searchReadCount === 2) {
+            assert.strictEqual(args.model, "partner");
+            assert.strictEqual(args.sort, "foo ASC");
+          }
+          if (searchReadCount === 3) {
+            assert.strictEqual(args.model, "pony");
+            assert.notOk(args.sort);
+          }
+          searchReadCount += 1;
+        }
       };
-      actionManager.trigger_up("search", searchData);
+      const webClient = await createWebClient({ baseConfig, legacyEnv, mockRPC });
+      await doAction(webClient, 3);
 
       // Sort records
-      await testUtils.dom.click(actionManager.$(".o_list_view th.o_column_sortable"));
+      await testUtils.dom.click($(webClient.el!).find(".o_list_view th.o_column_sortable"));
+      await legacyExtraNextTick();
 
-      // get to the form view of the model, on the first record
-      await testUtils.dom.click(actionManager.$(".o_data_cell:first"));
+      // Get to the form view of the model, on the first record
+      await testUtils.dom.click($(webClient.el!).find(".o_data_cell:first"));
+      await legacyExtraNextTick();
 
-      // Change model by clicking on the button within the form
-      await testUtils.dom.click(actionManager.$(".o_form_view button"));
+      // Execute another action by clicking on the button within the form
+      await testUtils.dom.click($(webClient.el!).find("button[name=8]"));
+      await legacyExtraNextTick();
 
-      actionManager.destroy();
-      */
+      webClient.destroy();
     }
   );
 
