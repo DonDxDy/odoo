@@ -43,6 +43,7 @@ class ComposerTextInput extends Component {
          * Reference of the textarea. Useful to set height, selection and content.
          */
         this._textareaRef = useRef('textarea');
+        this._textareaDummyRef = useRef('textarea_dummy');
     }
 
     //--------------------------------------------------------------------------
@@ -148,6 +149,7 @@ class ComposerTextInput extends Component {
             return;
         }
         this._textareaRef.el.value = this.composer.textInputContent;
+        this._textareaDummyRef.el.value = this.composer.textInputContent;
         this._textareaRef.el.setSelectionRange(
             this.composer.textInputCursorStart,
             this.composer.textInputCursorEnd,
@@ -162,8 +164,7 @@ class ComposerTextInput extends Component {
      * @private
      */
     _updateHeight() {
-        this._textareaRef.el.style.height = "0px";
-        this._textareaRef.el.style.height = (this._textareaRef.el.scrollHeight) + "px";
+        this._textareaRef.el.style.height = (this._textareaDummyRef.el.scrollHeight) + "px";
     }
 
     //--------------------------------------------------------------------------
