@@ -568,7 +568,7 @@ class Task(models.Model):
     stage_id = fields.Many2one('project.task.type', string='Stage', compute='_compute_stage_id',
         store=True, readonly=False, ondelete='restrict', tracking=True, index=True,
         default=_get_default_stage_id, group_expand='_read_group_stage_ids',
-        domain="[('project_ids', '=', project_id)]", copy=False)
+        domain="[('project_ids', '=', effective_project_id)]", copy=False)
     tag_ids = fields.Many2many('project.tags', string='Tags')
     kanban_state = fields.Selection([
         ('normal', 'In Progress'),
@@ -587,8 +587,8 @@ class Task(models.Model):
         readonly=True)
     project_id = fields.Many2one('project.project', string='Project', store=True, readonly=False,
         index=True, tracking=True, check_company=True, change_default=True)
-    effective_project_id = fields.Many2one('project.project', string='Project',
-        compute='_compute_effective_project_id', store=True, index=True, tracking=True, check_company=True)
+    effective_project_id = fields.Many2one('project.project',
+        compute='_compute_effective_project_id', store=True, index=True, tracking=True, check_company=True, change_default=True)
     planned_hours = fields.Float("Initially Planned Hours", help='Time planned to achieve this task (including its sub-tasks).', tracking=True)
     subtask_planned_hours = fields.Float("Sub-tasks Planned Hours", compute='_compute_subtask_planned_hours',
         help="Sum of the time planned of all the sub-tasks linked to this task. Usually less than or equal to the initially planned time of this task.")
@@ -957,7 +957,7 @@ class Task(models.Model):
     def _onchange_stage_id(self):
         self.ensure_one()
         if self.parent_id and not self.project_id and self.parent_id.stage_id != self.stage_id:
-            raise UserError(_("The sub-task stage cannot be different than its parent task stage."))
+            raise UserError(_("The sub-task stage cannot be different from the one of its parent."))
 
     @api.depends('project_id', 'parent_id.stage_id')
     def _compute_stage_id(self):
@@ -1059,7 +1059,6 @@ class Task(models.Model):
     def create(self, vals_list):
         default_stage = dict()
         default_parent_stage = dict()
-        default_subtask_project = dict()
         for vals in vals_list:
             parent_id = vals.get('parent_id')
             if parent_id and "stage_id" not in vals:
@@ -1077,7 +1076,7 @@ class Task(models.Model):
                 vals["company_id"] = self.env["project.project"].browse(
                     project_id
                 ).company_id.id or self.env.company.id
-            if vals.get('project_id') and "stage_id" not in vals:
+            if project_id and "stage_id" not in vals:
                 # 1) Allows keeping the batch creation of tasks
                 # 2) Ensure the defaults are correct (and computed once by project),
                 # by using default get (instead of _get_default_stage_id or _stage_find),
