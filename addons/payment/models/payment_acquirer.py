@@ -35,7 +35,7 @@ class PaymentAcquirer(models.Model):
              "This mode is advised when setting up the acquirer.",
         selection=[('disabled', "Disabled"), ('enabled', "Enabled"), ('test', "Test Mode")],
         default='disabled', required=True, copy=False)
-    company_id = fields.Many2one(  # Indexed to fasten ORM searches on c_id (from ir_rule or other)
+    company_id = fields.Many2one(  # Indexed to fasten ORM searches (from ir_rule or others)
         string="Company", comodel_name='res.company', default=lambda self: self.env.company.id,
         required=True, index=True)
     payment_icon_ids = fields.Many2many(

@@ -19,8 +19,8 @@ class PaymentToken(models.Model):
     partner_id = fields.Many2one(string="Partner", comodel_name='res.partner', required=True)
     acquirer_id = fields.Many2one(
         string="Acquirer Account", comodel_name='payment.acquirer', required=True)
-    company_id = fields.Many2one(  # Indexed to fasten ORM searches on c_id (from ir_rule or other)
-        related='acquirer_id.company_id', index=True)
+    company_id = fields.Many2one(  # Indexed to fasten ORM searches (from ir_rule or others)
+        related='acquirer_id.company_id', store=True, index=True)
     acquirer_ref = fields.Char(
         string="Acquirer Reference", help="The acquirer reference of the token of the transaction",
         required=True)  # This is not the same thing as the acquirer reference of the transaction
