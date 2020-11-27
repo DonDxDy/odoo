@@ -501,7 +501,7 @@ function factory(dependencies) {
          * @returns {boolean}
          */
         _computeHasUploadingAttachment() {
-            return this.attachments.some(attachment => attachment.isTemporary);
+            return this.attachments.some(attachment => attachment.isUploading);
         }
 
         /**
@@ -872,14 +872,13 @@ function factory(dependencies) {
             inverse: 'composers',
         }),
         /**
-         * This field watches the uploading (= temporary) status of attachments
-         * linked to this composer.
+         * This field watches the uploading status of attachments linked to this composer.
          *
          * Useful to determine whether there are some attachments that are being
          * uploaded.
          */
-        attachmentsAreTemporary: attr({
-            related: 'attachments.isTemporary',
+        attachmentsAreUploading: attr({
+            related: 'attachments.isUploading',
         }),
         canPostMessage: attr({
             compute: '_computeCanPostMessage',
@@ -928,7 +927,7 @@ function factory(dependencies) {
             compute: '_computeHasUploadingAttachment',
             dependencies: [
                 'attachments',
-                'attachmentsAreTemporary',
+                'attachmentsAreUploading',
             ],
         }),
         hasFocus: attr({

@@ -97,7 +97,7 @@ function factory(dependencies) {
          * Remove this attachment globally.
          */
         async remove() {
-            if (!this.isTemporary) {
+            if (!this.isUploading) {
                 await this.async(() => this.env.services.rpc({
                     model: 'ir.attachment',
                     method: 'unlink',
@@ -125,17 +125,17 @@ function factory(dependencies) {
          * @returns {mail.composer[]}
          */
         _computeComposers() {
-            if (this.isTemporary) {
+            if (this.isUploading) {
                 return [];
             }
-            const relatedTemporaryAttachment = this.env.models['mail.attachment']
+            const relatedUploadingAttachment = this.env.models['mail.attachment']
                 .find(attachment =>
                     attachment.filename === this.filename &&
-                    attachment.isTemporary
+                    attachment.isUploading
                 );
-            if (relatedTemporaryAttachment) {
-                const composers = relatedTemporaryAttachment.composers;
-                relatedTemporaryAttachment.delete();
+            if (relatedUploadingAttachment) {
+                const composers = relatedUploadingAttachment.composers;
+                relatedUploadingAttachment.delete();
                 return [['replace', composers]];
             }
             return [];
@@ -264,7 +264,7 @@ function factory(dependencies) {
          * @returns {AbortController|undefined}
          */
         _computeUploadingAbortController() {
-            if (this.isTemporary) {
+            if (this.isUploading) {
                 if (!this.uploadingAbortController) {
                     const abortController = new AbortController();
                     abortController.signal.onabort = () => {
@@ -328,12 +328,12 @@ function factory(dependencies) {
             compute: '_computeIsLinkedToComposer',
             dependencies: ['composers'],
         }),
-        isTemporary: attr({
-            default: false,
-        }),
         isTextFile: attr({
             compute: '_computeIsTextFile',
             dependencies: ['fileType'],
+        }),
+        isUploading: attr({
+            default: false,
         }),
         isViewable: attr({
             compute: '_computeIsViewable',
@@ -369,7 +369,7 @@ function factory(dependencies) {
         uploadingAbortController: attr({
             compute: '_computeUploadingAbortController',
             dependencies: [
-                'isTemporary',
+                'isUploading',
                 'uploadingAbortController',
             ],
         }),
