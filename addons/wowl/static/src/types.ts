@@ -225,7 +225,9 @@ export type FieldType =
   | "one2many"
   | "many2many"
   | "many2one"
-  | "number"
+  | "integer"
+  | "float"
+  | "monetary"
   | "date"
   | "datetime";
 

@@ -101,7 +101,7 @@ function makeServerData(): ServerData {
   const recordData: ServerData["models"] = {
     partner: {
       fields: {
-        id: { string: "Id", type: "number" },
+        id: { string: "Id", type: "integer" },
         foo: { string: "Foo", type: "char" },
         bar: { string: "Bar", type: "many2one", relation: "partner" },
         o2m: { string: "One2Many", type: "one2many", relation: "partner", relation_field: "bar" },
@@ -117,7 +117,7 @@ function makeServerData(): ServerData {
     },
     pony: {
       fields: {
-        id: { string: "Id", type: "number" },
+        id: { string: "Id", type: "integer" },
         name: { string: "Name", type: "char" },
       },
       records: [
@@ -3948,8 +3948,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     webClient.destroy();
   });
 
-  QUnit.skip("restore previous view state when switching back", async function (assert) {
-    // mockReadGroup not implemented
+  QUnit.test("restore previous view state when switching back", async function (assert) {
     assert.expect(5);
 
     baseConfig.serverData!.actions![3].views.unshift([false, "graph"]);
