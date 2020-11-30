@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import api, fields, models
+from odoo import api, exceptions, fields, models, _
 
 
 class CrmTeamMember(models.Model):
@@ -22,7 +22,7 @@ class CrmTeamMember(models.Model):
     is_membership_multi = fields.Boolean(
         'Multiple Memberships Allowed', compute='_compute_is_membership_multi',
         help='If True, users may belong to several sales teams. Otherwise membership is limited to a single sales team.')
-    is_in_another_team = fields.Boolean(compute='_compute_is_in_another_team')
+    member_warning = fields.Boolean(compute='_compute_member_warning')
     # salesman information
     image_1920 = fields.Image("Image", related="user_id.image_1920", max_width=1920, max_height=1920)
     image_128 = fields.Image("Image (128)", related="user_id.image_128", max_width=128, max_height=128)
@@ -32,11 +32,26 @@ class CrmTeamMember(models.Model):
     mobile = fields.Char(string='Mobile', related='user_id.mobile')
     company_id = fields.Many2one('res.company', string='Company', related='user_id.company_id')
 
-    _sql_constraints = [
-        ('crm_team_member_unique',
-         'UNIQUE(crm_team_id,user_id)',
-         'Error, team / user memberships should not be duplicated.'),
-    ]
+    @api.constrains('crm_team_id', 'user_id')
+    def _constrains_membership(self):
+        # In mono membership mode: check crm_team_id / user_id is unique for active
+        # memberships. Inactive memberships can create duplicate pairs which is whyy
+        # we don't use a SQL constraint. Include "self" in search in case we use create
+        # multi with duplicated user / team pairs in it.
+        existing = self.env['crm.team.member'].search([
+            ('crm_team_id', 'in', self.crm_team_id.ids),
+            ('user_id', 'in', self.user_id.ids),
+        ])
+        duplicates = self.env['crm.team.member']
+        for membership in self:
+            duplicates += existing.filtered(
+                lambda m: m.user_id == membership.user_id and m.crm_team_id == membership.crm_team_id and m.id != membership.id
+            )
+        if duplicates:
+            raise exceptions.UserError(
+                _("You are trying to create duplicate membership(s). We found that %(duplicates)s already exist(s).",
+                  duplicates=", ".join("%s (%s)" % (m.user_id.name, m.crm_team_id.name) for m in duplicates)
+                 ))
 
     @api.depends('crm_team_id')
     @api.depends_context('default_crm_team_id')
@@ -61,19 +76,23 @@ class CrmTeamMember(models.Model):
         for member in self:
             member.is_membership_multi = multi_enabled
 
-    @api.depends('user_id', 'crm_team_id')
-    def _compute_is_in_another_team(self):
-        existing = self.env['crm.team.member'].search([('user_id', 'in', self.user_id.ids)])
-        user_mapping = dict.fromkeys(existing.user_id, self.env['crm.team'])
-        for membership in existing:
-            user_mapping[membership.user_id] |= membership.crm_team_id
-        for member in self:
-            if not user_mapping.get(member.user_id):
-                member.is_in_another_team = False
-                continue
-            teams = user_mapping[member.user_id]
-            remaining = teams - (member.crm_team_id | member._origin.crm_team_id)
-            member.is_in_another_team = len(remaining) > 0
+    @api.depends('is_membership_multi', 'user_id', 'crm_team_id')
+    def _compute_member_warning(self):
+        if all(m.is_membership_multi for m in self):
+            self.member_warning = False
+        else:
+            existing = self.env['crm.team.member'].search([('user_id', 'in', self.user_id.ids)])
+            user_mapping = dict.fromkeys(existing.user_id, self.env['crm.team'])
+            for membership in existing:
+                user_mapping[membership.user_id] |= membership.crm_team_id
+
+            for member in self:
+                teams = user_mapping.get(member.user_id, self.env['crm.team'])
+                remaining = teams - (member.crm_team_id | member._origin.crm_team_id)
+                member.member_warning = _("Adding %(user_name)s in this team would remove him/her from its current team %(team_names)s.",
+                                          user_name=member.user_id.name,
+                                          team_names=", ".join(remaining.mapped('crm_team_id.name'))
+                                         )
 
     @api.model_create_multi
     def create(self, values_list):
@@ -81,49 +100,26 @@ class CrmTeamMember(models.Model):
 
           * mono membership mode: other user memberships are automatically
             archived (a warning already told it in form view);
-          * creating a membership already existing as archived: old one is
-            automatically removed;
+          * creating a membership already existing as archived: do nothing as
+            people can manage them from specific menu "Members";
         """
         is_membership_multi = self.env['ir.config_parameter'].sudo().get_param('sales_team.membership_multi', False)
-        exist_all = self.with_context(active_test=False).search([
-            ('user_id', 'in', [values['user_id'] for values in values_list])
-        ])
-        user_memberships = dict.fromkeys(exist_all.user_id.ids, self.env['crm.team.member'])
-        for membership in exist_all:
+        if is_membership_multi:
+            return super(CrmTeamMember, self).create(values_list)
+
+        existing = self.search([('user_id', 'in', [values['user_id'] for values in values_list])])
+        user_memberships = dict.fromkeys(existing.user_id.ids, self.env['crm.team.member'])
+        for membership in existing:
             user_memberships[membership.user_id.id] += membership
 
-        exist_to_remove = self.env['crm.team.member']
-        exist_to_archive = self.env['crm.team.member']
+        existing_to_archive = self.env['crm.team.member']
         for values in values_list:
-            exist_current = user_memberships.get(values['user_id'])
-            if not exist_current:
-                continue
-            if not is_membership_multi:
-                to_archive = exist_current.filtered(lambda m: m.active and m.crm_team_id.id != values['crm_team_id'])
-                if to_archive:
-                    exist_to_archive += to_archive
-            to_remove = exist_current.filtered(lambda m: not m.active and m.crm_team_id.id == values['crm_team_id'])
-            if to_remove:
-                exist_to_remove += to_remove
+            to_archive = user_memberships.get(values['user_id'], self.env['crm.team.member']).filtered(
+                lambda m: m.active and m.crm_team_id.id != values['crm_team_id']
+            )
+            existing_to_archive += to_archive
 
-        if exist_to_remove:
-            exist_to_remove.unlink()
-        if exist_to_archive:
-            exist_to_archive.active = False
+        if existing_to_archive:
+            existing_to_archive.action_archive()
 
         return super(CrmTeamMember, self).create(values_list)
-
-    def write(self, values):
-        """ When updating memberships to a new team, erase all other archived
-        memberships. """
-        if values.get('crm_team_id'):
-            existing_dups = self.with_context(active_test=False).search([
-                ('id', 'not in', self.ids),
-                ('user_id', 'in', self.user_id.ids),
-                ('crm_team_id', '=', values['crm_team_id']),
-                ('active', '=', False)
-            ])
-            if existing_dups:
-                existing_dups.unlink()
-
-        return super(CrmTeamMember, self).write(values)

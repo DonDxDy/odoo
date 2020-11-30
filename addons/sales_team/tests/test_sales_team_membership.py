@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-import psycopg2
-
+from odoo import exceptions
 from odoo.addons.sales_team.tests.common import TestSalesMC
 from odoo.tests.common import users
 from odoo.tools import mute_logger
@@ -143,12 +142,13 @@ class TestMembership(TestSalesMC):
         self.assertFalse(memberships.filtered(lambda m: m.crm_team_id == sales_team_1).active)
         self.assertTrue(memberships.filtered(lambda m: m.crm_team_id == new_team).active)
 
-        # subscribe user_sales_leads on old team -> old membership should be unlinked
+        # subscribe user_sales_leads on old team -> old membership still archived and kept
         sales_team_1.write({'crm_team_member_ids': [(0, 0, {'user_id': self.user_sales_leads.id})]})
-        memberships = self.env['crm.team.member'].with_context(active_test=False).search([('id', 'in', memberships.ids)])
-        self.assertEqual(len(memberships), 1)
-        self.assertEqual(memberships.crm_team_id, new_team)
-        self.assertEqual(memberships.active, False)
+        memberships_2 = self.env['crm.team.member'].with_context(active_test=False).search([('id', 'in', memberships.ids)])
+        self.assertEqual(memberships, memberships_2)
+        self.assertEqual(memberships_2.crm_team_id, sales_team_1 | new_team)
+        self.assertFalse(memberships_2.filtered(lambda m: m.crm_team_id == sales_team_1).active)
+        self.assertFalse(memberships_2.filtered(lambda m: m.crm_team_id == new_team).active)
         self.assertEqual(new_team.member_ids, self.env.user)
         self.assertEqual(sales_team_1.member_ids, self.user_admin | self.user_sales_leads)
 
@@ -191,7 +191,7 @@ class TestMembership(TestSalesMC):
         self.assertEqual(new_team.crm_team_member_all_ids, new_member + added)
         self.assertEqual(new_team.member_ids, self.env.user | self.user_sales_leads)
 
-        # archived are erased if duplicated on write
+        # archived are kept if duplicated on write
         admin_original = self.env['crm.team.member'].search([
             ('crm_team_id', '=', sales_team_1.id),
             ('user_id', '=', self.user_admin.id)
@@ -205,11 +205,13 @@ class TestMembership(TestSalesMC):
         admin_original.write({'crm_team_id': new_team.id})
         # send to db as errors may pop at that step (like trying to set NULL on a m2o inverse of o2m)
         self.new_team.flush()
-        self.assertFalse(admin_archived.exists())
-
+        self.assertTrue(self.user_admin in new_team.member_ids)
+        self.assertTrue(admin_original.active)
+        self.assertTrue(admin_archived.exists())
+        self.assertFalse(admin_archived.active)
 
         # change team of membership should raise unicity constraint
-        with self.assertRaises(psycopg2.IntegrityError), mute_logger('odoo.sql_db'):
+        with self.assertRaises(exceptions.UserError), mute_logger('odoo.sql_db'):
             added.write({'crm_team_id': sales_team_1.id})
             self.new_team.flush()
 

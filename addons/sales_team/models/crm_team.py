@@ -55,6 +55,7 @@ class CrmTeam(models.Model):
         'res.users', string='Salespersons', check_company=True, domain=[('share', '=', False)],
         compute='_compute_member_ids', inverse='_inverse_member_ids', search='_search_member_ids',
         help="Users assigned to this team.")
+    member_warning = fields.Text('Membership Issue Warning', compute='_compute_member_warning')
     crm_team_member_ids = fields.One2many(
         'crm.team.member', 'crm_team_id', string='Sales Team Members',
         help="Add members to automatically assign their documents to this sales team.")
@@ -96,6 +97,31 @@ class CrmTeam(models.Model):
             # activate or deactivate other memberships depending on members
             for membership in memberships_all:
                 membership.active = membership.user_id in members_active
+
+    @api.depends('is_membership_multi', 'member_ids')
+    def _compute_member_warning(self):
+        if self.is_membership_multi:
+            self.member_warning = False
+        else:
+            # done in a loop, but to be used in form view only -> not optimized
+            for team in self:
+                member_warning = False
+                other_memberships = self.env['crm.team.member'].search([
+                    ('crm_team_id', '!=', team.ids[0]),
+                    ('user_id', 'in', team.member_ids.ids)
+                ])
+                if other_memberships and len(other_memberships) == 1:
+                    member_warning = _("Adding %(user_name)s in this team would remove him/her from its current team %(team_name)s.",
+                                       user_name=other_memberships.user_id.name,
+                                       team_name=other_memberships.crm_team_id.name
+                                      )
+                elif other_memberships:
+                    member_warning = _("Adding %(user_names)s in this team would remove them from their current teams (%(team_names)s).",
+                                       user_names=", ".join(other_memberships.mapped('user_id.name')),
+                                       team_names=", ".join(other_memberships.mapped('user_id.name'))
+                                      )
+                if member_warning:
+                    team.member_warning = member_warning + " " + _("To add a Salesperson into multiple Teams, activate the Multi-Team option in settings.")
 
     def _search_member_ids(self, operator, value):
         return [('crm_team_member_ids.user_id', operator, value)]

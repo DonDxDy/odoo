@@ -23,6 +23,10 @@
             <form string="Sales Team">
                 <sheet>
                     <div class="oe_button_box" name="button_box"/>
+                    <div class="alert alert-info text-center" role="alert"
+                        attrs="{'invisible': ['|', ('is_membership_multi', '=', True), ('member_warning', '=', False)]}">
+                        <field name="member_warning"/>
+                    </div>
                     <widget name="web_ribbon" title="Archived" bg_color="bg-danger" attrs="{'invisible': [('active', '=', True)]}"/>
                     <div class="oe_title">
                         <label for="name" class="oe_edit_only" string="Sales Team"/>
@@ -39,7 +43,6 @@
                             <field name="user_id" domain="[('share', '=', False)]"/>
                             <field name="company_id" options="{'no_create': True}" groups="base.group_multi_company"/>
                             <field name="currency_id" invisible="1"/>
-                            <field name="user_in_teams_ids" invisible="1"/>
                         </group>
                         <group name="right">
                         </group>
@@ -48,7 +51,7 @@
                         <page string="Members" name="members_users"
                             attrs="{'invisible': [('is_membership_multi', '=', True)]}">
                             <field name="member_ids" mode="kanban"
-                                domain="[('id', 'not in', user_in_teams_ids), ('share', '=', False)]"
+                                domain="[('share', '=', False)]"
                                 class="w-100">
                                 <kanban>
                                     <field name="id"/>
