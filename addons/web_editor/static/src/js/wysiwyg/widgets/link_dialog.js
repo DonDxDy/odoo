@@ -25,6 +25,8 @@ var LinkDialog = Dialog.extend({
     }),
 
     /**
+     * Uses a boolean 'linkInfo.isButton' to adapt the changes to button elements.
+     *
      * @constructor
      */
     init: function (parent, options, editable, linkInfo) {
@@ -40,8 +42,11 @@ var LinkDialog = Dialog.extend({
             },
         });
 
+        this.data = linkInfo || {};
+        this.isButton = this.data.isButton;
+        // Using explicit type 'link' to preserve style when the target is <button class="...btn-link"/>.
         this.colorsData = [
-            {type: '', label: _t("Link"), btnPreview: 'link'},
+            {type: this.isButton ? 'link' : '', label: _t("Link"), btnPreview: 'link'},
             {type: 'primary', label: _t("Primary"), btnPreview: 'primary'},
             {type: 'secondary', label: _t("Secondary"), btnPreview: 'secondary'},
             // Note: by compatibility the dialog should be able to remove old
@@ -51,8 +56,6 @@ var LinkDialog = Dialog.extend({
         ];
 
         this.editable = editable;
-        this.data = linkInfo || {};
-
         this.data.className = "";
         this.data.iniClassName = "";
 
@@ -60,10 +63,10 @@ var LinkDialog = Dialog.extend({
         this.needLabel = !r || (r.sc === r.ec && r.so === r.eo);
 
         if (this.data.range) {
-            const $link = $(this.data.range.sc).filter("a");
-            this.data.iniClassName = $link.attr("class") || "";
+            const $el = $(this.data.range.sc).filter(this.isButton ? "button" : "a");
+            this.data.iniClassName = $el.attr("class") || "";
             this.colorCombinationClass = false;
-            let $node = $link;
+            let $node = $el;
             while ($node.length && !$node.is('body')) {
                 const className = $node.attr('class') || '';
                 const m = className.match(/\b(o_cc\d+)\b/g);
@@ -185,6 +188,12 @@ var LinkDialog = Dialog.extend({
             this._onURLInput();
         }
 
+        if (this.isButton) {
+            this.$("#link-preview").replaceWith($('<button id="link-preview"/>'));
+            this.$('input[name="is_new_window"]').closest('.form-group').remove();
+            this.$('input[name="url"]').closest('.form-group').addClass('d-none');
+        }
+
         this._updateOptionsUI();
         this._adaptPreview();
 
@@ -263,7 +272,8 @@ var LinkDialog = Dialog.extend({
             }
         }
 
-        if ($url.prop('required') && (!url || !$url[0].checkValidity())) {
+        // Url not required for buttons.
+        if (!this.isButton && $url.prop('required') && (!url || !$url[0].checkValidity())) {
             return null;
         }
 

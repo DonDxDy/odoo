@@ -618,6 +618,9 @@ define([
       var isNewWindow = linkInfo.isNewWindow;
       var rng = linkInfo.range || this.createRange($editable);
       var isTextChanged = rng.toString() !== linkText;
+      // Hack : This method was updated to create buttons as well (using the same logic as anchor nodes).
+      const nodeName = linkInfo.isButton ? 'BUTTON' : 'A';
+      const pred = dom.makePredByNodeName(nodeName);
 
       options = options || dom.makeLayoutInfo($editable).editor().data('options');
 
@@ -627,37 +630,39 @@ define([
         linkUrl = options.onCreateLink(linkUrl);
       }
 
-      var anchors = [];
+      var nodes = [];
       // ODOO: adding this branch to modify existing anchor if it fully contains the range
-      var ancestor_anchor = dom.ancestor(rng.sc, dom.isAnchor);
-      if(ancestor_anchor && ancestor_anchor === dom.ancestor(rng.ec, dom.isAnchor)) {
-          anchors.push($(ancestor_anchor).html(linkText).get(0));
+      var ancestorNode = dom.ancestor(rng.sc, pred);
+      if (ancestorNode && ancestorNode === dom.ancestor(rng.ec, pred)) {
+        nodes.push($(ancestorNode).html(linkText).get(0));
       } else if (isTextChanged) {
-        // Create a new link when text changed.
-        var anchor = rng.insertNode($('<A>' + linkText + '</A>')[0]);
-        anchors.push(anchor);
+        // Create a new element when text changed.
+        var node = rng.insertNode($(`<${nodeName}>${linkText}</${nodeName}>`)[0]);
+        nodes.push(node);
       } else {
-        anchors = style.styleNodes(rng, {
-          nodeName: 'A',
+        nodes = style.styleNodes(rng, {
+          nodeName: nodeName,
           expandClosestSibling: true,
           onlyPartialContains: true
         });
       }
 
-      $.each(anchors, function (idx, anchor) {
-        $(anchor).attr('href', linkUrl);
-        $(anchor).attr('class', linkInfo.className || null); // ODOO: addition
-        $(anchor).css(linkInfo.style || {}); // ODOO: addition
+      $.each(nodes, function (idx, node) {
+        if (!linkInfo.isButton) {
+          $(node).attr('href', linkUrl);
+        }
+        $(node).attr('class', linkInfo.className || null); // ODOO: addition
+        $(node).css(linkInfo.style || {}); // ODOO: addition
         if (isNewWindow) {
-          $(anchor).attr('target', '_blank');
+          $(node).attr('target', '_blank');
         } else {
-          $(anchor).removeAttr('target');
+          $(node).removeAttr('target');
         }
       });
 
-      var startRange = range.createFromNodeBefore(list.head(anchors));
+      var startRange = range.createFromNodeBefore(list.head(nodes));
       var startPoint = startRange.getStartPoint();
-      var endRange = range.createFromNodeAfter(list.last(anchors));
+      var endRange = range.createFromNodeAfter(list.last(nodes));
       var endPoint = endRange.getEndPoint();
 
       range.create(
@@ -672,6 +677,8 @@ define([
 
     /**
      * returns link info
+     * Hack : This method was updated to return a boolean attribute 'isButton' to allow
+     * handling buttons in linkDialog.
      *
      * @return {Object}
      * @return {WrappedRange} return.range
@@ -687,11 +694,24 @@ define([
       // Get the first anchor on range(for edit).
       var $anchor = $(list.head(rng.nodes(dom.isAnchor)));
 
+      // Check if the target is a button element.
+      let isButton = false;
+      if (!$anchor.length) {
+        const pred = dom.makePredByNodeName('BUTTON');
+        const rngNew = range.create().expand(pred);
+        const target = list.head(rngNew.nodes(pred));
+        if (target && target.nodeName === 'BUTTON') {
+          isButton = true;
+          rng = rngNew;
+        }
+      }
+
       return {
         range: rng,
         text: rng.toString(),
         isNewWindow: $anchor.length ? $anchor.attr('target') === '_blank' : false,
-        url: $anchor.length ? $anchor.attr('href') : ''
+        url: $anchor.length ? $anchor.attr('href') : '',
+        isButton: isButton,
       };
     };
 
