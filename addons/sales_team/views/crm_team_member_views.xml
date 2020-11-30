@@ -104,14 +104,12 @@
                     <div class="oe_title">
                         <label for="user_id" class="oe_edit_only"/>
                         <h1>
-                            <field name="user_id" domain="[('id', 'not in', user_in_teams_ids), ('share', '=', False)]"
-                                options="{'no_quick_create': True}"/>
+                            <field name="user_id" options="{'no_quick_create': True}"/>
                         </h1>
                     </div>
                     <group name="member_partner_info">
                         <group name="group_owner">
-                            <field name="crm_team_id" kanban_view_ref="%(sales_team.crm_team_view_kanban)s"
-                                domain="[('id', 'not in', crm_team_skip_ids)]"/>
+                            <field name="crm_team_id" kanban_view_ref="%(sales_team.crm_team_view_kanban)s"/>
                         </group>
                         <group name="group_user">
                             <field name="company_id" attrs="{'invisible': [('user_id', '=', False)]}"

@@ -11,13 +11,10 @@ class CrmTeamMember(models.Model):
     _rec_name = 'user_id'
 
     crm_team_id = fields.Many2one('crm.team', string='Sales Team', index=True, required=True)
-    crm_team_skip_ids = fields.Many2many(
-        'crm.team', compute='_compute_crm_team_skip_ids',
-        help='UX: Give teams not to add based on currently chosen user to avoid duplicates')
     user_id = fields.Many2one(
         'res.users', string='Salesman',   # check responsible field
         index=True, ondelete='cascade', required=True,
-        domain="[('share', '=', False), ('id', 'not in', user_in_teams_ids)]")
+        domain="['&', ('share', '=', False), ('id', 'not in', user_in_teams_ids)]")
     user_in_teams_ids = fields.Many2many(
         'res.users', compute='_compute_user_in_teams_ids',
         help='UX: Give users not to add in the currently chosen team to avoid duplicates')
@@ -36,16 +33,6 @@ class CrmTeamMember(models.Model):
          'UNIQUE(crm_team_id,user_id)',
          'Error, team / user memberships should not be duplicated.'),
     ]
-
-    @api.depends('user_id')
-    @api.depends_context('default_user_id')
-    def _compute_crm_team_skip_ids(self):
-        for member in self:
-            user_id = member.user_id.id or self.env.context.get('default_user_id')
-            if user_id:
-                member.crm_team_skip_ids = self.env['crm.team.member'].search([('user_id', '=', user_id)]).crm_team_id
-            else:
-                member.crm_team_skip_ids = self.env['crm.team']
 
     @api.depends('crm_team_id')
     @api.depends_context('default_crm_team_id')
