@@ -130,6 +130,7 @@
                     </group>
                     <group>
                         <group>
+                            <field name="res_name" readonly="1" attrs="{'invisible': [('id', '=', False)]}"/>
                             <field name="activity_type_id" required="1" options="{'no_create': True, 'no_open': True}"/>
                             <field name="summary" placeholder="e.g. Discuss proposal"/>
                         </group>
@@ -143,18 +144,16 @@
                         <field name="id" invisible="1"/>
                         <button string="Schedule" name="action_close_dialog" type="object" class="btn-primary"
                             attrs="{'invisible': [('id', '!=', False)]}"/>
-                        <button string="Save" name="action_close_dialog" type="object" class="btn-primary"
-                            attrs="{'invisible': [('id', '=', False)]}"/>
                         <button attrs="{'invisible': [('force_next', '=', True)]}" string="Mark as Done" name="action_done"
                             type="object" class="btn-secondary"
                             context="{'mail_activity_quick_update': True}"/>
                         <button attrs="{'invisible': [('force_next', '=', True)]}" string="Done &amp; Schedule Next" name="action_done_schedule_next"
-                            type="object" class="btn-secondary"
+                            type="object" class="breadcrumb-item btn-secondary"
                             context="{'mail_activity_quick_update': True}"/>
                         <button attrs="{'invisible': [('force_next', '=', False)]}" string="Done &amp; Launch Next" name="action_done_schedule_next"
                             type="object" class="btn-secondary"
                             context="{'mail_activity_quick_update': True}"/>
-                        <button string="Discard" class="btn-secondary" special="cancel" />
+                        <button string="Discard" class="btn-secondary" special="cancel" attrs="{'invisible': [('id', '!=', False)]}"/>
                     </footer>
                 </sheet>
             </form>
