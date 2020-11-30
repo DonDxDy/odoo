@@ -138,4 +138,6 @@ class StockPicking(models.Model):
             # Link the finished to the receipt move.
             finished_move = mo.move_finished_ids.filtered(lambda m: m.product_id == move.product_id)
             finished_move.write({'move_dest_ids': [(4, move.id, False)]})
+            if not finished_move.picking_id:
+                finished_move.write({'picking_id': move.picking_id.id})
             mo.action_assign()
