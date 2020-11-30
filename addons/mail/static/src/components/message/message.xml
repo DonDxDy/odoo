@@ -49,17 +49,17 @@
                                     }" t-on-click="_onClickStar"
                                 />
                             </t>
-                            <div t-if="message.isCurrentPartnerAuthor and !message.is_editing_message" class="o_Message_command o_Message_Edit" t-on-click="_onClickEditMessage">
-                                <span class="fa fa-pencil"/>
-                            </div>
-                            <span class="dropdown o_Message_command o_Message_headerCommand o_Message_More_Action">
-                                <span class="fa fa-ellipsis-h" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"/>
-                                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                    <div class="o_Message_command o_Message_commandsEdit o_Message_headerCommand dropdown-item" t-on-click="_onClickEditMessage">
+                            <t t-if="message.isCurrentPartnerAuthor and !message.is_editing_message and !message.tracking_value_ids">
+                                    <span class="o_Message_command o_Message_commandEdit o_Message_headerCommand fa fa-pencil" t-on-click="_onClickEditMessage"/>
+                            </t>
+                            <div class="btn-group dropright o_Message_headerCommand o_Message_More_Action">
+                                <button type="button" class="btn btn-secondary fa fa-ellipsis-h" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"/>
+                                <div class="dropdown-menu">
+                                    <div t-if="message.isCurrentPartnerAuthor and !message.is_editing_message and !message.tracking_value_ids" class="o_Message_command o_Message_commandEdit o_Message_headerCommand dropdown-item" t-on-click="_onClickEditMessage">
                                         Edit
                                     </div>
                                 </div>
-                            </span>
+                            </div>
                         </div>
                         <t t-if="message.isCurrentPartnerAuthor and threadView and threadView.thread and threadView.thread.hasSeenIndicators">
                             <MessageSeenIndicator class="o_Message_seenIndicator o-message-squashed" messageLocalId="message.localId" threadLocalId="threadView.thread.localId"/>
@@ -150,17 +150,17 @@
                                         }" t-on-click="_onClickMarkAsRead" title="Mark as Read"
                                     />
                                 </t>
-                                <t t-if="message.isCurrentPartnerAuthor and !message.is_editing_message">
-                                    <span class="o_Message_command o_Message_commandsEdit o_Message_headerCommand fa fa-pencil" t-on-click="_onClickEditMessage"/>
+                                <t t-if="message.isCurrentPartnerAuthor and !message.is_editing_message and !message.message.tracking_value_ids">
+                                    <span class="o_Message_command o_Message_commandEdit o_Message_headerCommand fa fa-pencil" t-on-click="_onClickEditMessage"/>
                                 </t>
-                                <span class="dropdown o_Message_command o_Message_headerCommand o_Message_More_Action">
-                                    <span class="fa fa-ellipsis-h" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"/>
-                                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                        <div class="o_Message_command o_Message_commandsEdit o_Message_headerCommand dropdown-item" t-on-click="_onClickEditMessage">
+                                <div class="btn-group dropright o_Message_headerCommand o_Message_More_Action">
+                                    <button type="button" class="btn btn-secondary fa fa-ellipsis-h" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"/>
+                                    <div class="dropdown-menu">
+                                        <div t-if="message.isCurrentPartnerAuthor and !message.is_editing_message and !message.message.tracking_value_ids" class="o_Message_command o_Message_commandEdit o_Message_headerCommand dropdown-item" t-on-click="_onClickEditMessage">
                                             Edit
                                         </div>
                                     </div>
-                                </span>
+                                </div>
                             </div>
                         </div>
                         <t t-if="message.isModeratedByCurrentPartner">

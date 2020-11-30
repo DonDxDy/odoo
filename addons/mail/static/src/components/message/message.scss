@@ -184,14 +184,17 @@
 .o_Message {
     background-color: white;
 
-    &:hover:not(.dropdown-menu) {
+    &:hover {
         background-color: whitesmoke;
+
+        .o_Message_commands {
+            display: block;
+        }
     }
     &:hover, &.o-clicked {
 
         .o_Message_commands {
             background-color: white;
-            opacity: 1;
         }
 
         .o_Message_sidebarItem.o-message-squashed {
@@ -300,7 +303,7 @@
 }
 
 .o_Message_headerCommands:not(.o-mobile) {
-    opacity: 0;
+    display: none;
 }
 
 .o_Message_originThread {
