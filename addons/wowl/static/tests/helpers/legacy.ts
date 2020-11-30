@@ -9,6 +9,7 @@ export const legacyProm: Promise<any> = new Promise((resolve) => {
     Object.assign(legacyExports, {
       makeTestEnvironment: require("web.test_env"),
       testUtils: require("web.test_utils"),
+      basicFields: require('web.basic_fields'),
       Widget: require("web.Widget"),
       AbstractAction: require("web.AbstractAction"),
       core: require("web.core"),
