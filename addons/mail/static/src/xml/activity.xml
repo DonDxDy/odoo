@@ -127,4 +127,10 @@
             </div>
         </div>
     </t>
+    <t t-extend="FormView.buttons" t-name="ActivityFormView.buttons">
+        <t t-jquery="button.o_form_button_edit" t-operation="after">
+            <button attrs="{'invisible': [('force_next', '=', True)]}" string="Mark as Done" name="action_done" type="object" class="btn-secondary" context="{'mail_activity_quick_update': True}"/>
+            <button attrs="{'invisible': [('force_next', '=', True)]}" string="Done &amp; Schedule Next" name="action_done_schedule_next" type="object" class="btn-secondary" context="{'mail_activity_quick_update': True}"/>
+        </t>
+    </t>
 </templates>
