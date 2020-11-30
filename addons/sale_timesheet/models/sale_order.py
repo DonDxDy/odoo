@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import api, fields, models
+from odoo import api, fields, models, _
 from odoo.osv import expression
+from odoo.tools import float_round
 
 
 class SaleOrder(models.Model):
@@ -78,6 +79,23 @@ class SaleOrderLine(models.Model):
 
     qty_delivered_method = fields.Selection(selection_add=[('timesheet', 'Timesheets')])
     analytic_line_ids = fields.One2many(domain=[('project_id', '=', False)])  # only analytic lines, not timesheets (since this field determine if SO line came from expense)
+
+    def name_get(self):
+        if not self.env.context.get('with_remaining_hours'):
+            return super(SaleOrderLine, self).name_get()
+        res = []
+        for record in self:
+            name = record.name
+            if record.product_id and record.product_id.service_policy == 'ordered_timesheet':
+                name = "%(name)s (%(count)s)" % {
+                    'name': name,
+                    'count': _('%g remaining out of %g') % (
+                        float_round(record.product_uom_qty - record.qty_delivered, precision_digits=2) or 0.0,
+                        float_round(record.product_uom_qty, precision_digits=2) or 0.0,
+                    )
+                }
+            res.append((record.id, name))
+        return res
 
     @api.depends('product_id')
     def _compute_qty_delivered_method(self):

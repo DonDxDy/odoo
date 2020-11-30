@@ -26,7 +26,7 @@
                             <field name="pricing_type" attrs="{'invisible': ['|', ('allow_billable', '=', False), ('bill_type', '!=', 'customer_project')], 'required': ['&amp;', ('allow_billable', '=', True), ('allow_timesheets', '=', True)]}" widget="radio"/>
                             <field name="timesheet_product_id" string="Service" attrs="{'invisible': ['|', '|', ('allow_timesheets', '=', False), ('sale_order_id', '!=', False), ('bill_type', '!=', 'customer_task')], 'required': ['&amp;', ('allow_billable', '=', True), ('allow_timesheets', '=', True)]}" context="{'default_type': 'service', 'default_service_policy': 'delivered_timesheet', 'default_service_type': 'timesheet'}"/>
                             <field name="sale_order_id" attrs="{'invisible': [('bill_type', '!=', 'customer_project')], 'readonly': [('sale_order_id', '!=', False)]}" force_save="1" options="{'no_create': True, 'no_edit': True, 'delete': False}"/>
-                            <field name="sale_line_id" string="Default Sales Order Item" attrs="{'invisible': [('bill_type', '!=', 'customer_project')]}" options="{'no_create': True, 'no_edit': True, 'delete': False}"/>
+                            <field name="sale_line_id" string="Default Sales Order Item" attrs="{'invisible': [('bill_type', '!=', 'customer_project')]}" options="{'no_create': True, 'no_edit': True, 'delete': False}" context="{'with_remaining_hours': True}"/>
                         </group>
                     </group>
                     <field name="sale_line_employee_ids" attrs="{'invisible': ['|', ('bill_type', '!=', 'customer_project'), ('pricing_type', '!=', 'employee_rate')]}">
@@ -35,7 +35,7 @@
                             <field name="project_id" invisible="1"/>
                             <field name="employee_id" options="{'no_create': True}"/>
                             <field name="timesheet_product_id" attrs="{'column_invisible': [('parent.sale_order_id', '!=', False)]}" invisible="1"/>
-                            <field name="sale_line_id" attrs="{'required': True}" options="{'no_create': True}" domain="[('order_id','=',parent.sale_order_id), ('is_service', '=', True)]"/>
+                            <field name="sale_line_id" attrs="{'required': True}" options="{'no_create': True}" domain="[('order_id','=',parent.sale_order_id), ('is_service', '=', True)]" context="{'with_remaining_hours': True}"/>
                             <field name="price_unit" widget="monetary" force_save="1" options="{'currency_field': 'currency_id'}"/>
                             <field name="currency_id" invisible="1"/>
                         </tree>
