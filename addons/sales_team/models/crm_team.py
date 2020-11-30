@@ -49,8 +49,7 @@ class CrmTeam(models.Model):
     user_id = fields.Many2one('res.users', string='Team Leader', check_company=True)
     # memberships
     member_ids = fields.Many2many(
-        'res.users', 'crm_team_member', 'crm_team_id', 'user_id', string='Salespersons',
-        check_company=True, domain=[('share', '=', False)],
+        'res.users', string='Salespersons', check_company=True, domain=[('share', '=', False)],
         compute='_compute_member_ids', inverse='_inverse_member_ids', search='_search_member_ids',
         help="Users assigned to this team.")
     crm_team_member_ids = fields.One2many(
