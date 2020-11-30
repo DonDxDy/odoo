@@ -169,17 +169,23 @@ interface DoActionButtonParams {
 export interface ActionManager {
   doAction(action: ActionRequest, options?: ActionOptions): Promise<void>;
   doActionButton(params: DoActionButtonParams): Promise<void>;
-  switchView(viewType: string, options?: ViewOptions): void;
+  switchView(viewType: string, options?: ViewOptions): Promise<void>;
   restore(jsId: string): void;
   loadState(state: Route["hash"], options: ActionOptions): Promise<boolean>;
 }
 
-interface useSetupActionParams {
-  export?: () => any;
-  beforeLeave?: beforeLeaveCallback;
+export function clearUncommittedChanges(env: OdooEnv): Promise<void[]> {
+  const callbacks: ClearUncommittedChanges[] = [];
+  env.bus.trigger('CLEAR-UNCOMMITTED-CHANGES', callbacks);
+  return Promise.all(callbacks.map(fn=>fn()));
 }
 
-type beforeLeaveCallback = () => Promise<void>;
+interface useSetupActionParams {
+  export?: () => any;
+  beforeLeave?: ClearUncommittedChanges;
+}
+
+type ClearUncommittedChanges = () => Promise<void>;
 
 // -----------------------------------------------------------------------------
 // Action hook
@@ -198,7 +204,9 @@ export function useSetupAction(params: useSetupActionParams) {
     });
   }
   if (params.beforeLeave && component.props.__beforeLeave__) {
-    component.props.__beforeLeave__(params.beforeLeave);
+    hooks.onMounted(() => {
+      component.props.__beforeLeave__(params.beforeLeave);
+    });
   }
 }
 
@@ -260,8 +268,6 @@ function makeActionManager(env: OdooEnv): ActionManager {
   // regex that matches context keys not to forward from an action to another
   const CTX_KEY_REGEX = /^(?:(?:default_|search_default_|show_).+|.+_view_ref|group_by|group_by_no_leaf|active_id|active_ids|orderedBy)$/;
 
-
-  let clearUncommittedChanges: (() => Promise<void|void[]> )| null = null;
   // ---------------------------------------------------------------------------
   // misc
   // ---------------------------------------------------------------------------
@@ -405,7 +411,6 @@ function makeActionManager(env: OdooEnv): ActionManager {
     controller: Controller,
     options: UpdateStackOptions = {}
   ): Promise<void> {
-    let localClearUncommittedChanges: typeof clearUncommittedChanges;
     let resolve: (v?: any) => any;
     let reject: (v?: any) => any;
     let dialogCloseResolve: (v?: any) => any;
@@ -415,8 +420,7 @@ function makeActionManager(env: OdooEnv): ActionManager {
     });
     const action = controller.action;
 
-    const beforeLeaveFns:beforeLeaveCallback[] = [];
-    class ControllerComponent extends Component {
+    class ControllerComponent extends Component<{}, OdooEnv> {
       static template = tags.xml`<t t-component="Component" t-props="props"
         __exportState__="exportState"
         __beforeLeave__="beforeLeave"
@@ -433,9 +437,13 @@ function makeActionManager(env: OdooEnv): ActionManager {
           this.exportState = (state) => {
             controller.exportedState = state;
           };
-          this.beforeLeave = (callback: beforeLeaveCallback) => {
+          const beforeLeaveFns: ClearUncommittedChanges[] = [];
+          this.beforeLeave = (callback: ClearUncommittedChanges) => {
             beforeLeaveFns.push(callback);
           };
+          this.env.bus.on('CLEAR-UNCOMMITTED-CHANGES', this, callbacks => {
+            beforeLeaveFns.forEach(fn => callbacks.push(fn));
+          });
         }
       }
       catchError(error: any) {
@@ -475,9 +483,6 @@ function makeActionManager(env: OdooEnv): ActionManager {
           if (controllerStack.some((c) => c.action.target === "fullscreen")) {
             mode = "fullscreen";
           }
-          clearUncommittedChanges = localClearUncommittedChanges = () => {
-            return Promise.all(beforeLeaveFns.map(fn => fn()));
-          };
         } else {
           dialogCloseProm = new Promise((_r) => {
             dialogCloseResolve = _r;
@@ -494,9 +499,7 @@ function makeActionManager(env: OdooEnv): ActionManager {
         if (action.target === "new" && dialogCloseResolve) {
           dialogCloseResolve();
         }
-        if (clearUncommittedChanges === localClearUncommittedChanges) {
-          clearUncommittedChanges = null;
-        }
+        this.env.bus.off('CLEAR-UNCOMMITTED-CHANGES', this);
       }
     }
     if (action.target === "new") {
@@ -824,12 +827,18 @@ function makeActionManager(env: OdooEnv): ActionManager {
       case "ir.actions.act_url":
         return _executeActURLAction(action);
       case "ir.actions.act_window":
+        if (action.target !== 'new' ) {
+          await clearUncommittedChanges(env);
+        }
         return _executeActWindowAction(action, options);
       case "ir.actions.act_window_close": {
         env.bus.trigger("ACTION_MANAGER:UPDATE", { type: "CLOSE_DIALOG" });
         return dialogCloseProm;
       }
       case "ir.actions.client":
+        if (action.target !== 'new' ) {
+          await clearUncommittedChanges(env);
+        }
         return _executeClientAction(action, options);
       case "ir.actions.report":
         return _executeReportAction(action, options);
@@ -916,7 +925,7 @@ function makeActionManager(env: OdooEnv): ActionManager {
    *
    * @param {ViewType} viewType
    */
-  function switchView(viewType: ViewType, options?: ViewOptions): void {
+  async function switchView(viewType: ViewType, options?: ViewOptions): Promise<void> {
     const controller = controllerStack[controllerStack.length - 1] as ViewController;
     if (controller.action.type !== "ir.actions.act_window") {
       throw new Error(`switchView called but the current controller isn't a view`);
@@ -947,7 +956,8 @@ function makeActionManager(env: OdooEnv): ActionManager {
       );
       index = index > -1 ? index : controllerStack.length;
     }
-    _updateUI(newController, { index });
+    await clearUncommittedChanges(env);
+    return _updateUI(newController, { index });
   }
 
   /**
@@ -956,7 +966,7 @@ function makeActionManager(env: OdooEnv): ActionManager {
    *
    * @param {string} jsId
    */
-  function restore(jsId: string): void {
+  async function restore(jsId: string): Promise<void> {
     const index = controllerStack.findIndex((controller) => controller.jsId === jsId);
     if (index < 0) {
       throw new Error("invalid controller to restore");
@@ -971,7 +981,8 @@ function makeActionManager(env: OdooEnv): ActionManager {
     } else if (controller.exportedState) {
       controller.props.state = controller.exportedState;
     }
-    _updateUI(controller, { index });
+    await clearUncommittedChanges(env);
+    return _updateUI(controller, { index });
   }
 
   async function loadState(state: Route["hash"], options: ActionOptions): Promise<boolean> {
@@ -1004,7 +1015,7 @@ function makeActionManager(env: OdooEnv): ActionManager {
           if (!viewType && (currentController as any).view) {
             viewType = (currentController as ViewController).view.type;
           }
-          switchView(viewType, viewOptions);
+          await switchView(viewType, viewOptions);
           return true;
         } catch (e) {}
       }
@@ -1077,25 +1088,10 @@ function makeActionManager(env: OdooEnv): ActionManager {
   }
 
   return {
-    async doAction(...args) {
-      if (clearUncommittedChanges) {
-        await clearUncommittedChanges();
-      }
-      return doAction(...args);
-    },
+    doAction,
     doActionButton,
-    async switchView(...args) {
-      if (clearUncommittedChanges) {
-        await clearUncommittedChanges();
-      }
-      return switchView(...args);
-    },
-    async restore(...args) {
-      if (clearUncommittedChanges) {
-        await clearUncommittedChanges();
-      }
-      return restore(...args);
-    },
+    switchView,
+    restore,
     loadState,
   };
 }
