@@ -40,6 +40,15 @@ odoo.define('web.weekly_recurrent_task', function (require) {
     }
 
     RcurrentTaskWidget.template = ["web.recurrent_task"];
+    RcurrentTaskWidget.fieldDependencies = {
+                                            sun: {type: 'boolean'},
+                                            mon: {type: 'boolean'},
+                                            tue: {type: 'boolean'},
+                                            wed: {type: 'boolean'},
+                                            thu: {type: 'boolean'},
+                                            fri: {type: 'boolean'},
+                                            sat: {type: 'boolean'},
+                                        };
     Registry.add('web_weekly_recurrent_task', RcurrentTaskWidget);
 
     return RcurrentTaskWidget;

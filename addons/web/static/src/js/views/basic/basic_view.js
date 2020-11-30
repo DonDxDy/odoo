@@ -18,6 +18,8 @@ var fieldRegistry = require('web.field_registry');
 var fieldRegistryOwl = require('web.field_registry_owl');
 var pyUtils = require('web.py_utils');
 var utils = require('web.utils');
+var widget_registry = require('web.widget_registry');
+var widget_registry_owl = require('web.widget_registry_owl');
 
 var BasicView = AbstractView.extend({
     config: _.extend({}, AbstractView.prototype.config, {
@@ -372,6 +374,10 @@ var BasicView = AbstractView.extend({
      * @returns {boolean} false iff subnodes must not be visited.
      */
     _processNode: function (node, fv) {
+        var viewType = fv.type;
+        var fieldsInfo = fv.fieldsInfo[viewType];
+        var fields = fv.viewFields;
+
         if (typeof node === 'string') {
             return false;
         }
@@ -382,31 +388,42 @@ var BasicView = AbstractView.extend({
             node.attrs.options = node.attrs.options ? JSON.parse(node.attrs.options) : {};
         }
         if (node.tag === 'field') {
-            var viewType = fv.type;
-            var fieldsInfo = fv.fieldsInfo[viewType];
-            var fields = fv.viewFields;
             fieldsInfo[node.attrs.name] = this._processField(viewType,
                 fields[node.attrs.name], node.attrs ? _.clone(node.attrs) : {});
 
             if (fieldsInfo[node.attrs.name].fieldDependencies) {
                 var deps = fieldsInfo[node.attrs.name].fieldDependencies;
-                for (var dependency_name in deps) {
-                    var dependency_dict = {name: dependency_name, type: deps[dependency_name].type};
-                    if (!(dependency_name in fieldsInfo)) {
-                        fieldsInfo[dependency_name] = _.extend({}, dependency_dict, {
-                            options: deps[dependency_name].options || {},
-                        });
-                    }
-                    if (!(dependency_name in fields)) {
-                        fields[dependency_name] = dependency_dict;
-                    }
-
-                    if (fv.fields && !(dependency_name in fv.fields)) {
-                        fv.fields[dependency_name] = dependency_dict;
-                    }
-                }
+                _process_info(deps);
             }
             return false;
+        }
+        if (node.tag === 'widget') {
+            var widgetInfo = widget_registry_owl.getAny([viewType + "." + node.attrs.name, node.attrs.name]) ||
+                widget_registry.getAny([viewType + "." + node.attrs.name, node.attrs.name]);
+            if (widgetInfo.fieldDependencies) {
+                var deps = widgetInfo.fieldDependencies;
+                _process_info(deps);
+                return false;
+            }
+        }
+
+        function _process_info(info){
+            for (var dependency_name in info) {
+                var dependency_dict = {name: dependency_name, type: info[dependency_name].type};
+                if (!(dependency_name in fieldsInfo)) {
+                    fieldsInfo[dependency_name] = _.extend({}, dependency_dict, {
+                        options: info[dependency_name].options || {},
+                    });
+                }
+                if (!(dependency_name in fields)) {
+                    fields[dependency_name] = dependency_dict;
+                }
+
+                if (fv.fields && !(dependency_name in fv.fields)) {
+                    fv.fields[dependency_name] = dependency_dict;
+                }
+            }
+            return;
         }
         return node.tag !== 'arch';
     },
