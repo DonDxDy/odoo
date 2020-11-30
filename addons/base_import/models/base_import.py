@@ -504,7 +504,7 @@ class Import(models.TransientModel):
                 # FIXME: should match all translations & original
                 string_match = None
                 if header.lower() == field['name'].lower():
-                    return [field]
+                    return [{**field, **{'distance': 0}}]
                 if header.lower() == field['string'].lower():
                     # matching string are not reliable way because
                     # strings have no unique constraint
@@ -514,7 +514,7 @@ class Import(models.TransientModel):
                     string_match = field
                 if string_match:
                     # this behavior is only applied if there is no matching field['name']
-                    return [string_match]
+                    return [{**string_match, **{'distance': 0}}]
                 else:
                     # use string distance for smart comparaison
                     name_field_dist = Levenshtein.distance(header.lower(), field['name'].lower()) / max(len(field['name'].lower()), len(header.lower()))
@@ -526,8 +526,12 @@ class Import(models.TransientModel):
             # First, take the closest match, store the distance of the corresponding mapping
             # Second, clear mapping for multi column usage (keep only the header-field with the minimal distance)
             min_dist_field = min(fields_matching_distance, key=fields_matching_distance.get)
-            if fields_matching_distance[min_dist_field] < 0.5:
-                return [next(field for field in fields if field['id'] == min_dist_field)]
+            distance = fields_matching_distance[min_dist_field]
+            if distance < 0.5:
+                return [{
+                    **next(field for field in fields if field['id'] == min_dist_field),
+                    **{'distance': distance}
+                }]
             else:
                 return []
 
@@ -580,8 +584,22 @@ class Import(models.TransientModel):
             if mapping_field_name:
                 match_field = mapping_field_name.split('/')
             if not match_field:
-                match_field = [field['name'] for field in self._match_header(header, fields, options)]
+                match_field = [field for field in self._match_header(header, fields, options)]
             matches[index] = match_field or None
+
+        # keep only one column/field matching couple (avoid multiple column to be matched on the same field)
+        fields_dist = {}
+        for index, match in matches.items():
+            if len(match) > 1:  # ignore hierarchy mapping
+                matches[index] = [field['name'] for field in match]
+                continue
+            field = match[0]
+            if fields_dist.get(field['name'], 1) > field['distance']:
+                fields_dist[field['name']] = field['distance']
+                matches[index] = [field['name']]
+            else:
+                matches[index] = None
+
         return headers, matches
 
     def parse_preview(self, options, count=10):
