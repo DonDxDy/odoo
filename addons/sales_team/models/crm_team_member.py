@@ -22,7 +22,7 @@ class CrmTeamMember(models.Model):
     is_membership_multi = fields.Boolean(
         'Multiple Memberships Allowed', compute='_compute_is_membership_multi',
         help='If True, users may belong to several sales teams. Otherwise membership is limited to a single sales team.')
-    member_warning = fields.Boolean(compute='_compute_member_warning')
+    member_warning = fields.Text(compute='_compute_member_warning')
     # salesman information
     image_1920 = fields.Image("Image", related="user_id.image_1920", max_width=1920, max_height=1920)
     image_128 = fields.Image("Image (128)", related="user_id.image_128", max_width=128, max_height=128)
@@ -76,23 +76,26 @@ class CrmTeamMember(models.Model):
         for member in self:
             member.is_membership_multi = multi_enabled
 
-    @api.depends('is_membership_multi', 'user_id', 'crm_team_id')
+    @api.depends('is_membership_multi', 'active', 'user_id', 'crm_team_id')
     def _compute_member_warning(self):
         if all(m.is_membership_multi for m in self):
             self.member_warning = False
         else:
-            existing = self.env['crm.team.member'].search([('user_id', 'in', self.user_id.ids)])
-            user_mapping = dict.fromkeys(existing.user_id, self.env['crm.team'])
-            for membership in existing:
-                user_mapping[membership.user_id] |= membership.crm_team_id
+            active = self.filtered('active')
+            (self - active).member_warning = False
+            if active:
+                existing = self.env['crm.team.member'].search([('user_id', 'in', active.user_id.ids)])
+                user_mapping = dict.fromkeys(existing.user_id, self.env['crm.team'])
+                for membership in existing:
+                    user_mapping[membership.user_id] |= membership.crm_team_id
 
-            for member in self:
-                teams = user_mapping.get(member.user_id, self.env['crm.team'])
-                remaining = teams - (member.crm_team_id | member._origin.crm_team_id)
-                member.member_warning = _("Adding %(user_name)s in this team would remove him/her from its current team %(team_names)s.",
-                                          user_name=member.user_id.name,
-                                          team_names=", ".join(remaining.mapped('crm_team_id.name'))
-                                         )
+                for member in active:
+                    teams = user_mapping.get(member.user_id, self.env['crm.team'])
+                    remaining = teams - (member.crm_team_id | member._origin.crm_team_id)
+                    member.member_warning = _("Adding %(user_name)s in this team would remove him/her from its current team %(team_names)s.",
+                                              user_name=member.user_id.name,
+                                              team_names=", ".join(remaining.mapped('name'))
+                                             )
 
     @api.model_create_multi
     def create(self, values_list):
@@ -123,3 +126,7 @@ class CrmTeamMember(models.Model):
             existing_to_archive.action_archive()
 
         return super(CrmTeamMember, self).create(values_list)
+
+    # def write(self, values):
+    #     if values.get('active'):
+    #         pass

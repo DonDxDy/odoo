@@ -100,9 +100,8 @@ class CrmTeam(models.Model):
 
     @api.depends('is_membership_multi', 'member_ids')
     def _compute_member_warning(self):
-        if self.is_membership_multi:
-            self.member_warning = False
-        else:
+        self.member_warning = False
+        if not self.is_membership_multi:
             # done in a loop, but to be used in form view only -> not optimized
             for team in self:
                 member_warning = False
