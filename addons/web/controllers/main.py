@@ -330,11 +330,22 @@ def clean_action(action, env):
         action = fix_view_modes(action)
 
     # When returning an action, only few information are really usefull
-    return {
+    readable_fields = env[action['type']]._get_readable_fields()
+    action_type_fields = set(env[action['type']]._fields)
+
+    cleaned_action = {
         field: value
         for field, value in action.items()
-        if field in env[action['type']]._get_readable_fields()
+        # keep allowed fields and `custom properties` fields
+        if field in readable_fields or field not in action_type_fields
     }
+
+    # Warn the presence of `custom properties` fields in the action, as their use should be discouraged.
+    custom_properties = set(action) - readable_fields - action_type_fields
+    if custom_properties:
+        _logger.warning("Action %s contains custom properties %s, use params or context instead", action['name'], custom_properties)
+
+    return cleaned_action
 
 # I think generate_views,fix_view_modes should go into js ActionManager
 def generate_views(action):
