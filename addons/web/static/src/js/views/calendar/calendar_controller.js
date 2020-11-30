@@ -99,14 +99,46 @@ var CalendarController = AbstractController.extend({
         this.mobilebutton.appendTo(this.el.querySelector('.o_content'));
     },
     //mir's code for mobile view improvement :)
-    _mobileQuickCreate: function () {
+    _mobileQuickCreate: function (info) {
         var self = this;
-        self.trigger_up('openCreate', dataCalendar);
+        const today = new Date();
+        var data = {start: today, end: today, allDay: false};
+        self.trigger_up('openCreate', self._convertEventToFC3Event(data));
     },
 
     //--------------------------------------------------------------------------
     // Private
     //--------------------------------------------------------------------------
+
+    /**
+     * Convert the new format of Event from FullCalendar V4 to a Event FullCalendar V3
+     * @param fc4Event
+     * @return {Object} FullCalendar V3 Object Event
+     * @private
+     */
+    _convertEventToFC3Event: function (fc4Event) {
+        var event = fc4Event;
+        if (!moment.isMoment(fc4Event.start)) {
+            event = {
+                id: fc4Event.id,
+                title: fc4Event.title,
+                start: moment(fc4Event.start).utcOffset(0, true),
+                end: fc4Event.end && moment(fc4Event.end).utcOffset(0, true),
+                allDay: fc4Event.allDay,
+                color: fc4Event.color,
+            };
+            if (fc4Event.extendedProps) {
+                event = Object.assign({}, event, {
+                    r_start: fc4Event.extendedProps.r_start && moment(fc4Event.extendedProps.r_start).utcOffset(0, true),
+                    r_end: fc4Event.extendedProps.r_end && moment(fc4Event.extendedProps.r_end).utcOffset(0, true),
+                    record: fc4Event.extendedProps.record,
+                    attendees: fc4Event.extendedProps.attendees,
+                });
+            }
+        }
+        return event;
+    },
+    //mir's code for mobile view improvement :)
 
     /**
      * Find a className in an array using the start of this class and
