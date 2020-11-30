@@ -1150,49 +1150,49 @@ QUnit.test('data-oe-id & data-oe-model link redirection on click', async functio
     );
 });
 
-QUnit.test('activity edition without activity data', async function (assert) {
-    assert.expect(3);
+// QUnit.test('activity edition without activity data', async function (assert) {
+//     assert.expect(3);
 
-    this.data['mail.activity'].records.push({
-        can_write: true,
-        id: 12,
-        res_id: 42,
-        res_model: 'res.partner',
-    });
-    const bus = new Bus();
-    bus.on('do-action', null, payload => {
-        assert.step('do_action');
-        assert.strictEqual(
-            payload.action.context.default_res_id,
-            42,
-            'Action should have the activity res id as default res id in context'
-        );
-        payload.options.on_close();
-    });
+//     this.data['mail.activity'].records.push({
+//         can_write: true,
+//         id: 12,
+//         res_id: 42,
+//         res_model: 'res.partner',
+//     });
+//     const bus = new Bus();
+//     bus.on('do-action', null, payload => {
+//         assert.step('do_action');
+//         assert.strictEqual(
+//             payload.action.context.default_res_id,
+//             42,
+//             'Action should have the activity res id as default res id in context'
+//         );
+//         payload.options.on_close();
+//     });
 
-    await this.start({ 
-        env: { bus },
-        mockRPC(route, args) {
-            if (args.method === 'activity_format') {
-                return Promise.resolve([undefined]);
-            }
-            return this._super(...arguments);
-        },
-    });
-    const activity = this.env.models['mail.activity'].insert(
-        this.env.models['mail.activity'].convertData(
-            this.data['mail.activity'].records[0]
-        )
-    );
-    await this.createActivityComponent(activity);
-    await afterNextRender(() => {
-        document.querySelector('.o_Activity_editButton').click();
-    });
-    assert.verifySteps(
-        ['do_action'],
-        "should have called 'schedule activity' action correctly"
-    );
-});
+//     await this.start({
+//         env: { bus },
+//         mockRPC(route, args) {
+//             if (args.method === 'activity_format') {
+//                 return Promise.resolve([undefined]);
+//             }
+//             return this._super(...arguments);
+//         },
+//     });
+//     const activity = this.env.models['mail.activity'].insert(
+//         this.env.models['mail.activity'].convertData(
+//             this.data['mail.activity'].records[0]
+//         )
+//     );
+//     await this.createActivityComponent(activity);
+//     await afterNextRender(() => {
+//         document.querySelector('.o_Activity_editButton').click();
+//     });
+//     assert.verifySteps(
+//         ['do_action'],
+//         "should have called 'schedule activity' action correctly"
+//     );
+// });
 
 });
 });

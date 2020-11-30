@@ -160,17 +160,8 @@ function factory(dependencies) {
                 method: 'activity_format',
                 args: [this.id],
             }, { shadow: true }));
-            let shouldDelete = false;
-            if (data) {
-                this.update(this.constructor.convertData(data));
-            } else {
-                shouldDelete = true;
-            }
-            this.thread.refreshActivities();
+            this.update(this.constructor.convertData(data));
             this.thread.refresh();
-            if (shouldDelete) {
-                this.delete();
-            }
         }
 
         /**
