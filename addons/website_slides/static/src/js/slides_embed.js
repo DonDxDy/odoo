@@ -142,6 +142,9 @@ $(function () {
         $('#PDFViewer').on('click', function (ev) {
             embeddedViewer.fullScreenFooter(ev);
         });
+        $(window).on('resize', _.debounce(function() {
+            embeddedViewer.on_resize();
+        }, 500));
 
         // switching slide with keyboard
         $(document).keydown(function (ev) {

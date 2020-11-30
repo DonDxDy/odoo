@@ -87,7 +87,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <canvas id="PDFViewerCanvas" class="img-fluid w-100" style="display: none;"></canvas>
+                                <canvas id="PDFViewerCanvas" style="display: none; margin: 0 auto"></canvas>
                             </t>
                             <t t-if="slide.slide_type == 'infographic'">
                                 <img t-att-src="website.image_url(slide, 'image_1024')" class="img-fluid" style="width: 100%" alt="Slide image"/>

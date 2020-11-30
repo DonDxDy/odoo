@@ -13,9 +13,9 @@ var PDFSlidesViewer = (function(){
         // pdf variables
         this.pdf = null;
         this.pdf_url = pdf_url || false;
-        this.pdf_scale = 1.5;
         this.pdf_page_total = 0;
         this.pdf_page_current = 1; // default is the first page
+        this.pdf_zoom = 1;
         // promise business
         this.pageRendering = false;
         this.pageNumPending = null;
@@ -59,7 +59,10 @@ var PDFSlidesViewer = (function(){
         this.pageRendering = true;
         return this.pdf.getPage(page_number).then(function(page) {
             // Each PDF page has its own viewport which defines the size in pixels and initial rotation.
-            var viewport = page.getViewport(self.pdf_scale);
+            var scale = self.getDefaultScale(page) * self.pdf_zoom;
+            console.log('using scale', scale)
+            var viewport = page.getViewport({ scale: scale });
+            // important to match, otherwise the browser will scale the rendered output and it will be ugly
             self.canvas.height = viewport.height;
             self.canvas.width = viewport.width;
             // Render PDF page into canvas context
@@ -71,6 +74,10 @@ var PDFSlidesViewer = (function(){
             // Wait for rendering to finish
             return renderTask.promise.then(function () {
                 self.pageRendering = false;
+                if(self.pdf_zoom === 1 && scale > self.getDefaultScale(page)) {
+                    // if the scale has changed (likely, because we just added scrollbars)
+                    return self.renderPage(page_number);
+                }
                 if (self.pageNumPending !== null) {
                     // New page rendering is pending
                     self.renderPage(self.pageNumPending);
@@ -115,6 +122,29 @@ var PDFSlidesViewer = (function(){
         }
         this.pdf_page_current++;
         return this.queueRenderPage(this.pdf_page_current);
+    };
+
+    /*
+     * Calculate a scale to fill as much as possible of the available width,
+     * without making the document overtly long.
+     */
+    PDFSlidesViewer.prototype.getDefaultScale = function(page) {
+        var self = this;
+        var maxWidth = this.canvas.parentNode.clientWidth;
+        var maxHeight = this.canvas.parentNode.clientHeight;
+        var hScale = maxWidth / page.view[2];
+        var vScale = maxHeight / page.view[3];
+        return Math.min(hScale, 2.25 * vScale);
+    };
+
+    PDFSlidesViewer.prototype.zoomIn = function() {
+        this.pdf_zoom *= 1.1;
+        this.queueRenderPage(this.pdf_page_current);
+    };
+
+    PDFSlidesViewer.prototype.zoomOut = function() {
+        this.pdf_zoom *= 0.9;
+        this.queueRenderPage(this.pdf_page_current);
     };
 
     /**
