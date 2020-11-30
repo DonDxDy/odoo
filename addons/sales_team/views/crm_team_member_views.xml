@@ -45,7 +45,6 @@
         <field name="model">crm.team.member</field>
         <field name="arch" type="xml">
             <kanban quick_create="false"
-                create="true"
                 group_create="0"
                 records_draggable="0"
                 sample="1"

@@ -59,9 +59,6 @@ class CrmTeam(models.Model):
     crm_team_member_all_ids = fields.One2many(
         'crm.team.member', 'crm_team_id', string='Sales Team Members (incl. inactive)',
         context={'active_test': False})
-    user_in_teams_ids = fields.Many2many(
-        'res.users', compute='_compute_user_in_teams_ids',
-        help='UX: Give users not to add in the currently chosen team to avoid duplicates')
     # UX options
     color = fields.Integer(string='Color Index', help="The color of the channel")
     favorite_user_ids = fields.Many2many(
@@ -96,11 +93,6 @@ class CrmTeam(models.Model):
 
     def _search_member_ids(self, operator, value):
         return [('crm_team_member_ids.user_id', operator, value)]
-
-    def _compute_user_in_teams_ids(self):
-        member_user_ids = self.env['crm.team.member'].search([]).user_id
-        for team in self:
-            team.user_in_teams_ids = member_user_ids
 
     def _compute_is_favorite(self):
         for team in self:
