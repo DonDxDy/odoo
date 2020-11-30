@@ -3996,86 +3996,77 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     webClient.destroy();
   });
 
-  QUnit.skip("view switcher is properly highlighted in graph view", async function (assert) {
-    /*
+  QUnit.test("view switcher is properly highlighted in graph view", async function (assert) {
     assert.expect(4);
 
-    // note: this test should be moved to graph tests ?
+    baseConfig.serverData!.actions![3].views.splice(1, 1, [false, "graph"]);
+    baseConfig.serverData!.views!["partner,false,graph"] = "<graph/>";
 
-    this.actions[2].views.splice(1, 1, [false, "graph"]);
-    this.archs["partner,false,graph"] = "<graph></graph>";
-
-    var actionManager = await createActionManager({
-      actions: this.actions,
-      archs: this.archs,
-      data: this.data,
-    });
-    await actionManager.doAction(3);
+    const webClient = await createWebClient({ baseConfig, legacyEnv });
+    await doAction(webClient, 3);
 
     assert.hasClass(
-      $(".o_control_panel .o_switch_view.o_list"),
+      $(webClient.el!).find(".o_control_panel .o_switch_view.o_list")[0],
       "active",
       "list button in control panel is active"
     );
     assert.doesNotHaveClass(
-      $(".o_control_panel .o_switch_view.o_graph"),
+      $(webClient.el!).find(".o_control_panel .o_switch_view.o_graph")[0],
       "active",
       "graph button in control panel is not active"
     );
 
     // switch to graph view
-    await cpHelpers.switchView(actionManager, "graph");
+    await cpHelpers.switchView(webClient.el!, "graph");
+    await legacyExtraNextTick();
     assert.doesNotHaveClass(
-      $(".o_control_panel .o_switch_view.o_list"),
+      $(webClient.el!).find(".o_control_panel .o_switch_view.o_list")[0],
       "active",
       "list button in control panel is not active"
     );
     assert.hasClass(
-      $(".o_control_panel .o_switch_view.o_graph"),
+      $(webClient.el!).find(".o_control_panel .o_switch_view.o_graph")[0],
       "active",
       "graph button in control panel is active"
     );
-    actionManager.destroy();
-    */
+    webClient.destroy();
   });
 
-  QUnit.skip("can interact with search view", async function (assert) {
-    /*
+  QUnit.test("can interact with search view", async function (assert) {
     assert.expect(2);
 
-    this.archs["partner,false,search"] =
-      "<search>" +
-      "<group>" +
-      '<filter name="foo" string="foo" context="{\'group_by\': \'foo\'}"/>' +
-      "</group>" +
-      "</search>";
-    var actionManager = await createActionManager({
-      actions: this.actions,
-      archs: this.archs,
-      data: this.data,
-    });
-    await actionManager.doAction(3);
+    baseConfig.serverData!.views!["partner,false,search"] = `
+      <search>
+        <group>
+          <filter name="foo" string="foo" context="{'group_by': 'foo'}"/>
+        </group>
+      </search>`;
+
+    const webClient = await createWebClient({ baseConfig, legacyEnv });
+    await doAction(webClient, 3);
 
     assert.doesNotHaveClass(
-      actionManager.$(".o_list_table"),
+      $(webClient.el!).find(".o_list_table")[0],
       "o_list_table_grouped",
       "list view is not grouped"
     );
 
     // open group by dropdown
-    await testUtils.dom.click($(".o_control_panel .o_cp_bottom_right button:contains(Group By)"));
+    await testUtils.dom.click(
+      $(webClient.el!).find(".o_control_panel .o_cp_bottom_right button:contains(Group By)")
+    );
 
     // click on first link
-    await testUtils.dom.click($(".o_control_panel .o_group_by_menu a:first"));
+    await testUtils.dom.click($(webClient.el!).find(".o_control_panel .o_group_by_menu a:first"));
+    await legacyExtraNextTick();
 
     assert.hasClass(
-      actionManager.$(".o_list_table"),
+      $(webClient.el!).find(".o_list_table")[0],
       "o_list_table_grouped",
       "list view is now grouped"
     );
 
-    actionManager.destroy();
-    */
+    webClient.destroy();
   });
 
   QUnit.skip("can open a many2one external window", async function (assert) {

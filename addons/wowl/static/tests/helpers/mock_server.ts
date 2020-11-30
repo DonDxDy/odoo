@@ -923,7 +923,7 @@ class MockServer {
           res.__domain = combineDomains(
             [[[fieldName, "=", val]], res.__domain as DomainRepr],
             "AND"
-          );
+          ).toList();
         }
       });
 
