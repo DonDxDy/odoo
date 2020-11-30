@@ -4,6 +4,7 @@ The module :mod:`odoo.tests.common` provides unittest test cases and a few
 helpers and classes to write tests.
 
 """
+import atexit
 import base64
 import collections
 import functools
@@ -465,6 +466,15 @@ class SavepointCase(SingleTransactionCase):
         super(SavepointCase, self).tearDown()
 
 
+def terminate_chrome(chrome_pid):
+    try:
+        os.kill(chrome_pid, 0)
+    except OSError:
+        # already killed
+        return
+    _logger.info('Killing remaining chrome with pid %s', chrome_pid)
+    os.kill(chrome_pid, signal.SIGTERM)
+
 class ChromeBrowser():
     """ Helper object to control a Chrome headless process. """
 
@@ -587,6 +597,7 @@ class ChromeBrowser():
             self.chrome_pid = self._spawn_chrome(cmd)
         except OSError:
             raise unittest.SkipTest("%s not found" % cmd[0])
+        atexit.register(terminate_chrome, self.chrome_pid)
         self._logger.info('Chrome pid: %s', self.chrome_pid)
 
     def _find_websocket(self):
