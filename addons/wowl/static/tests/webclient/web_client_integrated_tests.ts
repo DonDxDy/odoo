@@ -4029,7 +4029,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     baseConfig.serverData!.actions![3].views.splice(1, 1, [false, "graph"]);
     baseConfig.serverData!.views!["partner,false,graph"] = "<graph/>";
 
-    const webClient = await createWebClient({ baseConfig, legacyEnv });
+    const webClient = await createWebClient({ baseConfig, legacyParams });
     await doAction(webClient, 3);
 
     assert.hasClass(
@@ -4069,7 +4069,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         </group>
       </search>`;
 
-    const webClient = await createWebClient({ baseConfig, legacyEnv });
+    const webClient = await createWebClient({ baseConfig, legacyParams });
     await doAction(webClient, 3);
 
     assert.doesNotHaveClass(
