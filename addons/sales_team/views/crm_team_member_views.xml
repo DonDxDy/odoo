@@ -95,7 +95,6 @@
             <form string="Sales Men">
                 <field name="active" invisible="1"/>
                 <field name="user_in_teams_ids" invisible="1"/>
-                <field name="crm_team_skip_ids" invisible="1"/>
                 <sheet>
                     <widget name="web_ribbon" title="Archived" bg_color="bg-danger" attrs="{'invisible': [('active', '=', True)]}"/>
                     <field name="image_1920" widget='image' class="oe_avatar"
