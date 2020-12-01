@@ -55,7 +55,7 @@
                                 <field name="name" default_focus="1" placeholder="e.g. How to grow your business with Odoo?"/>
                                 <field name="is_category" invisible="1"/>
                             </h1>
-                            <field name="tag_ids" attrs="{'invisible': [('is_category', '=', True)]}" widget="many2many_tags" placeholder="Tags..."/>
+                            <field name="tag_ids" attrs="{'invisible': [('is_category', '=', True)]}" widget="many2many_tags" placeholder="Tags..." options="{'color_field': 'color'}"/>
                         </div>
                         <notebook attrs="{'invisible': [('is_category', '=', True)]}">
                             <page name="document" string="Document">

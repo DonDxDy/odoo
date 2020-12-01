@@ -2,6 +2,7 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 from odoo import fields, models
+from random import randint
 
 
 class SlideChannelTagGroup(models.Model):
@@ -23,6 +24,9 @@ class SlideChannelTag(models.Model):
     _description = 'Channel/Course Tag'
     _order = 'group_sequence asc, sequence asc'
 
+    def _get_default_color(self):
+        return randint(1, 11)
+
     name = fields.Char('Name', required=True, translate=True)
     sequence = fields.Integer('Sequence', default=10, index=True, required=True)
     group_id = fields.Many2one('slide.channel.tag.group', string='Group', index=True, required=True)
@@ -30,4 +34,5 @@ class SlideChannelTag(models.Model):
         'Group sequence', related='group_id.sequence',
         index=True, readonly=True, store=True)
     channel_ids = fields.Many2many('slide.channel', 'slide_channel_tag_rel', 'tag_id', 'channel_id', string='Channels')
-    color = fields.Integer(string='Color Index', help="Color to apply to this tag (including in website).")
+    color = fields.Integer(string='Color Index', default=_get_default_color,
+                           help="Color to apply to this tag (including in website).")
