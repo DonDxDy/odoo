@@ -6,7 +6,7 @@ import { makeFakeUserService, nextTick, OdooEnv } from "../helpers/index";
 import { click, legacyExtraNextTick, makeTestEnv, mount, TestConfig } from "../helpers/utility";
 import { notificationService } from "../../src/notifications/notification_service";
 import { menusService } from "../../src/services/menus";
-import { ActionManager, actionManagerService } from "../../src/action_manager/action_manager";
+import { ActionManager, actionManagerService, clearUncommittedChanges } from "../../src/action_manager/action_manager";
 import { Component, tags } from "@odoo/owl";
 import { makeFakeRouterService, fakeTitleService } from "../helpers/mocks";
 import { useService } from "../../src/core/hooks";
@@ -2733,6 +2733,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
   });
 
   QUnit.skip("handle server actions returning false", async function (assert) {
+    // unskip: on_close option?
     assert.expect(9);
 
     const mockRPC: RPC = async (route, args) => {
@@ -3761,6 +3762,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
   });
 
   QUnit.skip("reload previous controller when discarding a new record", async function (assert) {
+    // unskip: doesn't go back to previous controller when discarding
     assert.expect(9);
 
     const mockRPC: RPC = async (route, args) => {
@@ -3917,6 +3919,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
   QUnit.skip(
     "requests for execute_action of type object: disable buttons",
     async function (assert) {
+      // unskip: buttons aren't re-enabled
       assert.expect(2);
 
       let def: any;
@@ -5462,22 +5465,12 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     webClient.destroy();
   });
 
-  QUnit.skip(
+  QUnit.test(
     "Call twice clearUncommittedChanges in a row does not display twice the discard warning",
     async function (assert) {
-      /*
       assert.expect(4);
 
-      var actionManager = await createActionManager({
-        actions: this.actions,
-        archs: this.archs,
-        data: this.data,
-        intercepts: {
-          clear_uncommitted_changes: function () {
-            actionManager.clearUncommittedChanges();
-          },
-        },
-      });
+      const webClient = await createWebClient({ baseConfig });
 
       // execute an action and edit existing record
       await doAction(webClient, 3);
@@ -5490,20 +5483,21 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
       assert.containsOnce(webClient.el!, ".o_form_view.o_form_editable");
 
       await testUtils.fields.editInput($(webClient.el!).find("input[name=foo]"), "val");
-      actionManager.trigger_up("clear_uncommitted_changes");
+      clearUncommittedChanges(webClient.env);
       await testUtils.nextTick();
+      await legacyExtraNextTick();
 
-      assert.containsOnce($("body"), ".modal"); // confirm discard dialog
+      assert.containsOnce(document.body, ".modal"); // confirm discard dialog
       // confirm discard changes
       await testUtils.dom.click($(".modal .modal-footer .btn-primary"));
 
-      actionManager.trigger_up("clear_uncommitted_changes");
+      clearUncommittedChanges(webClient.env);
       await testUtils.nextTick();
+      await legacyExtraNextTick();
 
-      assert.containsNone($("body"), ".modal");
+      assert.containsNone(document.body, ".modal");
 
       webClient.destroy();
-      */
     }
   );
 });
