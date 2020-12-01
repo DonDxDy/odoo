@@ -34,6 +34,7 @@ class AttachmentViewer extends Component {
         /**
          * Used to ensure that the ref is always up to date, which seems to be needed if the element
          * has a t-key, which was added to force the rendering of a new element when the src of the image changes.
+         * This was made to remove the display of the previous image as soon as the src changes.
          */
         this._getRefs = useRefs();
         /**
