@@ -317,7 +317,7 @@
                         domain="[('activity_ids.date_deadline', '&gt;', context_today().strftime('%Y-%m-%d'))]"/>
                     <group expand="0" string="Group By">
                         <filter string="Employee" name="employee" domain="[]" context="{'group_by': 'employee_id'}"/>
-                        <filter string="Product" name="product" domain="[]" context="{'group_by': 'product_id'}"/>
+                        <filter string="Category" name="product" domain="[]" context="{'group_by': 'product_id'}"/>
                         <filter string="Analytic Account" name="analyticacc" domain="[]" context="{'group_by': 'analytic_account_id'}" groups="analytic.group_analytic_accounting"/>
                         <filter string="Status" name="status" domain="[]" context="{'group_by': 'state'}"/>
                         <filter string="Expense Date" name="expensesmonth" domain="[]" context="{'group_by': 'date'}" help="Expense Date"/>
@@ -477,6 +477,12 @@
                 <filter name="filter_to_purchase" position="after">
                     <filter string="Can be Expensed" name="filter_to_expense" domain="[('can_be_expensed', '=', True)]"/>
                 </filter>
+                <filter name="consumable" position="attributes">
+                    <attribute name="string">Categories</attribute>
+                </filter>
+                <filter name="type" position="attributes">
+                    <attribute name="string">Category Type</attribute>
+                </filter>
             </field>
         </record>
 
@@ -491,7 +497,7 @@
                         <field name="id" invisible="True"/>
                         <field name="image_1920" widget="image" class="oe_avatar" options="{'image_preview': 'image_128'}"/>
                         <div class="oe_title">
-                            <label class="oe_edit_only" for="name" string="Product Name"/>
+                            <label class="oe_edit_only" for="name" string="Category Name"/>
                             <h1><field name="name" placeholder="e.g. Lunch"/></h1>
                             <div name="options" groups="base.group_user" invisible="1">
                                 <div>
@@ -543,7 +549,7 @@
         </record>
 
         <record id="hr_expense_product" model="ir.actions.act_window">
-            <field name="name">Expense Products</field>
+            <field name="name">Expense Categories</field>
             <field name="res_model">product.product</field>
             <field name="view_mode">kanban,tree,form</field>
             <field name="search_view_id" ref="product.product_search_form_view"/>
@@ -551,9 +557,9 @@
             <field name="domain">[('can_be_expensed', '=', True)]</field>
             <field name="help" type="html">
               <p class="o_view_nocontent_smiling_face">
-                No expense products found. Let's create one!
+                No expense categories found. Let's create one!
               </p><p>
-                Expense products can be reinvoiced to your customers.
+                Expense categories can be reinvoiced to your customers.
               </p>
             </field>
         </record>
@@ -1106,7 +1112,7 @@ if records:
 
         <menuitem id="menu_hr_expense_configuration" name="Configuration" parent="menu_hr_expense_root"
             sequence="100"/>
-        <menuitem id="menu_hr_product" name="Expense Products" parent="menu_hr_expense_configuration"
+        <menuitem id="menu_hr_product" name="Expense Categories" parent="menu_hr_expense_configuration"
             action="hr_expense_product" groups="hr_expense.group_hr_expense_manager" sequence="10"/>
 
         <menuitem id="menu_hr_expense_account_employee_expenses" name="Employee Expenses" sequence="22" parent="account.menu_finance_payables" groups="hr_expense.group_hr_expense_user" action="action_hr_expense_account"/>

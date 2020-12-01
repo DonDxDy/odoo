@@ -61,7 +61,7 @@ class HrExpense(models.Model):
         states={'approved': [('readonly', True)], 'done': [('readonly', True)]},
         default=_default_employee_id, domain=lambda self: self._get_employee_id_domain(), check_company=True)
     # product_id not required to allow create an expense without product via mail alias, but should be required on the view.
-    product_id = fields.Many2one('product.product', string='Product', readonly=True, tracking=True, states={'draft': [('readonly', False)], 'reported': [('readonly', False)], 'refused': [('readonly', False)]}, domain="[('can_be_expensed', '=', True), '|', ('company_id', '=', False), ('company_id', '=', company_id)]", ondelete='restrict')
+    product_id = fields.Many2one('product.product', string='Category', readonly=True, tracking=True, states={'draft': [('readonly', False)], 'reported': [('readonly', False)], 'refused': [('readonly', False)]}, domain="[('can_be_expensed', '=', True), '|', ('company_id', '=', False), ('company_id', '=', company_id)]", ondelete='restrict')
     product_uom_id = fields.Many2one('uom.uom', string='Unit of Measure', compute='_compute_from_product_id_company_id',
         store=True, states={'draft': [('readonly', False)], 'refused': [('readonly', False)]},
         default=_default_product_uom_id, domain="[('category_id', '=', product_uom_category_id)]")
