@@ -73,16 +73,16 @@ export const viewManagerService: Service<ViewManager> = {
           .then((result) => {
             const viewDescriptions: ViewDescriptions = result; // we add keys in result for legacy! ---> c'est moche!
             for (const [_, viewType] of params.views) {
-              const viewDefinition: ViewDescription = (result as any).fields_views[viewType];
-              viewDefinition.fields = Object.assign(
+              const viewDescription: ViewDescription = (result as any).fields_views[viewType];
+              viewDescription.fields = Object.assign(
                 {},
                 (result as any).fields,
-                viewDefinition.fields
+                viewDescription.fields
               ); // before a deep freeze was done.
               if (viewType === "search" && options.withFilters) {
-                viewDefinition.irFilters = (result as any).filters; // don't think it is useful to add it everywhere.
+                viewDescription.irFilters = (result as any).filters; // don't think it is useful to add it everywhere.
               }
-              viewDescriptions[viewType] = viewDefinition;
+              viewDescriptions[viewType] = viewDescription;
             }
             return viewDescriptions;
           });
