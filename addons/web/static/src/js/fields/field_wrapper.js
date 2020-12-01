@@ -93,6 +93,9 @@ odoo.define('web.FieldWrapper', function (require) {
         get noLabel() {
             return this.Component.noLabel;
         }
+        get isQuickEditable() {
+            return this.componentRef.comp.isQuickEditable;
+        }
 
         //----------------------------------------------------------------------
         // Public
