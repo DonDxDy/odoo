@@ -10520,9 +10520,8 @@ QUnit.module('Views', {
 
         list.destroy();
     });
-
-    QUnit.test("edit many2one and click outside many2one in list", async function (assert) {
-        assert.expect(3);
+    QUnit.test("quickcreate in a many2one in a list", async function (assert) {
+        assert.expect(2);
 
         const list = await createView({
             arch: '<tree editable="top"><field name="m2o"/></tree>',
@@ -10533,25 +10532,20 @@ QUnit.module('Views', {
 
         await testUtils.dom.click(list.$('.o_data_row:first .o_data_cell:first'));
 
-        await testUtils.fields.editAndTrigger(list.$('.o_field_many2one input'),
-            'aaa', ['keydown', 'keyup']);
-        testUtils.dom.triggerMouseEvent(list.$(".o_control_panel"), "click");
-        await testUtils.nextTick();
-        assert.strictEqual(list.$('.o_field_many2one input').val(), "",
-            "should have cleared input if no result found in autocomplete and mousedown outside many2one");
+        const $input = list.$('.o_data_row:first .o_data_cell:first input');
+        await testUtils.fields.editInput($input, "aaa");
+        $input.trigger('keyup');
+        $input.trigger('blur');
+        document.body.click();
 
-        await testUtils.fields.editAndTrigger(list.$('.o_field_many2one input'),
-            'Value', ['keydown', 'keyup']);
-        // trigger click event somewhere else except many2one
-        testUtils.dom.triggerMouseEvent(list.$(".o_control_panel"), "click");
         await testUtils.nextTick();
-        assert.strictEqual(list.$('.o_field_many2one input').val(), "Value 1",
-            "should have selected xphone");
 
-        // click second time to unselect editable row
+        assert.containsOnce(document.body, '.modal', "the quick_create modal should appear");
+
+        await testUtils.dom.click($('.modal .btn-primary:first'));
         await testUtils.dom.click(document.body);
 
-        assert.strictEqual(list.el.getElementsByClassName('o_data_cell')[0].innerHTML, "Value 1",
+        assert.strictEqual(list.el.getElementsByClassName('o_data_cell')[0].innerHTML, "aaa",
             "value should have been updated");
 
         list.destroy();

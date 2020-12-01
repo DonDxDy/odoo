@@ -38,6 +38,56 @@ var qweb = core.qweb;
 // Many2one widgets
 //------------------------------------------------------------------------------
 
+var M2ODialog = Dialog.extend({
+    template: "M2ODialog",
+    init: function (parent, name, value) {
+        this.name = name;
+        this.value = value;
+        this._super(parent, {
+            title: _t(`New ${this.name}`),
+            size: 'medium',
+            buttons: [{
+                text: _t('Create'),
+                classes: 'btn-primary',
+                close: true,
+                click: function () {
+                    this.trigger_up('quick_create', { value: this.value });
+                },
+            }, {
+                text: _t('Create and edit'),
+                classes: 'btn-primary',
+                close: true,
+                click: function () {
+                    this.trigger_up('search_create_popup', {
+                        view_type: 'form',
+                        value: this.value,
+                    });
+                },
+            }, {
+                text: _t('Cancel'),
+                close: true,
+            }],
+        });
+    },
+    /**
+     * @override
+     * @param {boolean} isSet
+     */
+    close: function (isSet) {
+        this.isSet = isSet;
+        this._super.apply(this, arguments);
+    },
+    /**
+     * @override
+     */
+    destroy: function () {
+        if (!this.isSet) {
+            this.trigger_up('closed_unset');
+        }
+        this._super.apply(this, arguments);
+    },
+});
+
 var FieldMany2One = AbstractField.extend({
     description: _lt("Many2one"),
     supportedFieldTypes: ['many2one'],
@@ -50,6 +100,7 @@ var FieldMany2One = AbstractField.extend({
     }),
     events: _.extend({}, AbstractField.prototype.events, {
         'click input': '_onInputClick',
+        'focusout input': '_onInputFocusout',
         'keyup input': '_onInputKeyup',
         'click .o_external_button': '_onExternalButtonClick',
         'click': '_onClick',
@@ -117,9 +168,6 @@ var FieldMany2One = AbstractField.extend({
     destroy: function () {
         if (this._onScroll) {
             window.removeEventListener('scroll', this._onScroll, true);
-        }
-        if (this._onWindowClick) {
-            window.removeEventListener('click', this._onWindowClick, true);
         }
         this._super.apply(this, arguments);
     },
@@ -256,40 +304,6 @@ var FieldMany2One = AbstractField.extend({
                     }
                 };
                 window.addEventListener('scroll', self._onScroll, true);
-
-                self._onWindowClick = function (ev) {
-                    // ignore window click in autocomplete dropdowns and many2one widget itself and trash icon on editable list
-                    if (self.el.contains(ev.target) || this.el === ev.target
-                        || $(ev.target).parents('.ui-autocomplete').length
-                        || $(ev.target).closest('.o_list_record_remove').length) {
-                        return;
-                    }
-
-                    let results = [];
-                    self._autocompleteSources.forEach(source => {
-                        if (source.results && source.results.length) {
-                            results = results.concat(source.results);
-                        } else if (source.loading) {
-                            results.push({
-                                label: source.placeholder
-                            });
-                        }
-                    });
-                    results = results.filter(item => {
-                        return item.classname === "o_m2o_option";
-                    });
-                    if (self.floating && self.$input.hasClass('ui-autocomplete-input')) {
-                        ev.stopImmediatePropagation();
-                        const $dropdown = self.$input.autocomplete("widget");
-                        if (results.length) {
-                            $dropdown.find("li.o_m2o_option:first").click();
-                        } else {
-                            self.$input.val('');
-                            self.reinitialize(false);
-                        }
-                    }
-                };
-                window.addEventListener('click', self._onWindowClick, true);
             },
             close: function (event) {
                 // it is necessary to prevent ESC key from propagating to field
@@ -299,9 +313,6 @@ var FieldMany2One = AbstractField.extend({
                 }
                 if (self._onScroll) {
                     window.removeEventListener('scroll', self._onScroll, true);
-                }
-                if (this._onWindowClick) {
-                    window.removeEventListener('click', this._onWindowClick, true);
                 }
             },
             autoFocus: true,
@@ -587,7 +598,6 @@ var FieldMany2One = AbstractField.extend({
                 label: escape(displayName) || data.noDisplayContent,
                 value: displayName,
                 name: displayName,
-                classname: 'o_m2o_option',
             };
         });
 
@@ -755,6 +765,14 @@ var FieldMany2One = AbstractField.extend({
             this.$input.autocomplete("search"); // search with the input's content
         } else {
             this.$input.autocomplete("search", ''); // search with the empty string
+        }
+    },
+    /**
+     * @private
+     */
+    _onInputFocusout: function () {
+        if (this.can_create && this.floating) {
+            new M2ODialog(this, this.string, this.$input.val()).open();
         }
     },
     /**
