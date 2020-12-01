@@ -35,7 +35,6 @@ var FormController = BasicController.extend({
         this.defaultButtons = params.defaultButtons;
         this.hasActionMenus = params.hasActionMenus;
         this.toolbarActions = params.toolbarActions || {};
-        this.autoSave = false;
     },
     /**
      * Called each time the form view is attached into the DOM
@@ -78,16 +77,6 @@ var FormController = BasicController.extend({
                     return this.$buttons.find('.o_form_button_edit').focus();
                 }
             }
-        }
-    },
-    canBeRemoved: function () {
-        if (this.mode === 'edit' && this.autoSave) {
-            return this.saveRecord(this.handle, {
-                reload: false,
-                stayInEdit: true,
-            });
-        } else {
-            return this._super(...arguments);
         }
     },
     /**
@@ -193,16 +182,7 @@ var FormController = BasicController.extend({
             return null;
         }
         return Object.assign(this._super(...arguments), {
-            validate: (recordID) => {
-                if (this.mode === 'edit' && this.autoSave) {
-                    return this.saveRecord(recordID, {
-                        reload: false,
-                        stayInEdit: true,
-                    });
-                } else {
-                    return this.canBeDiscarded(recordID);
-                }
-            },
+            validate: this.canBeDiscarded.bind(this),
         });
     },
     /**
@@ -669,23 +649,10 @@ var FormController = BasicController.extend({
     },
     /**
      * @private
-     * @override
-     */
-    _onPagerChanged: function () {
-        if (this.mode === "edit" && this.autoSave) {
-            this.autoSave = false;
-            this.mode = "readonly";
-        }
-        this._super(...arguments);
-    },
-    /**
-     * @private
      * @param {OdooEvent} ev
      */
     _onQuickEdit: function (ev) {
         ev.stopPropagation();
-
-        this.autoSave = true;
         this._onEdit();
     },
     /**
