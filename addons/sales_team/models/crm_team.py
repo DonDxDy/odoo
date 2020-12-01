@@ -152,10 +152,13 @@ class CrmTeam(models.Model):
             # done in a loop, but to be used in form view only -> not optimized
             for team in self:
                 member_warning = False
-                other_memberships = self.env['crm.team.member'].search([
-                    ('crm_team_id', '!=', team.ids[0]),
-                    ('user_id', 'in', team.member_ids.ids)
-                ])
+                if team.ids:
+                    other_memberships = self.env['crm.team.member'].search([
+                        ('crm_team_id', '!=', team.ids[0]),
+                        ('user_id', 'in', team.member_ids.ids)
+                    ])
+                else:
+                    other_memberships = self.env['crm.team.member'].search([('user_id', 'in', team.member_ids.ids)])
                 if other_memberships and len(other_memberships) == 1:
                     member_warning = _("Adding %(user_name)s in this team would remove him/her from its current team %(team_name)s.",
                                        user_name=other_memberships.user_id.name,
