@@ -216,10 +216,6 @@ var FormRenderer = BasicRenderer.extend({
      */
     getLocalState: function () {
         const state = {};
-        const sheetBg = this.el.querySelector('.o_form_sheet_bg');
-        if (sheetBg) {
-            state.scrollValue = sheetBg.scrollTop;
-        }
         for (const notebook of this.el.querySelectorAll(':scope div.o_notebook')) {
             const name = notebook.dataset.name;
             const navs = notebook.querySelectorAll(':scope .o_notebook_headers .nav-item > .nav-link');
@@ -275,10 +271,6 @@ var FormRenderer = BasicRenderer.extend({
                 }
                 core.bus.trigger('DOM_updated');
             }
-        }
-        const sheetBg = this.el.querySelector('.o_form_sheet_bg');
-        if (sheetBg) {
-            sheetBg.scrollTop = state.scrollValue;
         }
     },
     /**
