@@ -176,8 +176,8 @@ export interface ActionManager {
 
 export function clearUncommittedChanges(env: OdooEnv): Promise<void[]> {
   const callbacks: ClearUncommittedChanges[] = [];
-  env.bus.trigger('CLEAR-UNCOMMITTED-CHANGES', callbacks);
-  return Promise.all(callbacks.map(fn=>fn()));
+  env.bus.trigger("CLEAR-UNCOMMITTED-CHANGES", callbacks);
+  return Promise.all(callbacks.map((fn) => fn()));
 }
 
 interface useSetupActionParams {
@@ -429,7 +429,7 @@ function makeActionManager(env: OdooEnv): ActionManager {
       componentProps = this.props;
       componentRef = hooks.useRef("component");
       exportState: ((state: any) => void) | null = null;
-      beforeLeave:((state: any) => void) | null = null;
+      beforeLeave: ((state: any) => void) | null = null;
 
       constructor() {
         super(...arguments);
@@ -441,8 +441,8 @@ function makeActionManager(env: OdooEnv): ActionManager {
           this.beforeLeave = (callback: ClearUncommittedChanges) => {
             beforeLeaveFns.push(callback);
           };
-          this.env.bus.on('CLEAR-UNCOMMITTED-CHANGES', this, callbacks => {
-            beforeLeaveFns.forEach(fn => callbacks.push(fn));
+          this.env.bus.on("CLEAR-UNCOMMITTED-CHANGES", this, (callbacks) => {
+            beforeLeaveFns.forEach((fn) => callbacks.push(fn));
           });
         }
       }
@@ -499,7 +499,7 @@ function makeActionManager(env: OdooEnv): ActionManager {
         if (action.target === "new" && dialogCloseResolve) {
           dialogCloseResolve();
         }
-        this.env.bus.off('CLEAR-UNCOMMITTED-CHANGES', this);
+        this.env.bus.off("CLEAR-UNCOMMITTED-CHANGES", this);
       }
     }
     if (action.target === "new") {
@@ -827,7 +827,7 @@ function makeActionManager(env: OdooEnv): ActionManager {
       case "ir.actions.act_url":
         return _executeActURLAction(action);
       case "ir.actions.act_window":
-        if (action.target !== 'new' ) {
+        if (action.target !== "new") {
           await clearUncommittedChanges(env);
         }
         return _executeActWindowAction(action, options);
@@ -836,7 +836,7 @@ function makeActionManager(env: OdooEnv): ActionManager {
         return dialogCloseProm;
       }
       case "ir.actions.client":
-        if (action.target !== 'new' ) {
+        if (action.target !== "new") {
           await clearUncommittedChanges(env);
         }
         return _executeClientAction(action, options);

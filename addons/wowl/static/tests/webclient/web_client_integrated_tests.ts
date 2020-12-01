@@ -20,13 +20,30 @@ import { makeLegacyActionManagerService, mapLegacyEnvToWowlEnv } from "../../src
 import { getLegacy } from "../helpers/legacy";
 import { actionRegistry, viewRegistry } from "../../src/registries";
 import { Route } from "../../src/services/router";
+import type { Context } from "../../src/types";
 
 // JQuery :visible selector
 // https://stackoverflow.com/questions/13388616/firefox-query-selector-and-the-visible-pseudo-selector
 
-let baseConfig: TestConfig;
+// -----------------------------------------------------------------------------
+// Types
+// -----------------------------------------------------------------------------
 
-// UTILS
+interface LegacyMockParams {
+  env?: any;
+  modules?: any;
+}
+
+interface CreateParams {
+  baseConfig: TestConfig;
+  legacyParams?: LegacyMockParams;
+  mockRPC?: RPC;
+}
+
+// -----------------------------------------------------------------------------
+// Utils
+// -----------------------------------------------------------------------------
+
 async function doAction(env: Component | OdooEnv, ...args: Parameters<ActionManager["doAction"]>) {
   if (env instanceof Component) {
     env = env.env as OdooEnv;
@@ -43,36 +60,69 @@ async function loadState(env: Component | OdooEnv, state: Route["hash"]) {
   }
   env.bus.trigger("test:hashchange", state);
   await nextTick();
-  return legacyExtraNextTick();
+  await legacyExtraNextTick();
 }
 
-interface LegacyMockParams {
-  env?: any;
-  modules?: any;
-}
-
-interface CreateParams {
-  baseConfig: TestConfig;
-  legacyParams?: LegacyMockParams;
-  mockRPC?: RPC;
-}
-function mockLegacyBrols(comp: Component<{}, OdooEnv>, legacyParams: LegacyMockParams) {
+function addLegacyMockEnvironment(comp: Component<{}, OdooEnv>, baseConfig: TestConfig) {
   const cleanUps: (() => void)[] = [];
-  if (legacyParams.env) {
-    mapLegacyEnvToWowlEnv(legacyParams.env, comp.env);
-  }
-  if (legacyParams.modules) {
-    const { basicFields } = legacyParams.modules;
-    const debouncedField = basicFields.DebouncedField;
-    const initialDebouncedVal = debouncedField.prototype.DEBOUNCE;
-    debouncedField.prototype.DEBOUNCE = 0;
-    cleanUps.push(() => debouncedField.prototype.DEBOUNCE = initialDebouncedVal);
-  }
+  const legacy = getLegacy() as any;
 
+  // setup a legacy env
+  const dataManager = {
+    load_action: (actionID: number, context: Context) => {
+      return comp.env.services.rpc("/web/action/load", {
+        action_id: actionID,
+        additional_context: context,
+      });
+    },
+    load_views: async (params: any, options: any) => {
+      const result = await comp.env.services.rpc(`/web/dataset/call_kw/${params.model}`, {
+        args: [],
+        kwargs: {
+          context: params.context,
+          options: options,
+          views: params.views_descr,
+        },
+        method: "load_views",
+        model: params.model,
+      });
+      const views = result.fields_views;
+      for (const [_, viewType] of params.views_descr) {
+        const fvg = views[viewType];
+        fvg.viewFields = fvg.fields;
+        fvg.fields = result.fields;
+      }
+      if (params.favoriteFilters && "search" in views) {
+        views.search.favoriteFilters = params.favoriteFilters;
+      }
+      return views;
+    },
+    load_filters: (params: any) => {
+      if (QUnit.config.debug) {
+        console.log("[mock] load_filters", params);
+      }
+      return Promise.resolve([]);
+    },
+  };
+  const legacyEnv = legacy.makeTestEnvironment({ dataManager });
+  Component.env = legacyEnv;
+  mapLegacyEnvToWowlEnv(legacyEnv, comp.env);
+
+  // deploy the legacyActionManagerService (in Wowl env)
+  const legacyActionManagerService = makeLegacyActionManagerService(legacyEnv);
+  baseConfig.services!.add("legacy_action_manager", legacyActionManagerService);
+
+  // patch DebouncedField delay
+  const debouncedField = legacy.basicFields.DebouncedField;
+  const initialDebouncedVal = debouncedField.prototype.DEBOUNCE;
+  debouncedField.prototype.DEBOUNCE = 0;
+  cleanUps.push(() => (debouncedField.prototype.DEBOUNCE = initialDebouncedVal));
+
+  // clean up at end of test
   const compDestroy = comp.destroy.bind(comp);
   comp.destroy = () => {
+    cleanUps.forEach((fn) => fn());
     compDestroy();
-    cleanUps.forEach(fn => fn());
   };
 }
 
@@ -83,15 +133,15 @@ async function createWebClient(params: CreateParams) {
     mockRPC,
   });
   const wc = await mount(WebClient, { env });
-  mockLegacyBrols(wc, params.legacyParams || {});
+
+  addLegacyMockEnvironment(wc, params.baseConfig);
   await legacyExtraNextTick();
+
   return wc;
 }
 
 // PREPARE AND DATA
 function beforeEachActionManager(): TestConfig {
-  const actionsRegistry = new Registry<any>();
-  actionsRegistry.add("clientAction", ClientAction);
   const services = new Registry<any>();
   services
     .add("user", makeFakeUserService())
@@ -111,15 +161,9 @@ function beforeEachActionManager(): TestConfig {
 
   const serverData = makeServerData();
 
-  return { serverData, actions: actionsRegistry, services, browser };
+  return { serverData, services, browser };
 }
 
-class ClientAction extends Component<{}, OdooEnv> {
-  static template = tags.xml`
-    <div class="test_client_action">
-      ClientAction_<t t-esc="props.params?.description" />
-    </div>`;
-}
 function makeServerData(): ServerData {
   // action_manager_tests.js
   const recordData: ServerData["models"] = {
@@ -354,9 +398,31 @@ function makeServerData(): ServerData {
   };
 }
 
+// -----------------------------------------------------------------------------
+// Tests
+// -----------------------------------------------------------------------------
+
+let baseConfig: TestConfig;
+
+// legacy stuff
+let AbstractAction: any;
+let cpHelpers: any;
+let core: any;
+let testUtils: any;
+let Widget: any;
+
 QUnit.module("web client integrated tests", (hooks) => {
   hooks.beforeEach(() => {
     baseConfig = beforeEachActionManager();
+    const actionsRegistry = new Registry<any>();
+    class ClientAction extends Component<{}, OdooEnv> {
+      static template = tags.xml`
+        <div class="test_client_action">
+          ClientAction_<t t-esc="props.params?.description" />
+        </div>`;
+    }
+    actionsRegistry.add("clientAction", ClientAction);
+    baseConfig.actions = actionsRegistry;
   });
 
   QUnit.module("Basic rendering");
@@ -685,32 +751,19 @@ QUnit.module("web client integrated tests", (hooks) => {
 });
 
 QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
-  let testUtils: any;
-  let AbstractAction: any;
-  let Widget: any;
-  let cpHelpers: any;
-  let makeTestEnvironment: any;
-  let core: any;
-  let legacyParams: LegacyMockParams;
+  hooks.before(() => {
+    const legacy = getLegacy() as any;
+    AbstractAction = legacy.AbstractAction;
+    core = legacy.core;
+    testUtils = legacy.testUtils;
+    cpHelpers = testUtils.controlPanel;
+    Widget = legacy.Widget;
+  });
+
   hooks.beforeEach(async (assert) => {
     baseConfig = beforeEachActionManager();
-    const legacy = getLegacy() as any;
-    testUtils = legacy.testUtils;
-    AbstractAction = legacy.AbstractAction;
-    Widget = legacy.Widget;
-    core = legacy.core;
-    cpHelpers = testUtils.controlPanel;
-    makeTestEnvironment = legacy.makeTestEnvironment;
-    const legacyEnv = Component.env = makeTestEnvironment();
     baseConfig.actions = actionRegistry;
     baseConfig.views = viewRegistry;
-    // in principle, we already have a testEnv on Component...
-    const legacyActionManagerService = makeLegacyActionManagerService(legacyEnv);
-    baseConfig.services!.add("legacy_action_manager", legacyActionManagerService);
-    legacyParams = {
-      env: legacyEnv,
-      modules: legacy,
-    };
   });
 
   QUnit.module("Misc");
@@ -721,10 +774,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     baseConfig.serverData!.actions![4].views = [[false, "form"]];
     baseConfig.serverData!.actions![4].target = "inline";
 
-    const webClient = await createWebClient({
-      baseConfig,
-      legacyParams,
-    });
+    const webClient = await createWebClient({ baseConfig });
 
     await doAction(webClient, 4);
     assert.containsNone(webClient.el!, ".o_control_panel");
@@ -756,7 +806,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
       },
     });
 
-    const webClient = await createWebClient({ baseConfig, legacyParams, });
+    const webClient = await createWebClient({ baseConfig });
     await doAction(webClient, 8);
 
     const n = delta;
@@ -794,7 +844,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
       },
     });
 
-    const webClient = await createWebClient({ baseConfig, legacyParams, });
+    const webClient = await createWebClient({ baseConfig });
     const n = delta;
 
     await doAction(webClient, 5);
@@ -829,7 +879,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
           await Promise.resolve(def);
         }
       };
-      const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+      const webClient = await createWebClient({ baseConfig, mockRPC });
 
       await doAction(webClient, 4);
       const n = delta;
@@ -877,7 +927,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
           await Promise.resolve(def);
         }
       };
-      const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+      const webClient = await createWebClient({ baseConfig, mockRPC });
 
       // execute action 4 to know the number of widgets it instantiates
       await doAction(webClient, 4);
@@ -922,7 +972,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
           await Promise.resolve(def);
         }
       };
-      const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+      const webClient = await createWebClient({ baseConfig, mockRPC });
 
       // execute action 4 to know the number of widgets it instantiates
       await doAction(webClient, 4);
@@ -950,7 +1000,6 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     baseConfig.serverData!.actions![4].context = { no_breadcrumbs: true };
     const webClient = await createWebClient({
       baseConfig,
-      legacyParams,
     });
     await doAction(webClient, 3);
     assert.containsOnce(webClient.el!, ".o_control_panel .breadcrumb-item");
@@ -983,7 +1032,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     };
     baseConfig.services!.add("title", mockedTitleService, true);
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
 
     await doAction(webClient, 4);
     await doAction(webClient, 8);
@@ -1124,7 +1173,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         </field>
       </form>`;
 
-      const webClient = await createWebClient({ baseConfig, legacyParams });
+      const webClient = await createWebClient({ baseConfig });
 
       await doAction(webClient, 3);
       assert.containsOnce(webClient.el!, ".o_list_view");
@@ -1157,7 +1206,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         </field>
       </form>`;
 
-      const webClient = await createWebClient({ baseConfig, legacyParams });
+      const webClient = await createWebClient({ baseConfig });
 
       await doAction(webClient, 3);
       assert.containsOnce(webClient.el!, ".o_list_view");
@@ -1182,7 +1231,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
   QUnit.test("properly push state", async function (assert) {
     assert.expect(3);
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
 
     await doAction(webClient, 4);
     assert.deepEqual(webClient.env.services.router.current.hash, {
@@ -1219,7 +1268,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         await def;
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     doAction(webClient, 4);
     await testUtils.nextTick();
@@ -1248,7 +1297,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         return Promise.reject();
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     await doAction(webClient, 8);
     assert.deepEqual(webClient.env.services.router.current.hash, {
@@ -1278,7 +1327,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async function (route, args) {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     await loadState(webClient, {
       res_model: "partner", // the valid key for the model is 'model', not 'res_model'
@@ -1301,7 +1350,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async function (route, args) {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     webClient.env.bus.trigger("test:hashchange", {
       action: "HelloWorldTest",
@@ -1326,7 +1375,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async function (route, args) {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     webClient.env.bus.trigger("test:hashchange", {
       action: 1,
     });
@@ -1352,7 +1401,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async function (route, args) {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     webClient.env.bus.trigger("test:hashchange", {
       id: 2,
       model: "partner",
@@ -1378,7 +1427,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async function (route, args) {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     webClient.env.bus.trigger("test:hashchange", {
       action: 3,
       id: "", // might happen with bbq and id=& in URL
@@ -1401,7 +1450,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async function (route, args) {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     webClient.env.bus.trigger("test:hashchange", {
       action: 3,
       view_type: "kanban",
@@ -1430,7 +1479,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
       const mockRPC: RPC = async function (route, args) {
         assert.step((args && args.method) || route);
       };
-      const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+      const webClient = await createWebClient({ baseConfig, mockRPC });
       webClient.env.bus.trigger("test:hashchange", {
         action: 3,
         id: 2,
@@ -1469,7 +1518,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
   QUnit.test("lazy load multi record view with previous action", async function (assert) {
     assert.expect(6);
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
     await doAction(webClient, 4);
 
     assert.containsOnce(
@@ -1527,7 +1576,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         return Promise.reject();
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     await loadState(webClient, {
       action: "3",
@@ -1551,7 +1600,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async function (route, args) {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     await doAction(webClient, 3);
 
     assert.containsOnce(webClient.el!, ".o_list_view");
@@ -1611,7 +1660,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async function (route, args) {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     // execute action 3 and open the first record in a form view
     await doAction(webClient, 3);
@@ -1889,7 +1938,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         await def;
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     doAction(webClient, 4);
     doAction(webClient, 8);
@@ -1924,7 +1973,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         await defs.shift();
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     await doAction(webClient, 4);
 
     // kanban view is loaded, switch to list view
@@ -1966,7 +2015,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         return 1;
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     doAction(webClient, 2);
     doAction(webClient, 4);
 
@@ -1993,7 +2042,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         await def;
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     // create a situation with 3 breadcrumbs: kanban/form/list
     await doAction(webClient, 4);
@@ -2039,7 +2088,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
           await def;
         }
       };
-      const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+      const webClient = await createWebClient({ baseConfig, mockRPC });
 
       webClient.env.bus.trigger("test:hashchange", {
         action: 4,
@@ -2113,7 +2162,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         return baseConfig.serverData!.actions![1];
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     // execute action 3 and open a record in form view
     await doAction(webClient, 3);
@@ -2184,7 +2233,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         await def;
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     await doAction(webClient, 3);
 
@@ -2254,7 +2303,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         await def;
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     // execute a first action (its 'load_views' RPC is blocked)
     doAction(webClient, 3);
@@ -2311,7 +2360,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         await def;
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     // execute a first action (its 'search_read' RPC is blocked)
     doAction(webClient, 3);
@@ -2367,7 +2416,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         await def;
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     await doAction(webClient, 3);
 
@@ -2421,7 +2470,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async function (route, args) {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     await doAction(webClient, "HelloWorldTestLeg");
 
     assert.containsNone(
@@ -2451,7 +2500,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async function (route, args) {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     await doAction(webClient, "HelloWorldTest");
 
     assert.containsNone(
@@ -2623,7 +2672,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
 
     baseConfig!.services!.add("notification", notificationService);
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
 
     await doAction(webClient, 1);
     assert.containsOnce(webClient.el!, ".o_kanban_view");
@@ -2674,7 +2723,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         return Promise.resolve(1); // execute action 1
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     await doAction(webClient, 2);
 
     assert.containsOnce(webClient.el!, ".o_control_panel", "should have rendered a control panel");
@@ -2700,7 +2749,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         return Promise.resolve(false);
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     // execute an action in target="new"
     await doAction(webClient, 5);
@@ -3070,7 +3119,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async (route, args) => {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     await doAction(webClient, 1);
 
@@ -3098,7 +3147,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         assert.strictEqual(args.kwargs.options.toolbar, true, "should ask for toolbar information");
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     await doAction(webClient, 3);
 
@@ -3123,7 +3172,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async (route, args) => {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     await doAction(webClient, 3);
 
     assert.containsOnce(webClient.el!, ".o_list_view", "should display the list view");
@@ -3217,7 +3266,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
           searchReadCount += 1;
         }
       };
-      const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+      const webClient = await createWebClient({ baseConfig, mockRPC });
       await doAction(webClient, 3);
 
       // Sort records
@@ -3239,7 +3288,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
   QUnit.test("breadcrumbs are updated when switching between views", async function (assert) {
     assert.expect(15);
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
     await doAction(webClient, 3);
 
     assert.containsOnce(
@@ -3344,7 +3393,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
   QUnit.test("switch buttons are updated when switching between views", async function (assert) {
     assert.expect(13);
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
     await doAction(webClient, 3);
 
     assert.containsN(
@@ -3439,7 +3488,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
   QUnit.test("pager is updated when switching between views", async function (assert) {
     assert.expect(10);
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
     await doAction(webClient, 4);
 
     assert.strictEqual(
@@ -3517,7 +3566,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
 
     baseConfig.serverData!.actions![3].search_view_id = [1, "a custom search view"];
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
 
     await doAction(webClient, 3);
     assert.containsN(webClient.el!, ".o_data_row", 5);
@@ -3553,7 +3602,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async (route, args) => {
       await def;
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
 
     await doAction(webClient, 3);
 
@@ -3637,7 +3686,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
   QUnit.test("breadcrumbs are updated when display_name changes", async function (assert) {
     assert.expect(4);
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
     await doAction(webClient, 3);
 
     // open a record in form view
@@ -3681,7 +3730,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
   QUnit.test('reverse breadcrumb works on accesskey "b"', async function (assert) {
     assert.expect(4);
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
     await doAction(webClient, 3);
 
     // open a record in form view
@@ -3725,7 +3774,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async (route, args) => {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     await doAction(webClient, 3);
 
     // create a new record
@@ -3789,7 +3838,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         return Promise.resolve(false);
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     await doAction(webClient, 3);
 
     // open a record in form view
@@ -3829,7 +3878,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async (route, args) => {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     await doAction(webClient, 3);
 
     // open a record in form view
@@ -3886,7 +3935,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
           await def; // block the 'read' call
         }
       };
-      const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+      const webClient = await createWebClient({ baseConfig, mockRPC });
       await doAction(webClient, 3);
 
       // open a record in form view
@@ -3927,7 +3976,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async (route, args) => {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     await doAction(webClient, 3);
 
     // open the first record in form view
@@ -3981,7 +4030,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     baseConfig.serverData!.actions![3].views.unshift([false, "graph"]);
     baseConfig.serverData!.views!["partner,false,graph"] = "<graph/>";
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
     await doAction(webClient, 3);
 
     assert.hasClass(
@@ -4029,7 +4078,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     baseConfig.serverData!.actions![3].views.splice(1, 1, [false, "graph"]);
     baseConfig.serverData!.views!["partner,false,graph"] = "<graph/>";
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
     await doAction(webClient, 3);
 
     assert.hasClass(
@@ -4069,7 +4118,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         </group>
       </search>`;
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
     await doAction(webClient, 3);
 
     assert.doesNotHaveClass(
@@ -4097,58 +4146,60 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
   });
 
   QUnit.skip("can open a many2one external window", async function (assert) {
-    /*
-    // AAB: this test could be merged with 'many2ones in form views' in relational_fields_tests.js
-    assert.expect(8);
+    // UNSKIP: dialog remains in the dom at end of test
+    assert.expect(9);
 
-    this.data.partner.records[0].bar = 2;
-    this.archs["partner,false,search"] =
-      "<search>" +
-      "<group>" +
-      '<filter name="foo" string="foo" context="{\'group_by\': \'foo\'}"/>' +
-      "</group>" +
-      "</search>";
-    this.archs["partner,false,form"] =
-      "<form>" + "<group>" + '<field name="foo"/>' + '<field name="bar"/>' + "</group>" + "</form>";
+    baseConfig.serverData!.models!.partner.records[0].bar = 2;
+    baseConfig.serverData!.views!["partner,false,search"] = `
+      <search>
+        <group>
+          <filter name="foo" string="foo" context="{'group_by': 'foo'}"/>
+        </group>
+      </search>`;
+    baseConfig.serverData!.views!["partner,false,form"] = `
+      <form>
+        <field name="foo"/>
+        <field name="bar"/>
+      </form>`;
 
-    var actionManager = await createActionManager({
-      actions: this.actions,
-      archs: this.archs,
-      data: this.data,
-      mockRPC: function (route, args) {
-        assert.step(route);
-        if (args.method === "get_formview_id") {
-          return Promise.resolve(false);
-        }
-        return this._super.apply(this, arguments);
-      },
-    });
-    await actionManager.doAction(3);
+    const mockRPC: RPC = async (route, args) => {
+      assert.step(route);
+      if (args && args.method === "get_formview_id") {
+        return Promise.resolve(false);
+      }
+    };
+
+    const webClient = await createWebClient({ baseConfig, mockRPC });
+    await doAction(webClient, 3);
 
     // open first record in form view
-    await testUtils.dom.click(actionManager.$(".o_data_row:first"));
+    await testUtils.dom.click($(webClient.el!).find(".o_data_row:first"));
+    await legacyExtraNextTick();
     // click on edit
-    await testUtils.dom.click($(".o_control_panel .o_form_button_edit"));
+    await testUtils.dom.click($(webClient.el!).find(".o_control_panel .o_form_button_edit"));
+    await legacyExtraNextTick();
 
     // click on external button for m2o
-    await testUtils.dom.click(actionManager.$(".o_external_button"));
+    await testUtils.dom.click($(webClient.el!).find(".o_external_button"));
+    await legacyExtraNextTick();
+
     assert.verifySteps([
+      "/wowl/load_menus",
       "/web/action/load", // initial load action
-      "/web/dataset/call_kw/partner", // load views
+      "/web/dataset/call_kw/partner/load_views", // load views
       "/web/dataset/search_read", // read list view data
       "/web/dataset/call_kw/partner/read", // read form view data
       "/web/dataset/call_kw/partner/get_formview_id", // get form view id
       "/web/dataset/call_kw/partner", // load form view for modal
       "/web/dataset/call_kw/partner/read", // read data for m2o record
     ]);
-    actionManager.destroy();
-    */
+    webClient.destroy();
   });
 
   QUnit.test('ask for confirmation when leaving a "dirty" view', async function (assert) {
     assert.expect(4);
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
     await doAction(webClient, 4);
 
     // open record in form view
@@ -4842,7 +4893,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
     const mockRPC: RPC = async (route, args) => {
       assert.step((args && args.method) || route);
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     await doAction(webClient, 5);
 
     assert.containsOnce(
@@ -4904,7 +4955,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         </footer>
       </form>`;
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
     await doAction(webClient, 5);
 
     assert.containsNone(
@@ -5069,7 +5120,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
 
       baseConfig.serverData!.actions![1].target = "fullscreen";
 
-      const webClient = await createWebClient({ baseConfig, legacyParams });
+      const webClient = await createWebClient({ baseConfig });
       await doAction(webClient, 1);
 
       assert.containsOnce(
@@ -5092,7 +5143,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
       "partner,false,form"
     ] = `<form><button name="1" type="action" class="oe_stat_button" /></form>`;
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
     await doAction(webClient, 6);
     assert.isVisible(webClient.el!.querySelector(".o_main_navbar") as HTMLElement);
 
@@ -5115,7 +5166,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
       "partner,false,form"
     ] = `<form><button name="1" type="action" class="oe_stat_button" /></form>`;
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
     await doAction(webClient, 6);
     assert.isNotVisible(webClient.el!.querySelector(".o_main_navbar") as HTMLElement);
 
@@ -5135,7 +5186,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
   QUnit.test("close the currently opened dialog", async function (assert) {
     assert.expect(2);
 
-    const webClient = await createWebClient({ baseConfig, legacyParams });
+    const webClient = await createWebClient({ baseConfig });
 
     // execute an action in target="new"
     await doAction(webClient, 5);
@@ -5492,7 +5543,7 @@ QUnit.module("Action Manager Legacy Tests Porting", (hooks) => {
         }
       }
     };
-    const webClient = await createWebClient({ baseConfig, legacyParams, mockRPC });
+    const webClient = await createWebClient({ baseConfig, mockRPC });
     await doAction(webClient, 3);
 
     await cpHelpers.editSearch(webClient.el!, "m");

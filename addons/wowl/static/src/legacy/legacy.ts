@@ -1,7 +1,9 @@
 import { Component, hooks, tags } from "@odoo/owl";
 import {
   ClientActionProps,
-  OdooEnv, Type, ViewProps,
+  OdooEnv,
+  Type,
+  ViewProps,
   Context,
   Service,
   ViewId,
@@ -97,7 +99,9 @@ interface ActionAdapter extends ComponentAdapter {
 }
 
 odoo.define("wowl.ActionAdapters", function (require: any) {
-  const { ComponentAdapter }:   { ComponentAdapter: Type<ComponentAdapter> } = require("web.OwlCompatibility");
+  const {
+    ComponentAdapter,
+  }: { ComponentAdapter: Type<ComponentAdapter> } = require("web.OwlCompatibility");
 
   class ActionAdapter extends ComponentAdapter {
     am = useService("action_manager");
@@ -306,7 +310,7 @@ odoo.define("wowl.legacyViews", async function (require: any) {
           export: () => this.controllerRef.comp!.exportState(),
           beforeLeave: () => {
             return this.controllerRef.comp!.widget!.canBeRemoved();
-          }
+          },
         });
       }
 
