@@ -8,6 +8,8 @@ import { Context } from "../core/context";
 import { useDebugManager } from "../debug_manager/debug_manager";
 import { DebuggingAccessRights, editModelDebug } from "../debug_manager/debug_manager_service";
 import { ActWindowAction, ClientAction } from "../action_manager/action_manager";
+import { Dialog } from "../components/dialog/dialog";
+import { json_node_to_xml } from "../utils/utils";
 
 
 declare const odoo: any;
@@ -549,6 +551,176 @@ interface ActWindowActionAdapted extends Omit<ActWindowAction, "views"> {
   }[];
 }
 
+class FieldViewGetDialog extends Component {
+  static template = tags.xml`
+  <Dialog title="title">
+    <pre t-esc="props.arch"/>
+  </Dialog>`;
+  static components = { Dialog };
+  title = Component.env._t("Fields View Get");
+}
+
+class SetDefaultDialog extends Component {
+  static template = "wowl.DebugManager.SetDefault";
+  static components = { Dialog };
+  title = Component.env._t("Set Default");
+  state = {
+    fieldToSet: "",
+    condition: "",
+    scope: "self",
+  };
+  defaultFields: any[];
+  conditions: any[];
+  dataWidgetState: { [id: string]: any };
+
+  constructor(...args: any[]) {
+    super(...args);
+    this.dataWidgetState = this.getDataWidgetState();
+    this.defaultFields = this.getDefaultFields();
+    this.conditions = this.getConditions();
+  }
+
+  getDataWidgetState() {
+    const renderer = this.props.component.widget.renderer;
+    const state = renderer.state;
+    const fields = state.fields;
+    const fieldsInfo = state.fieldsInfo.form;
+    const fieldNamesInView = state.getFieldNames();
+    const fieldNamesOnlyOnView: string[] = ["message_attachment_count"];
+    const fieldsValues = state.data;
+    const modifierDatas: {
+      [id: string]: any;
+    } = {};
+    fieldNamesInView.forEach((fieldName: string) => {
+      modifierDatas[fieldName] = renderer.allModifiersData.find((modifierdata: any) => {
+        return modifierdata.node.attrs.name === fieldName;
+      });
+    });
+    return {
+      fields,
+      fieldsInfo,
+      fieldNamesInView,
+      fieldNamesOnlyOnView,
+      fieldsValues,
+      modifierDatas,
+      stateId: state.id,
+    };
+  }
+
+  getDefaultFields() {
+    const {
+      fields,
+      fieldsInfo,
+      fieldNamesInView,
+      fieldNamesOnlyOnView,
+      fieldsValues,
+      modifierDatas,
+      stateId,
+    } = this.dataWidgetState;
+
+    return fieldNamesInView
+      .filter((fieldName: string) => !fieldNamesOnlyOnView.includes(fieldName))
+      .map((fieldName: string) => {
+        const modifierData = modifierDatas[fieldName];
+        let invisibleOrReadOnly;
+        if (modifierData) {
+          const evaluatedModifiers = modifierData.evaluatedModifiers[stateId];
+          invisibleOrReadOnly = evaluatedModifiers.invisible || evaluatedModifiers.readonly;
+        }
+        const fieldInfo = fields[fieldName];
+        const valueDisplayed = this.display(fieldInfo, fieldsValues[fieldName]);
+        const value = valueDisplayed[0];
+        const displayed = valueDisplayed[1];
+        // ignore fields which are empty, invisible, readonly, o2m
+        // or m2m
+        if (
+          !value ||
+          invisibleOrReadOnly ||
+          fieldInfo.type === "one2many" ||
+          fieldInfo.type === "many2many" ||
+          fieldInfo.type === "binary" ||
+          fieldsInfo[fieldName].options.isPassword ||
+          fieldInfo.depends.length !== 0
+        ) {
+          return false;
+        }
+        return {
+          name: fieldName,
+          string: fieldInfo.string,
+          value: value,
+          displayed: displayed,
+        };
+      })
+      .filter((val: any) => val)
+      .sort((field: any) => field.string);
+  }
+
+  getConditions() {
+    const { fields, fieldNamesInView, fieldsValues } = this.dataWidgetState;
+
+    return fieldNamesInView
+      .filter((fieldName: any) => {
+        const fieldInfo = fields[fieldName];
+        return fieldInfo.change_default;
+      })
+      .map((fieldName: any) => {
+        const fieldInfo = fields[fieldName];
+        const valueDisplayed = this.display(fieldInfo, fieldsValues[fieldName]);
+        const value = valueDisplayed[0];
+        const displayed = valueDisplayed[1];
+        return {
+          name: fieldName,
+          string: fieldInfo.string,
+          value: value,
+          displayed: displayed,
+        };
+      });
+  }
+
+  display(fieldInfo: any, value: any) {
+    let displayed = value;
+    if (value && fieldInfo.type === "many2one") {
+      displayed = value.data.display_name;
+      value = value.data.id;
+    } else if (value && fieldInfo.type === "selection") {
+      displayed = fieldInfo.selection.find((option: any) => {
+        return option[0] === value;
+      })[1];
+    }
+    return [value, displayed];
+  }
+
+  /**
+   * Send an event signaling that the dialog should be closed.
+   * @private
+   */
+  _close() {
+    this.trigger("dialog-closed");
+  }
+
+  saveDefault() {
+    if (!this.state.fieldToSet) {
+      // TODO $defaults.parent().addClass('o_form_invalid');
+      // It doesn't work in web.
+      return;
+    }
+    const fieldToSet = this.defaultFields.find((field: any) => {
+      return field.name === this.state.fieldToSet;
+    }).value;
+    this.props.env.services
+      .model("ir.default")
+      .call("set", [
+        this.props.action.res_model,
+        this.state.fieldToSet,
+        fieldToSet,
+        this.state.scope === "self",
+        true,
+        this.state.condition || false,
+      ])
+      .then(() => this._close());
+  }
+}
+
 export function setupDebugView(
   accessRights: DebuggingAccessRights,
   env: OdooEnv,
@@ -569,6 +741,10 @@ export function setupDebugView(
       console.log("Fields View Get");
       // fvg
       // Need Arch
+      const props = {
+        arch: json_node_to_xml(env, component.widget.renderer.arch, true, 0),
+      };
+      env.services.dialog_manager.open(FieldViewGetDialog, props);
     },
     sequence: 340,
   };
@@ -625,6 +801,13 @@ export function setupDebugViewForm(
       console.log("Set Defaults");
       // set_defaults
       // need this._controller.renderer (_controller == widget)
+
+      env.services.dialog_manager.open(SetDefaultDialog, {
+        title: "Set Default",
+        component: component,
+        action: action,
+        env: env,
+      });
     },
     sequence: 310,
   };
@@ -637,6 +820,23 @@ export function setupDebugViewForm(
       console.log("View Metadata");
       // get_metadata
       // need getSelectedIds
+      const selectedIds = component.widget.getSelectedIds();
+      if (!selectedIds.length) {
+        console.warn(env._t("No metadata available"));
+        return;
+      }
+      env.services
+        .model(action.res_model)
+        .call("get_metadata", [selectedIds])
+        .then((result) => {
+          //const metadata = result[0];
+          // metadata.creator = field_utils.format.many2one(metadata.create_uid);
+          // metadata.lastModifiedBy = field_utils.format.many2one(metadata.write_uid);
+          // var createDate = field_utils.parse.datetime(metadata.create_date);
+          // metadata.create_date = field_utils.format.datetime(createDate);
+          // var modificationDate = field_utils.parse.datetime(metadata.write_date);
+          // metadata.write_date = field_utils.format.datetime(modificationDate);
+        });
     },
     sequence: 320,
   };
@@ -650,6 +850,7 @@ export function setupDebugViewForm(
       console.log("Manage Attachments");
       //get_attachments
       // need getSelectedIds
+      // TODO we don't need it ?
       if (!component.widget.getSelectedIds().length) {
         console.warn(env._t("No attachment available"));
         return;
