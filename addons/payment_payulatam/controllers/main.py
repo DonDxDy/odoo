@@ -12,11 +12,12 @@ _logger = logging.getLogger(__name__)
 
 
 class PayuLatamController(http.Controller):
+    _response_url = '/payment/payulatam/response'
 
-    @http.route('/payment/payulatam/response', type='http', auth='public', csrf=False)
+    @http.route(_response_url, type='http', auth='public')
     def payulatam_response(self, **post):
         """ PayUlatam."""
         _logger.info('PayU Latam: entering form_feedback with post response data %s', pprint.pformat(post))
         if post:
-            request.env['payment.transaction'].sudo().form_feedback(post, 'payulatam')
-        return werkzeug.utils.redirect('/payment/process')
+            request.env['payment.transaction'].sudo()._handle_feedback_data('payulatam', post)
+        return werkzeug.utils.redirect('/payment/status')
