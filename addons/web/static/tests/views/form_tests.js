@@ -7904,9 +7904,8 @@ QUnit.module('Views', {
         delete widgetRegistry.map.test;
     });
 
-    // maybe remove this test?
-    QUnit.skip('bounce edit button in readonly mode', async function (assert) {
-        assert.expect(1);
+    QUnit.test('bounce edit button in readonly mode', async function (assert) {
+        assert.expect(2);
 
         var form = await createView({
             View: FormView,
@@ -7921,9 +7920,8 @@ QUnit.module('Views', {
         });
 
         // in readonly
-        // Now clicking on a field switches to edit mode
-        // await testUtils.dom.click(form.$('[name="display_name"]'));
-        // assert.hasClass(form.$('.o_form_button_edit'), 'o_catch_attention');
+        await testUtils.dom.click(form.$('div.oe_title'));
+        assert.hasClass(form.$('.o_form_button_edit'), 'o_catch_attention');
 
         // in edit
         await testUtils.form.clickEdit(form);
