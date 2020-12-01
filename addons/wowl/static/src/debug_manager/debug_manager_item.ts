@@ -1,9 +1,6 @@
-import { MenuElement, MenuElementFactory, Odoo, OdooEnv } from "../types";
+import { MenuElement, OdooEnv } from "../types";
 import { routeToUrl } from "../services/router";
-import { Registry } from "../core/registry";
 import { DomainListRepr as Domain } from "../core/domain";
-
-declare const odoo: Odoo;
 
 // Backend Debug Manager Items
 
@@ -112,7 +109,6 @@ export function regenerateAssets(env: OdooEnv): MenuElement {
     type: "item",
     description: env._t("Regenerate Assets Bundles"),
     callback: () => {
-      // TODO Uncaught (in promise) TypeError: Illegal invocation
       console.log("Regenerate Assets Bundles");
       const domain: Domain = [
         "&",
@@ -157,7 +153,7 @@ export function leaveDebugMode(env: OdooEnv): MenuElement {
     description: env._t("Leave the Developer Tools"),
     callback: () => {
       console.log("Leave the Developer Tools");
-      let route = env.services.router.current;
+      const route = env.services.router.current;
       route.search.debug = "";
       odoo.browser.location.href = odoo.browser.location.origin + routeToUrl(route);
     },
@@ -180,12 +176,3 @@ export const globalDebugManagerItems = [
   leaveDebugMode,
   activateTestsAssetsDebugging,
 ];
-
-
-export const debugManagerRegistry: Registry<MenuElementFactory> = new Registry();
-backendDebugManagerItems.forEach((item) => {
-  debugManagerRegistry.add(item.name, item);
-});
-globalDebugManagerItems.forEach((item) => {
-  debugManagerRegistry.add(item.name, item);
-});

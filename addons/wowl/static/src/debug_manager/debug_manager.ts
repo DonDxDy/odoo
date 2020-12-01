@@ -1,10 +1,11 @@
 import { Component, hooks } from "@odoo/owl";
 import { OwlEvent } from "@odoo/owl/dist/types/core/owl_event";
-import { MenuElement, MenuItemEventPayload, OdooEnv, SystrayItem } from "../types";
+import { MenuElement, MenuItemEventPayload, OdooEnv } from "../types";
 import { Dropdown } from "../components/dropdown/dropdown";
 import { DropdownItem } from "../components/dropdown/dropdown_item";
 import { useService } from "../core/hooks";
 import { DebuggingAccessRights } from "./debug_manager_service";
+import { SystrayItem } from "../webclient/systray_registry";
 
 export class DebugManager extends Component<{}, OdooEnv> {
   static debugElementsId: number = 1;
@@ -40,8 +41,8 @@ export class DebugManager extends Component<{}, OdooEnv> {
     });
 
     if (!this.isInDialog) {
-      this.debugFactories["global"] = (accessRights) =>
-        this.env.registries.debugManager.getAll().map((el) => el(this.env));
+      this.debugFactories["global"] = () =>
+        odoo.debugManagerRegistry.getAll().map((elFactory) => elFactory(this.env));
     }
   }
   get isInDialog(): true | undefined {

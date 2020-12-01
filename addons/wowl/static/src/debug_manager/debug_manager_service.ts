@@ -35,7 +35,7 @@ export const debugManagerService: Service<DebugManagerService> = {
   async deploy(env: OdooEnv): Promise<DebugManagerService> {
     let accessRightsProm: Promise<DebuggingAccessRights> | undefined;
     if (env.debug !== "") {
-      env.registries.systray.add("wowl.debug_mode_menu", debugManager);
+      odoo.systrayRegistry.add("wowl.debug_mode_menu", debugManager);
     }
 
     return {

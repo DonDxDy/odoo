@@ -1,5 +1,14 @@
 import { Component, hooks, tags } from "@odoo/owl";
-import { ClientActionProps, OdooEnv, ViewProps, Service, ViewId, ViewType, MenuElement } from "../types";
+import {
+  ClientActionProps,
+  OdooEnv,
+  ViewProps,
+  Service,
+  ViewId,
+  ViewType,
+  MenuElement,
+  Type,
+} from "../types";
 import { useService } from "../core/hooks";
 import { useSetupAction } from "../action_manager/action_manager";
 import { actionRegistry } from "../action_manager/action_registry";
@@ -10,7 +19,6 @@ import { DebuggingAccessRights, editModelDebug } from "../debug_manager/debug_ma
 import { ActWindowAction, ClientAction } from "../action_manager/action_manager";
 import { Dialog } from "../components/dialog/dialog";
 import { json_node_to_xml } from "../utils/utils";
-
 
 declare const odoo: any;
 
@@ -166,7 +174,7 @@ odoo.define("wowl.ActionAdapters", function (require: any) {
           setupDebugViewForm(envWowl, this, this.props.viewParams.action)
         );
       }
-      this.env = Component.env;
+      this.env = <OdooEnv>Component.env;
     }
     async willStart() {
       if (this.props.widget) {

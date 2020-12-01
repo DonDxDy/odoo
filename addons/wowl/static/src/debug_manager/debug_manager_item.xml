@@ -4,8 +4,8 @@
     <Dialog t-name="wowl.DebugManager.SetDefault" title="title">
         <t t-call="wowl.DebugManager.setDefault"/>
         <t t-set-slot="buttons">
-            <button class="btn btn-primary" t-on-click="_close">Close</button>
-            <button class="btn btn-primary" t-on-click="saveDefault">Save default</button>
+            <button class="btn btn-secondary" t-on-click="_close">Close</button>
+            <button class="btn btn-secondary" t-on-click="saveDefault">Save default</button>
         </t>
     </Dialog>
 
