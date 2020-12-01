@@ -54,17 +54,7 @@ var M2ODialog = Dialog.extend({
                     this.trigger_up('quick_create', { value: this.value });
                 },
             }, {
-                text: _t('Create and edit'),
-                classes: 'btn-primary',
-                close: true,
-                click: function () {
-                    this.trigger_up('search_create_popup', {
-                        view_type: 'form',
-                        value: this.value,
-                    });
-                },
-            }, {
-                text: _t('Cancel'),
+                text: _t('Discard'),
                 close: true,
             }],
         });
@@ -100,7 +90,6 @@ var FieldMany2One = AbstractField.extend({
     }),
     events: _.extend({}, AbstractField.prototype.events, {
         'click input': '_onInputClick',
-        'focusout input': '_onInputFocusout',
         'keyup input': '_onInputKeyup',
         'click .o_external_button': '_onExternalButtonClick',
         'click': '_onClick',
@@ -258,6 +247,18 @@ var FieldMany2One = AbstractField.extend({
                 return val.split('').join('\ufeff');
             });
         }
+        let suggestions = [];
+        this.$el.on('focusout', 'input', () => {
+            if (!this.floating) {
+                return;
+            }
+            const firstValue = suggestions.find(s => s.id);
+            if (firstValue) {
+                this.reinitialize(firstValue.id);
+            } else if (this.can_create) {
+                new M2ODialog(this, this.string, this.$input.val()).open();
+            }
+        });
         this.$input.autocomplete({
             source: function (req, resp) {
                 _.each(self._autocompleteSources, function (source) {
@@ -274,7 +275,8 @@ var FieldMany2One = AbstractField.extend({
                         Promise.resolve(source.method.call(self, search)).then(function (results) {
                             source.results = results;
                             source.loading = false;
-                            resp(self._concatenateAutocompleteResults());
+                            suggestions = self._concatenateAutocompleteResults();
+                            resp(suggestions);
                         });
                     }
                 });
@@ -765,14 +767,6 @@ var FieldMany2One = AbstractField.extend({
             this.$input.autocomplete("search"); // search with the input's content
         } else {
             this.$input.autocomplete("search", ''); // search with the empty string
-        }
-    },
-    /**
-     * @private
-     */
-    _onInputFocusout: function () {
-        if (this.can_create && this.floating) {
-            new M2ODialog(this, this.string, this.$input.val()).open();
         }
     },
     /**
