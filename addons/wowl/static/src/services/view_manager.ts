@@ -80,7 +80,7 @@ export const viewManagerService: Service<ViewManager> = {
                 viewDescription.fields
               ); // before a deep freeze was done.
               if (viewType === "search" && options.withFilters) {
-                viewDescription.irFilters = (result as any).filters; // don't think it is useful to add it everywhere.
+                viewDescription.irFilters = (result as any).filters;
               }
               viewDescriptions[viewType] = viewDescription;
             }

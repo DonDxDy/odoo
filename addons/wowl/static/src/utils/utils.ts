@@ -72,6 +72,7 @@ function _getExtractorFrom(criterion: string | ((element: any) => any)): (elemen
  * The given criterion can either be:
  * - a string: a property name on the array elements returning the sortable primitive
  * - a function: a handler that will return the sortable primitive from a given element.
+ * The default order is ascending ('asc'). It can be modified by setting the extra param 'order' to 'desc'.
  */
 export function sortBy<T = any>(
   array: T[],
@@ -90,5 +91,4 @@ export function sortBy<T = any>(
     }
     return order === "asc" ? result : -result;
   });
-  return array;
 }
