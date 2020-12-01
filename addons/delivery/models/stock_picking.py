@@ -87,9 +87,10 @@ class StockPicking(models.Model):
     weight_bulk = fields.Float('Bulk Weight', compute='_compute_bulk_weight', help="Total weight of products which are not in a package.")
     shipping_weight = fields.Float("Weight for Shipping", compute='_compute_shipping_weight',
         help="Total weight of packages and products not in a package. Packages with no shipping weight specified will default to their products' total weight. This is the weight used to compute the cost of the shipping.")
+    weight_at_label = fields.Float(string="Shipment Weight during lable printing")
     is_return_picking = fields.Boolean(compute='_compute_return_picking')
     return_label_ids = fields.One2many('ir.attachment', compute='_compute_return_label')
-    destination_country_code = fields.Char(related='partner_id.country_id.code')
+    destination_country_code = fields.Char(related='partner_id.country_id.code', string="Destination")
 
     @api.depends('carrier_id', 'carrier_tracking_ref')
     def _compute_carrier_tracking_url(self):
@@ -125,22 +126,26 @@ class StockPicking(models.Model):
 
     def _send_confirmation_email(self):
         for pick in self:
-            if pick.carrier_id and not pick.carrier_tracking_ref:
+            if pick.carrier_id:
                 if pick.carrier_id.integration_level == 'rate_and_ship' and pick.picking_type_code != 'incoming':
-                    pick.send_to_shipper()
+                    if pick.weight_at_label != pick.shipping_weight:
+                        pick.activity_schedule(
+                        'mail.mail_activity_todo',
+                        user_id=pick.user_id.id if pick.user_id else self.env.user.id,
+                        summary='Re-generate the shipping label')
+                    if not pick.carrier_tracking_ref:
+                        pick.send_to_shipper()
         return super(StockPicking, self)._send_confirmation_email()
 
     def action_print_label(self):
         for pick in self:
             if pick.carrier_id:
                 if pick.carrier_id.integration_level == 'rate_and_ship' and pick.picking_type_code != 'incoming':
-                    weight = 0.0
-                    for move_line in pick.move_line_ids:
-                        if move_line.product_id and not move_line.result_package_id:
-                            weight += move_line.product_uom_id._compute_quantity(move_line.product_uom_qty, move_line.product_id.uom_id) * move_line.product_id.weight
-                        pick.weight_bulk = weight
-                    pick.shipping_weight = pick.weight_bulk + sum([pack.shipping_weight or pack.weight for pack in pick.package_ids])
-                    return pick.send_to_shipper()
+                    if pick.move_line_ids.filtered(lambda l: not l.qty_done):
+                        raise UserError(_("Please fill the done quantity first, to print the lable!"))
+                    else:
+                        pick.weight_at_label = pick.shipping_weight
+                        return pick.send_to_shipper()
 
     def _pre_put_in_pack_hook(self, move_line_ids):
         res = super(StockPicking, self)._pre_put_in_pack_hook(move_line_ids)
