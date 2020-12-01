@@ -204,7 +204,7 @@ odoo.define('web.AbstractFieldOwl', function (require) {
          * @returns {boolean}
          */
         get isQuickEditable() {
-            return true;
+            return false;
         }
         /**
          * Determines if the field value is set to a meaningful

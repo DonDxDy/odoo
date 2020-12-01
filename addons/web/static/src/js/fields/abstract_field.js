@@ -49,7 +49,7 @@ var AbstractField = Widget.extend({
      * form view to switch into edit mode and then it'll perform
      * some action (@see doQuickEdit)
      */
-    isQuickEditable: true,
+    isQuickEditable: false,
     /**
     * An object representing fields to be fetched by the model eventhough not present in the view
     * This object contains "field name" as key and an object as value.

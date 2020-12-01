@@ -568,6 +568,7 @@ var FieldChar = InputField.extend(TranslatableFieldMixin, {
     className: 'o_field_char',
     tagName: 'span',
     supportedFieldTypes: ['char'],
+    isQuickEditable: true,
 
     //--------------------------------------------------------------------------
     // Private
@@ -657,6 +658,7 @@ var FieldDateRange = InputField.extend({
         '/web/static/lib/daterangepicker/daterangepicker.css',
     ],
     supportedFieldTypes: ['date', 'datetime'],
+    isQuickEditable: true,
     /**
      * @override
      */
@@ -813,6 +815,7 @@ var FieldDate = InputField.extend({
     className: "o_field_date",
     tagName: "span",
     supportedFieldTypes: ['date', 'datetime'],
+    isQuickEditable: true,
     // we don't need to listen on 'input' nor 'change' events because the
     // datepicker widget is already listening, and will correctly notify changes
     events: AbstractField.prototype.events,
@@ -958,6 +961,7 @@ var FieldDate = InputField.extend({
 var FieldDateTime = FieldDate.extend({
     description: _lt("Date & Time"),
     supportedFieldTypes: ['datetime'],
+    isQuickEditable: true,
 
     /**
      * @override
@@ -1064,6 +1068,7 @@ var FieldMonetary = NumericField.extend({
     tagName: 'span',
     supportedFieldTypes: ['float', 'monetary'],
     resetOnAnyFieldChange: true, // Have to listen to currency changes
+    isQuickEditable: true,
 
     /**
      * Float fields using a monetary widget have an additional currency_field
@@ -1174,6 +1179,7 @@ var FieldInteger = NumericField.extend({
     description: _lt("Integer"),
     className: 'o_field_integer o_field_number',
     supportedFieldTypes: ['integer'],
+    isQuickEditable: true,
 
     //--------------------------------------------------------------------------
     // Private
@@ -1208,6 +1214,7 @@ var FieldFloat = NumericField.extend({
     description: _lt("Decimal"),
     className: 'o_field_float o_field_number',
     supportedFieldTypes: ['float'],
+    isQuickEditable: true,
 
     /**
      * Float fields have an additional precision parameter that is read from
@@ -1230,6 +1237,7 @@ var FieldFloatTime = FieldFloat.extend({
     // 'float_time', but for the sake of clarity, we explicitely define a
     // FieldFloatTime widget with formatType = 'float_time'.
     formatType: 'float_time',
+    isQuickEditable: true,
 
     init: function () {
         this._super.apply(this, arguments);
@@ -1241,6 +1249,7 @@ var FieldFloatFactor = FieldFloat.extend({
     supportedFieldTypes: ['float'],
     className: 'o_field_float_factor',
     formatType: 'float_factor',
+    isQuickEditable: true,
 
     /**
      * @constructor
@@ -1268,6 +1277,7 @@ var FieldFloatToggle = AbstractField.extend({
     formatType: 'float_factor',
     className: 'o_field_float_toggle',
     tagName: 'span',
+    isQuickEditable: true,
     events: {
         click: '_onClick'
     },
@@ -1392,6 +1402,7 @@ var FieldFloatToggle = AbstractField.extend({
 var FieldPercentage = FieldFloat.extend({
     className: 'o_field_float_percentage o_field_number',
     description: _lt("Percentage"),
+    isQuickEditable: true,
 
     /**
      * @constructor
@@ -1432,6 +1443,7 @@ var FieldText = InputField.extend(TranslatableFieldMixin, {
     className: 'o_field_text',
     supportedFieldTypes: ['text', 'html'],
     tagName: 'span',
+    isQuickEditable: true,
 
     /**
      * @constructor
@@ -1526,9 +1538,9 @@ var FieldEmail = InputField.extend({
     events: _.extend({}, InputField.prototype.events, {
         'click': '_onClick',
     }),
-    isQuickEditable: false,
     prefix: 'mailto',
     supportedFieldTypes: ['char'],
+    isQuickEditable: true,
 
     /**
      * In readonly, emails should be a link, not a span.
@@ -1632,7 +1644,6 @@ var UrlWidget = InputField.extend({
     events: _.extend({}, InputField.prototype.events, {
         'click': '_onClick',
     }),
-    isQuickEditable: false,
     supportedFieldTypes: ['char'],
 
     /**
@@ -2299,7 +2310,6 @@ var PriorityWidget = AbstractField.extend({
         'click > a': '_onClick',
         'keydown > a': '_onKeydown',
     },
-    isQuickEditable: false,
     supportedFieldTypes: ['selection'],
 
     //--------------------------------------------------------------------------
@@ -2592,7 +2602,6 @@ var FavoriteWidget = AbstractField.extend({
     events: {
         'click': '_setFavorite'
     },
-    isQuickEditable: false,
     supportedFieldTypes: ['boolean'],
 
     //--------------------------------------------------------------------------
@@ -2666,6 +2675,7 @@ var LabelSelection = AbstractField.extend({
 var BooleanToggle = FieldBoolean.extend({
     description: _lt("Toggle"),
     className: FieldBoolean.prototype.className + ' o_boolean_toggle',
+    isQuickEditable: true,
     events: {
         'click': '_onClick'
     },
@@ -2734,6 +2744,7 @@ var FieldPercentPie = AbstractField.extend({
     description: _lt("Percentage Pie"),
     template: 'FieldPercentPie',
     supportedFieldTypes: ['integer', 'float'],
+    isQuickEditable: true,
 
     /**
      * Register some useful references for later use throughout the widget.
@@ -2993,7 +3004,6 @@ var FieldToggleBoolean = AbstractField.extend({
     events: {
         'click': '_onToggleButton'
     },
-    isQuickEditable: false,
     supportedFieldTypes: ['boolean'],
 
     //--------------------------------------------------------------------------
@@ -3545,7 +3555,6 @@ var FieldColor = AbstractField.extend({
     custom_events: _.extend({}, AbstractField.prototype.custom_events, {
         'colorpicker:saved': '_onColorpickerSaved',
     }),
-    isQuickEditable: false,
 
     //--------------------------------------------------------------------------
     // Public

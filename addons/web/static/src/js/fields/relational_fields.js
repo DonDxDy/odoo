@@ -107,6 +107,7 @@ var FieldMany2One = AbstractField.extend({
     }),
     AUTOCOMPLETE_DELAY: 200,
     SEARCH_MORE_LIMIT: 320,
+    isQuickEditable: true,
 
     /**
      * @override
@@ -2672,6 +2673,7 @@ var FormFieldMany2ManyTags = FieldMany2ManyTags.extend({
         'mousedown .o_colorpicker a': '_onUpdateColor',
         'mousedown .o_colorpicker .o_hide_in_kanban': '_onUpdateColor',
     }),
+    isQuickEditable: true,
     /**
      * @override
      */
@@ -2830,6 +2832,7 @@ var FieldMany2ManyCheckBoxes = AbstractField.extend({
     }),
     specialData: "_fetchSpecialRelation",
     supportedFieldTypes: ['many2many'],
+    isQuickEditable: true,
     init: function () {
         this._super.apply(this, arguments);
         this.m2mValues = this.record.specialData[this.name];
@@ -3054,6 +3057,7 @@ var FieldSelection = AbstractField.extend({
     events: _.extend({}, AbstractField.prototype.events, {
         'change': '_onChange',
     }),
+    isQuickEditable: true,
     /**
      * @override
      */
@@ -3189,6 +3193,7 @@ var FieldRadio = FieldSelection.extend({
     events: _.extend({}, AbstractField.prototype.events, {
         'click input': '_onInputClick',
     }),
+    isQuickEditable: true,
     /**
      * @constructs FieldRadio
      */

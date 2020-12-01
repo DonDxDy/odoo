@@ -46,6 +46,12 @@ odoo.define('web.basic_fields_owl', function (require) {
             return this.mode === 'readonly' ? null : this.el.querySelector('input');
         }
         /**
+         * @override
+         */
+        get isQuickEditable() {
+            return true;
+        }
+        /**
          * A boolean field is always set since false is a valid value.
          *
          * @override
