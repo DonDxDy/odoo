@@ -296,9 +296,6 @@ var FieldHtml = basic_fields.DebouncedField.extend(TranslatableFieldMixin, {
             }
             const container = document.createElement('container');
             container.innerHTML = value;
-            $(container).find('[href]').on('click', ev => {
-                ev.preventDefault();
-            });
             for (const node of [...container.childNodes]) {
                 shadowRoot.appendChild(node);
             }
