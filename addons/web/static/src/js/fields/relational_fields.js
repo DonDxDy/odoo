@@ -1974,8 +1974,7 @@ var FieldOne2Many = FieldX2Many.extend({
                     }
                 }).guardedCatch(function() {
                     self.creatingRecord = false;
-                })
-                ;
+                });
             }
         } else {
             this._openFormDialog({
