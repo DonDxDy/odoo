@@ -2,11 +2,27 @@ odoo.define('web.PivotRenderer', function (require) {
     "use strict";
 
     const GroupByMenu = require('web.GroupByMenu');
+    const CustomGroupByItem = require('web.CustomGroupByItem');
     const OwlAbstractRenderer = require('web.AbstractRendererOwl');
     const field_utils = require('web.field_utils');
     const patchMixin = require('web.patchMixin');
 
     const { useExternalListener, useState, useSubEnv, onMounted, onPatched } = owl.hooks;
+
+    class PivotCustomGroupByItem extends CustomGroupByItem {
+        //---------------------------------------------------------------------
+        // Handlers
+        //---------------------------------------------------------------------
+
+        /**
+         * @private
+         */
+        _onApply() {
+            const field = this.props.fields.find(f => f.name === this.state.fieldName);
+            this.model.dispatch('createNewGroupBy', field, true);
+            this.state.open = false;
+        }
+    }
 
     class PivotGroupByMenu extends GroupByMenu {
 
@@ -29,6 +45,7 @@ odoo.define('web.PivotRenderer', function (require) {
         }
     }
     PivotGroupByMenu.template = "web.PivotGroupByMenu";
+    PivotGroupByMenu.components = { PivotCustomGroupByItem };
 
     /**
      * Here is a basic example of the structure of the Pivot Table:

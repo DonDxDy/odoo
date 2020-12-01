@@ -106,7 +106,7 @@
             </t>
             <t t-if="fields.length">
                 <li t-if="items.length" class="dropdown-divider" role="separator"/>
-                <CustomGroupByItem fields="fields" t-on-click.stop=""/>
+                <PivotCustomGroupByItem fields="fields" t-on-click.stop=""/>
             </t>
         </div>
     </t>
