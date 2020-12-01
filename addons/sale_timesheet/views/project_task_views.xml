@@ -24,7 +24,11 @@
                             <field name="display_create_order" invisible="1"/>
                             <field name="bill_type" widget="radio"/>
                             <field name="pricing_type" attrs="{'invisible': ['|', ('allow_billable', '=', False), ('bill_type', '!=', 'customer_project')], 'required': ['&amp;', ('allow_billable', '=', True), ('allow_timesheets', '=', True)]}" widget="radio"/>
-                            <field name="timesheet_product_id" string="Service" attrs="{'invisible': ['|', '|', ('allow_timesheets', '=', False), ('sale_order_id', '!=', False), ('bill_type', '!=', 'customer_task')], 'required': ['&amp;', ('allow_billable', '=', True), ('allow_timesheets', '=', True)]}" context="{'default_type': 'service', 'default_service_policy': 'delivered_timesheet', 'default_service_type': 'timesheet'}"/>
+                            <!-- FIXME: Remark for reviewer
+                                We remove the condition for the require but we have a sql_contrains for the same condition...
+                                See this file: https://github.com/odoo/odoo/blob/8dc647adcd5d4c0c1c059f5b5c4ba5eec4e0136d/addons%2Fsale_timesheet%2Fmodels%2Fproject.py#L57
+                            -->
+                            <field name="timesheet_product_id" string="Service" attrs="{'invisible': ['|', '|', ('allow_timesheets', '=', False), ('sale_order_id', '!=', False), ('bill_type', '!=', 'customer_task')]}" context="{'default_type': 'service', 'default_service_policy': 'delivered_timesheet', 'default_service_type': 'timesheet'}"/>
                             <field name="sale_order_id" attrs="{'invisible': [('bill_type', '!=', 'customer_project')], 'readonly': [('sale_order_id', '!=', False)]}" force_save="1" options="{'no_create': True, 'no_edit': True, 'delete': False}"/>
                             <field name="sale_line_id" string="Default Sales Order Item" attrs="{'invisible': [('bill_type', '!=', 'customer_project')]}" options="{'no_create': True, 'no_edit': True, 'delete': False}"/>
                         </group>
