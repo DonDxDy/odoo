@@ -80,7 +80,7 @@ var FormRenderer = BasicRenderer.extend({
         if (this.quickEditInfo) {
             const fieldWidget = this.allFieldWidgets[this.state.id]
                 .find(field => field[symbol] === this.quickEditInfo.fieldName);
-            if (fieldWidget) {
+            if (fieldWidget && fieldWidget.isQuickEditable) {
                 fieldWidget.doQuickEdit(this.quickEditInfo.extraInfo);
                 return;
             }
@@ -216,6 +216,10 @@ var FormRenderer = BasicRenderer.extend({
      */
     getLocalState: function () {
         const state = {};
+        const sheetBg = this.el.querySelector('.o_form_sheet_bg');
+        if (sheetBg) {
+            state.scrollValue = sheetBg.scrollTop;
+        }
         for (const notebook of this.el.querySelectorAll(':scope div.o_notebook')) {
             const name = notebook.dataset.name;
             const navs = notebook.querySelectorAll(':scope .o_notebook_headers .nav-item > .nav-link');
@@ -271,6 +275,10 @@ var FormRenderer = BasicRenderer.extend({
                 }
                 core.bus.trigger('DOM_updated');
             }
+        }
+        const sheetBg = this.el.querySelector('.o_form_sheet_bg');
+        if (sheetBg) {
+            sheetBg.scrollTop = state.scrollValue;
         }
     },
     /**
