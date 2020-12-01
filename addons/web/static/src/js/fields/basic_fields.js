@@ -878,7 +878,9 @@ var FieldDate = InputField.extend({
      */
     doQuickEdit: function () {
         this._super(...arguments);
-        this.datewidget.$input.click();
+        if (this.datewidget) {
+            this.datewidget.$input.click();
+        }
     },
 
     //--------------------------------------------------------------------------
