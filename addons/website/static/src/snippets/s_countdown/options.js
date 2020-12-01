@@ -46,65 +46,30 @@ snippetOptions.registry.countdown = snippetOptions.SnippetOptionWidget.extend({
     * @see this.selectClass for parameters
     */
     layout: async function (previewMode, widgetValue, params) {
+        this.wysiwyg.withMutation(this.$target, () => {
             switch (widgetValue) {
                 case 'circle':
-                    if (!previewMode) {
-                        const countdownLayoutCircle = async (context) => {
-                            await this.editorHelpers.setAttribute(context, this.$target[0], 'data-progress-bar-style', 'disappear');
-                            await this.editorHelpers.setAttribute(context, this.$target[0], 'data-progress-bar-weight', 'thin');
-                            await this.editorHelpers.setAttribute(context, this.$target[0], 'data-layout-background', 'none');
-                            await this.editorHelpers.setAttribute(context, this.$target[0], 'data-layout', widgetValue);
-                        };
-                        await this.wysiwyg.execCommand(countdownLayoutCircle);
-                    } else {
-                        this.$target[0].dataset.progressBarStyle = 'disappear';
-                        this.$target[0].dataset.progressBarWeight = 'thin';
-                        this.$target[0].dataset.layoutBackground = 'none';
-                    }
+                    this.$target[0].dataset.progressBarStyle = 'disappear';
+                    this.$target[0].dataset.progressBarWeight = 'thin';
+                    this.$target[0].dataset.layoutBackground = 'none';
                     break;
                 case 'boxes':
-                    if (!previewMode) {
-                        const countdownLayoutBoxes = async (context) => {
-                            await this.editorHelpers.setAttribute(context, this.$target[0], 'data-progress-bar-style', 'none');
-                            await this.editorHelpers.setAttribute(context, this.$target[0], 'data-layout-background', 'plain');
-                            await this.editorHelpers.setAttribute(context, this.$target[0], 'data-layout', widgetValue);
-                        };
-                        await this.wysiwyg.execCommand(countdownLayoutBoxes);
-                    } else {
-                        this.$target[0].dataset.progressBarStyle = 'none';
-                        this.$target[0].dataset.layoutBackground = 'plain';
-                    }
+                    this.$target[0].dataset.progressBarStyle = 'none';
+                    this.$target[0].dataset.layoutBackground = 'plain';
                     break;
                 case 'clean':
-                    if (!previewMode) {
-                        const countdownLayoutClean = async (context) => {
-                            await this.editorHelpers.setAttribute(context, this.$target[0], 'data-progress-bar-style', 'none');
-                            await this.editorHelpers.setAttribute(context, this.$target[0], 'data-layout-background', 'none');
-                            await this.editorHelpers.setAttribute(context, this.$target[0], 'data-layout', widgetValue);
-                        };
-                        await this.wysiwyg.execCommand(countdownLayoutClean);
-                    } else {
-                        this.$target[0].dataset.progressBarStyle = 'none';
-                        this.$target[0].dataset.layoutBackground = 'none';
-                    }
+                    this.$target[0].dataset.progressBarStyle = 'none';
+                    this.$target[0].dataset.layoutBackground = 'none';
                     break;
                 case 'text':
-                    if (!previewMode) {
-                        const countdownLayoutText = async (context) => {
-                            await this.editorHelpers.setAttribute(context, this.$target[0], 'data-progress-bar-style', 'none');
-                            await this.editorHelpers.setAttribute(context, this.$target[0], 'data-layout-background', 'none');
-                            await this.editorHelpers.setAttribute(context, this.$target[0], 'data-layout', widgetValue);
-                        };
-                        await this.wysiwyg.execCommand(countdownLayoutText);
-                    } else {
-                        this.$target[0].dataset.progressBarStyle = 'none';
-                        this.$target[0].dataset.layoutBackground = 'none';
-                    }
+                    this.$target[0].dataset.progressBarStyle = 'none';
+                    this.$target[0].dataset.layoutBackground = 'none';
                     break;
                 default:
                     break;
             }
             this.$target[0].dataset.layout = widgetValue;
+        });
     },
 
     //--------------------------------------------------------------------------

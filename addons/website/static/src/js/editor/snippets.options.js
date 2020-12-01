@@ -747,24 +747,26 @@ snippetOptions.registry.BackgroundVideo = snippetOptions.SnippetOptionWidget.ext
      * @see this.selectClass for parameters
      * @returns {Promise}
      */
-    _setBgVideo: async function (previewMode, value) {
-        this.$('> .o_bg_video_container').toggleClass('d-none', previewMode === true);
+    _setBgVideo: async function (previewMode, value, params) {
+        return await this.wysiwyg.withMutation(this.$target, async () => {
+            this.$('> .o_bg_video_container').toggleClass('d-none', previewMode === true);
 
-        if (previewMode !== false) {
-            return;
-        }
+            if (previewMode !== false) {
+                return;
+            }
 
-        this.videoSrc = value;
-        var target = this.$target[0];
-        target.classList.toggle('o_background_video', !!(value && value.length));
-        if (value && value.length) {
-            target.dataset.bgVideoSrc = value;
-        } else {
-            delete target.dataset.bgVideoSrc;
-        }
-        await this._refreshPublicWidgets();
+            this.videoSrc = value;
+            var target = this.$target[0];
 
-        await this.updateChangesInWysiwyg();
+            target.classList.toggle('o_background_video', !!(value && value.length));
+            if (value && value.length) {
+                target.dataset.bgVideoSrc = value;
+            } else {
+                delete target.dataset.bgVideoSrc;
+            }
+
+            await this._refreshPublicWidgets();
+        });
     },
 });
 
@@ -1625,7 +1627,6 @@ snippetOptions.registry.Parallax = snippetOptions.SnippetOptionWidget.extend({
         }
 
         this._updateBackgroundOptions();
-        await this.updateChangesInWysiwyg();
     },
 
     //--------------------------------------------------------------------------

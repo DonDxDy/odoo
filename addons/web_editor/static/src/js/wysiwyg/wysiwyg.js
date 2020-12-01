@@ -854,9 +854,17 @@ var Wysiwyg = Widget.extend({
             return result;
         }
     },
-    withDomMutationsObserver ($target, callback) {
-        callback();
-        this.updateChanges($target);
+    /**
+     * Within a callback, observe the mutation that are produced in the dom and
+     * replicate them in the internal structure of the editor.
+     *
+     * @param {jQuery} $target The root element to observe
+     * @param {Function} callback The callback being executed
+     * @param {Context} [context] The context in which it applies
+     */
+    async withMutation($target, callback, context) {
+        context = context || this._execCommandContext || this.editor;
+        return JWEditorLib.withMutation(this.editor, $($target)[0], callback, context);
     },
 
     //--------------------------------------------------------------------------
@@ -1257,6 +1265,7 @@ var Wysiwyg = Widget.extend({
             }
             const isStructureDirty = node instanceof JWEditorLib.OdooStructureNode && node.dirty;
             const isFieldDirty = node instanceof JWEditorLib.OdooFieldNode && node.fieldInfo.originalValue !== node.fieldInfo.value.get();
+            console.log(isStructureDirty, isStructureDirty, isFieldDirty);
             if (isStructureDirty || isFieldDirty) {
                 const promise = this._saveViewTo($saveNode, +$saveNode[0].dataset.oeId, node.xpath);
                 promise.catch(() => { console.error('Fail to save:', $saveNode[0]); });

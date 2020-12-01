@@ -2018,16 +2018,16 @@ const SnippetOptionWidget = Widget.extend({
      * @returns {Promise|undefined}
      */
     selectClass: async function (previewMode, widgetValue, params) {
-        for (const classNames of params.possibleValues) {
-            if (classNames) {
-                this.$target[0].classList.remove(...classNames.trim().split(/\s+/g));
+        await this.wysiwyg.withMutation(this.$target, () => {
+            for (const classNames of params.possibleValues) {
+                if (classNames) {
+                    this.$target[0].classList.remove(...classNames.trim().split(/\s+/g));
+                }
             }
-        }
-        if (widgetValue) {
-            this.$target[0].classList.add(...widgetValue.trim().split(/\s+/g));
-        }
-
-        if (previewMode === false) await this.updateChangesInWysiwyg();
+            if (widgetValue) {
+                this.$target[0].classList.add(...widgetValue.trim().split(/\s+/g));
+            }
+        });
     },
     /**
      * Default option method which allows to select a value and set it on the
@@ -2039,16 +2039,11 @@ const SnippetOptionWidget = Widget.extend({
      * @param {Object} params
      * @returns {Promise|undefined}
      */
-    selectDataAttribute: async function (previewMode, widgetValue, params) {
-        const selectDataAttribute = async (context) => {
+    selectDataAttribute: async function (previewMode, widgetValue, params, context) {
+        await context.withMutation(this.$target, async () => {
             const value = await this._selectAttributeHelper(widgetValue, params, context);
             this.$target[0].dataset[params.attributeName] = value;
-            if (!previewMode) {
-                const attributeName = params.attributeName.replace(/[A-Z]/g, m => "-" + m.toLowerCase());
-                await this.editorHelpers.setAttribute(context, this.$target[0], `data-${attributeName}`, value);
-            }
-        };
-        return this.wysiwyg.editor.execCommand(selectDataAttribute);
+        });
     },
     /**
      * Default option method which allows to select a value and set it on the
@@ -2062,11 +2057,9 @@ const SnippetOptionWidget = Widget.extend({
      */
     selectAttribute: async function (previewMode, widgetValue, params) {
         const value = await this._selectAttributeHelper(widgetValue, params);
-        if (previewMode) {
+        await context.withMutation(this.$target, async () => {
             this.$target.attr(params.attributeName, value);
-        } else {
-            await this.editorHelpers.setAttribute(this.wysiwyg.editor, this.$target[0], params.attributeName, value);
-        }
+        });
     },
     /**
      * Default option method which allows to select a value and set it on the
@@ -2725,7 +2718,26 @@ const SnippetOptionWidget = Widget.extend({
                 });
                 await Promise.all(proms);
             } else {
-                await this[methodName](previewMode, widgetValue, params);
+                const callback = async (context) => {
+                    // todo: this.wysiwyg.editor.memoryInfo.uiCommand is a hack
+                    // that tells the editor to consider that this command will
+                    // not change anything in the VDOC. Remove that line when
+                    // the jabberowck Memory will be smarter and avoid creating
+                    // a step when no changes in VDOC appears in one
+                    // execCommand.
+                    if (previewMode !== false) this.wysiwyg.editor.memoryInfo.uiCommand = true;
+                    console.log("call option method:", methodName)
+                    console.log(previewMode, widgetValue, params);
+                    if (previewMode === false) {
+                        context.withMutation = ($el, callback) => {
+                            return this.wysiwyg.withMutation($el, callback, context);
+                        }
+                    } else {
+                        context.withMutation = ($el, callback, context) => callback();
+                    }
+                    await this[methodName](previewMode, widgetValue, params, context);
+                };
+                await this.wysiwyg.execCommand(callback);
             }
         }
 
@@ -2746,18 +2758,20 @@ const SnippetOptionWidget = Widget.extend({
      * @returns {string|undefined}
      */
     async _selectAttributeHelper(value, params, context) {
-        if (!params.attributeName) {
-            throw new Error('Attribute name missing');
-        }
-        if (params.saveUnit && !params.withUnit) {
-            // Values that come with an unit are saved without unit as
-            // data-attribute unless told otherwise.
-            value = value.split(params.saveUnit).join('');
-        }
-        if (params.extraClass) {
-            await this.editorHelpers.setClass(context, this.$target[0], params.extraClass, params.defaultValue !== value)
-        }
-        return value;
+        return context.withMutation(this.$target, async () => {
+            if (!params.attributeName) {
+                throw new Error('Attribute name missing');
+            }
+            if (params.saveUnit && !params.withUnit) {
+                // Values that come with an unit are saved without unit as
+                // data-attribute unless told otherwise.
+                value = value.split(params.saveUnit).join('');
+            }
+            if (params.extraClass) {
+                this.$target.toggleClass(params.extraClass, params.defaultValue !== value);
+            }
+            return value;
+        });
     },
     /**
      * @private
@@ -3044,7 +3058,9 @@ registry.sizing = SnippetOptionWidget.extend({
                 $body.removeClass(cursor);
                 $handle.removeClass('o_active');
 
-                await self.editorHelpers.setAttribute(self.wysiwyg.editor, self.$target[0], 'class', self.$target.attr('class'));
+                await self.wysiwyg.withMutation(self.$target, () => {
+                    self.$target.attr('class', self.$target.attr('class'))
+                });
 
                 // Highlights the previews for a while
                 var $handlers = self.$overlay.find('.o_handle');
@@ -3748,23 +3764,23 @@ registry.BackgroundImage = SnippetOptionWidget.extend({
      *
      * @see this.selectClass for parameters
      */
-    background: async function (previewMode, widgetValue, params) {
-        if (previewMode === true) {
-            this.__customImageSrc = getBgImageURL(this.$target[0]);
-        } else if (previewMode === 'reset') {
-            widgetValue = this.__customImageSrc;
-        } else {
-            this.__customImageSrc = widgetValue;
-        }
+    background: async function (previewMode, widgetValue, params, context) {
+        await this.wysiwyg.withMutation(this.$target, () => {
+            if (previewMode === true) {
+                this.__customImageSrc = getBgImageURL(this.$target[0]);
+            } else if (previewMode === 'reset') {
+                widgetValue = this.__customImageSrc;
+            } else {
+                this.__customImageSrc = widgetValue;
+            }
 
-        this._setBackground(this.$target, widgetValue);
+            this._setBackground(this.$target, widgetValue);
 
-        if (previewMode !== 'reset') {
-            removeOnImageChangeAttrs.forEach(attr => delete this.$target[0].dataset[attr]);
-            this.$target.trigger('background_changed', [previewMode]);
-        }
-
-        if (previewMode === false) await this.updateChangesInWysiwyg();
+            if (previewMode !== 'reset') {
+                removeOnImageChangeAttrs.forEach(attr => delete this.$target[0].dataset[attr]);
+                this.$target.trigger('background_changed', [previewMode]);
+            }
+        });
     },
     /**
      * Changes the main color of dynamic SVGs.
@@ -3785,7 +3801,7 @@ registry.BackgroundImage = SnippetOptionWidget.extend({
         newURL.searchParams.set('c1', normalizeColor(widgetValue));
         const src = newURL.pathname + newURL.search;
         await loadImage(src);
-        await this.editorHelpers.setStyle(this.editor, this.$target.get(), 'background-image', `url('${src}')`);
+        await this.wysiwyg.withMutation(this.$target, this.$target.setStyle('background-image', `url('${src}')`));
         if (!previewMode) {
             this.previousSrc = src;
         }
@@ -4228,12 +4244,12 @@ registry.BackgroundPosition = SnippetOptionWidget.extend({
      * @see this.selectClass for params
      */
     backgroundType: async function (previewMode, widgetValue, params) {
-        const backgroundType = async (context)=> {
-            await this.editorHelpers.setClass(context, this.$target[0], 'o_bg_img_opt_repeat', widgetValue === 'repeat-pattern');
-            await this.editorHelpers.setStyle(context, this.$target[0], 'background-position', '');
-            await this.editorHelpers.setStyle(context, this.$target[0], 'background-size', '');
-        }
-        await this.wysiwyg.execCommand(backgroundType);
+        console.log('backgroundType');
+        await this.wysiwyg.withMutation(this.$target, () => {
+            this.$target.toggleClass('o_bg_img_opt_repeat', widgetValue === 'repeat-pattern');
+            this.$target.css('background-position', '');
+            this.$target.css('background-size', '');
+        });
     },
     /**
      * Saves current background position and enables overlay.
