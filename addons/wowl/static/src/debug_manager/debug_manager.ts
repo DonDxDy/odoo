@@ -49,8 +49,8 @@ export class DebugManager extends Component<{}, OdooEnv> {
     return (this.env as any).inDialog;
   }
 
-  getItems(): MenuElement[] {
-    const sortedItems = Object.values(this.debugFactories)
+  getElements(): MenuElement[] {
+    const sortedElements = Object.values(this.debugFactories)
       .map((factory: DebugManagerElementsFactory) => factory(this.accessRights!))
       .reduce((acc: MenuElement[], elements: MenuElement[]) => acc.concat(elements))
       .sort((x: MenuElement, y: MenuElement) => {
@@ -58,11 +58,17 @@ export class DebugManager extends Component<{}, OdooEnv> {
         const ySeq = y.sequence ? y.sequence : 1000;
         return xSeq - ySeq;
       });
-    return sortedItems;
+    return sortedElements;
   }
 
   onDropdownItemSelected(ev: OwlEvent<MenuItemEventPayload>) {
     ev.detail.payload.callback();
+  }
+
+  onClickOnTagA(ev: MouseEvent) {
+    if (!ev.ctrlKey) {
+      ev.preventDefault();
+    }
   }
 }
 

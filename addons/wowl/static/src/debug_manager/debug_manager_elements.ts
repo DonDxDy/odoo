@@ -5,24 +5,28 @@ import { DomainListRepr as Domain } from "../core/domain";
 // Backend Debug Manager Items
 
 export function runJSTestsItem(env: OdooEnv): MenuElement {
+  const runTestsURL = odoo.browser.location.origin + "/wowl/tests?mod=*";
   return {
     type: "item",
     description: env._t("Run JS Tests"),
+    href: runTestsURL,
     callback: () => {
       console.log("Run JS Tests");
-      odoo.browser.open(odoo.browser.location.origin + "/wowl/tests?mod=*");
+      odoo.browser.open(runTestsURL);
     },
     sequence: 10,
   };
 }
 
 export function runJSTestsMobileItem(env: OdooEnv): MenuElement {
+  const runTestsMobileURL = odoo.browser.location.origin + "/wowl/tests/mobile?mod=*";
   return {
     type: "item",
     description: env._t("Run JS Mobile Tests"),
+    href: runTestsMobileURL,
     callback: () => {
       console.log("Run JS Mobile Tests");
-      odoo.browser.open(odoo.browser.location.origin + "/wowl/tests/mobile?mod=*");
+      odoo.browser.open(runTestsMobileURL);
     },
     sequence: 20,
   };
@@ -134,14 +138,16 @@ export function regenerateAssets(env: OdooEnv): MenuElement {
 }
 
 export function becomeSuperuser(env: OdooEnv): MenuElement {
+  const becomeSuperuserULR = odoo.browser.location.origin + "/wowl/become";
   return {
     type: "item",
     description: env._t("Become Superuser"),
     hide: !env.services.user.isAdmin,
+    href: becomeSuperuserULR,
     callback: () => {
       console.log("Become Superuser");
       //TODO  add /wowl/become
-      odoo.browser.location.href = odoo.browser.location.origin + "/wowl/become";
+      odoo.browser.open(becomeSuperuserULR, "_self");
     },
     sequence: 440,
   };
