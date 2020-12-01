@@ -11,6 +11,8 @@ var Pager = require('web.Pager');
 var utils = require('web.utils');
 var viewUtils = require('web.viewUtils');
 
+var OpenStudioButton = require('web.open_studio_button');
+
 var _t = core._t;
 
 // Allowed decoration on the list's rows: bold, italic and bootstrap semantics classes
@@ -1023,7 +1025,12 @@ var ListRenderer = BasicRenderer.extend({
                 class: "dropdown-item",
             }).append($checkbox));
         });
-        $dropdown.appendTo($optionalColumnsDropdown);
+        $dropdown.append($("<hr />"))
+        var $addCustomField = new OpenStudioButton(this);
+        $addCustomField.appendTo($dropdown);
+
+        $dropdown.appendTo($optionalColumnsDropdown);        
+
         return $optionalColumnsDropdown;
     },
     /**
@@ -1107,13 +1114,11 @@ var ListRenderer = BasicRenderer.extend({
             if (document.body.contains(this.el)) {
                 this.pagers.forEach(pager => pager.on_attach_callback());
             }
-            if (this.optionalColumns.length) {
-                this.el.classList.add('o_list_optional_columns');
-                this.$('table').append(
-                    $('<i class="o_optional_columns_dropdown_toggle fa fa-ellipsis-v"/>')
-                );
-                this.$('table').append(this._renderOptionalColumnsDropdown());
-            }
+            this.el.classList.add('o_list_optional_columns');
+            this.$('table').append(
+                $('<i class="o_optional_columns_dropdown_toggle fa fa-ellipsis-v"/>')
+            );
+            this.$('table').append(this._renderOptionalColumnsDropdown());
             if (this.selection.length) {
                 const $checked_rows = this.$('tr').filter(
                     (i, el) => this.selection.includes(el.dataset.id)

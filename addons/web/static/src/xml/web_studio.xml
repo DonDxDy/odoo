@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<template>
+
+    <t t-name="web.SystrayItem">
+        <button class="btn">
+            <i class="fa fa-plus" role="img"/>
+        </button>
+    </t>
+
+    <t t-name="web.install_web_studio">
+        <div style="color:#666; margin:5px;">
+          <p>Odoo Studio is not installed yet.</p>
+          <a class="btn btn-primary btn-block open_install_web_studio" style="margin: 5px 0">Install Odoo Studio</a>
+          <p>Odoo Studio lets you customize screens and menus in a simple and graphical way.</p>
+        </div>
+        <a href="https://www.youtube.com/watch?v=xCvFZrrQq7k" target="_blank" style="padding: 0;">
+            <img style="max-width: 100%;" alt="Link to Odoo Studio Video" src="web/static/src/img/studio_video_link.jpg"></img>
+        </a>
+    </t>
+
+</template>
