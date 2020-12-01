@@ -54,7 +54,9 @@ var FieldBoolean = AbstractField.extend({
     doQuickEdit: function () {
         const value = this.value;
         this._super(...arguments);
-        this._setValue(!value);
+        if (this.mode !== 'readonly') {
+            this._setValue(!value);
+        }
     },
     /**
      * @override
