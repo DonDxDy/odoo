@@ -31,6 +31,10 @@ class AttachmentViewer extends Component {
                 attachmentViewer: attachmentViewer ? attachmentViewer.__state : undefined,
             };
         });
+        /**
+         * Used to ensure that the ref is always up to date, which seems to be needed if the element
+         * has a t-key, which was added to force the rendering of a new element when the src of the image changes.
+         */
         this._getRefs = useRefs();
         /**
          * Determine whether the user is currently dragging the image.
@@ -51,18 +55,12 @@ class AttachmentViewer extends Component {
          * position changes while dragging)
          */
         this._translate = { x: 0, y: 0, dx: 0, dy: 0 };
-        /**
-         * Tracked last rendered attachment. Useful to detect a new image is
-         * loading, in order to display spinner until it is fully loaded.
-         */
-        this._renderedAttachment = undefined;
         this._onClickGlobal = this._onClickGlobal.bind(this);
     }
 
     mounted() {
         this.el.focus();
         this._handleImageLoad();
-        this._renderedAttachment = this.attachmentViewer.attachment;
         document.addEventListener('click', this._onClickGlobal);
     }
 
@@ -71,7 +69,6 @@ class AttachmentViewer extends Component {
      */
     patched() {
         this._handleImageLoad();
-        this._renderedAttachment = this.attachmentViewer.attachment;
     }
 
     willUnmount() {
