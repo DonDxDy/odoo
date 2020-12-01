@@ -515,10 +515,7 @@ var FieldMany2One = AbstractField.extend({
     _renderEdit: function () {
         var value = this.m2o_value;
 
-        const escapedValue = _.escape(`${value}`.trim());
-        const [, ...lines] = escapedValue.split('\n');
-        const extraText = lines.map((line) => `<span>${line}</span>`).join('<br/>');
-        this.$('.o_field_many2one_extra').html(extraText);
+        this.$('.o_field_many2one_extra').html(this._renderValueLines(false));
 
         // this is a stupid hack necessary to support the always_reload flag.
         // the field value has been reread by the basic model.  We use it to
@@ -537,13 +534,22 @@ var FieldMany2One = AbstractField.extend({
     },
     /**
      * @private
+     * @param {boolean} needFirstLine
+     * @returns {string} escaped html of value lines
+     */
+    _renderValueLines: function (needFirstLine) {
+        const escapedValue = _.escape((this.m2o_value || "").trim());
+        const lines = escapedValue.split('\n');
+        if (!needFirstLine) {
+            lines.shift();
+        }
+        return lines.map((line) => `<span>${line}</span>`).join('<br/>');
+    },
+    /**
+     * @private
      */
     _renderReadonly: function () {
-        var escapedValue = _.escape((this.m2o_value || "").trim());
-        var value = escapedValue.split('\n').map(function (line) {
-            return '<span>' + line + '</span>';
-        }).join('<br/>');
-        this.$el.html(value);
+        this.$el.html(this._renderValueLines(true));
         if (!this.noOpen && this.value) {
             this.$el.attr('href', _.str.sprintf('#id=%s&model=%s', this.value.res_id, this.field.relation));
             this.$el.addClass('o_form_uri');
